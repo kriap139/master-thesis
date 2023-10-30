@@ -1,6 +1,5 @@
 from Util.dataset import (
-    Dataset, DatasetInfo, extract_labels, get_dataset_info, 
-    get_train_dataset, get_test_dataset, get_dataset_labels
+    Dataset, extract_labels, Name
 ) 
 
 from Util.io_util import (

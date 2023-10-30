@@ -1,6 +1,53 @@
 import pandas as pd
 from scipy.io import arff
 import os
+import json
+import dataclasses
+import numpy as np
+
+def json_serializer(o):
+    if isinstance(o, np.integer):
+        return int(o)
+    elif dataclasses.is_dataclass(o):
+        return dataclasses.asdict(o)
+    elif isinstance(o, np.ndarray):
+        return o.tolist()
+    else:
+        raise TypeError(f"Object of class {type(o)} is not JSON serializable")
+
+def find_file_ver(folder: str, name: str) -> str:
+    if not os.path.exists(os.path.join(folder, name)):
+        return os.path.join(folder, name)
+
+    fn, ext = os.path.splitext(name)
+
+    ver = 1
+    fn_new = f"{fn} ({ver}){ext}"
+
+    while True:
+        if not os.path.exists(os.path.join(folder, fn_new)):
+            break
+        ver += 1
+        fn_new = f"{fn} ({ver}){ext}"
+
+    return os.path.join(folder, fn_new)
+
+def save_json(fp: str, data: Union[dict, list], indent: int = 3, overwrite=False):
+    folder = os.path.dirname(fp)
+    os.makedirs(folder, exist_ok=True)
+    
+    if os.path.isfile(fp) and (not overwrite):
+        fp = find_file_ver(folder, os.path.basename(fp))
+
+    with open(fp, mode='w') as f:
+        json.dump(data, f, indent=indent, default=json_serializer)
+    
+
+def load_json(fp: str, default = None):
+    if os.path.exists(fp):
+        with open(fp, mode='r') as f:
+            return json.load(f)
+    return default
 
 def data_dir(add: str) -> str:
     data_dir = os.path.join(os.getcwd(), "data")

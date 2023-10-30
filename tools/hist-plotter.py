@@ -2,12 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import skew
-from Util import get_train_dataset, get_test_dataset, Dataset, get_dataset_labels
+from Util import Dataset, Name
 import numpy as np
 
-dataset = Dataset.ACCEL
-y = get_dataset_labels(dataset)
-
+y = Dataset(dname=Name.ACCEL).load_labels().y
 labels, counts = np.unique(y.to_numpy(), return_counts=True)
 
 print(f"labels={labels}, counts={counts}")
