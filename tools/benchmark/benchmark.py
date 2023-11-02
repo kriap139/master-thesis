@@ -16,7 +16,7 @@ class Benchmark:
         self._save_timestamp = datetime.now().strftime("%d-%m-%Y@%H:%M:%S")
         self._save_path = save_path
         self._save = save
-        self._n_repeats = 0
+        self.n_repeats = 0
 
         if save and save_path is None:
             raise RuntimeError(f"'save_path' argument is required for saveing benchmark")
@@ -38,10 +38,10 @@ class Benchmark:
             for i in range(n_repeats):
                 self.__run(*args, **kwargs)
                 self.update_save()
-                self._n_repeats += 1
+                self.n_repeats += 1
             self.update_save( 
                 skip_benchmark_update=True,
-                exstra_keys=dict(n_repeats=self._n_repeats,average_time=self.average_time())
+                exstra_keys=dict(n_repeats=self.n_repeats,average_time=self.average_time())
             )
         else:
             for i in range(n_repeats):
