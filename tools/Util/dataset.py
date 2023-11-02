@@ -2,38 +2,36 @@ from enum import Enum
 from typing import Tuple, Union, Optional
 import pandas as pd
 import os
-from dataclasses import dataclass, field
 import subprocess
 from Util.io_util import arff_to_csv, data_dir, load_arff
 import lightgbm as lgm
 import gc
 
-class Name(Enum):
-    HIGGS = 0
-    HEPMASS = 1
-    KASANDR = 2
-    AIRLINES = 3
-    FPS = 4
-    ACSI = 5
-    SGEMM_GKP = 6
-    PUF_128 = 7
-    WAVE_E = 8 
-    OKCUPID_STEM = 9
-    ACCEL = 10
+class SizeGroup(Enum):
+    SMALL = 0,
+    MODERATE = 1,
+    LARGE = 2
 
-TARGET_COLUMNS = {
-    Dataset.HIGGS: 0,
-    #Dataset.HEPMASS: 0,
-    #Dataset.KASANDR: "",
-    Dataset.AIRLINES: "DepDelay",
-    Dataset.FPS: "FPS",
-    Dataset.ACSI: "PINCP",
-    Dataset.SGEMM_GKP: "Run1",
-    Dataset.PUF_128: 128,
-    Dataset.WAVE_E: "energy_total",
-    Dataset.OKCUPID_STEM: "job",
-    Dataset.ACCEL: "wconfid"
-}
+class DatasetInfo:
+    def __init__(self, label_column: any, task: str, size_group: SizeGroup, name = None):
+        self.name = name
+        self.label_column = label_column
+        self.task = task
+        self.size_group = size_group
+
+
+class Builtin(Enum):
+    HIGGS = DatasetInfo(0, "binary", SizeGroup.LARGE)
+    HEPMASS = DatasetInfo(0, "binary", SizeGroup.LARGE)
+    AIRLINES = DatasetInfo("DepDelay", "regression", SizeGroup.LARGE)
+    FPS = DatasetInfo("FPS", "regression", SizeGroup.MODERATE)
+    ACSI = DatasetInfo("PINCP", "binary", SizeGroup.MODERATE)
+    SGEMM_GKP = DatasetInfo("Run1", "regression", SizeGroup.SMALL)
+    PUF_128 = DatasetInfo(128, "binary", "large", SizeGroup.LARGE)
+    WAVE_E = DatasetInfo("energy_total", "regression", SizeGroup.SMALL)
+    OKCUPID_STEM = DatasetInfo("job", "multiclass", SizeGroup.SMALL)
+    ACCEL = DatasetInfo("wconfid", "multiclass", SizeGroup.SMALL)
+
 
 def extract_labels( 
                 data: pd.DataFrame, 
@@ -64,8 +62,9 @@ def extract_labels(
     return x, y
 
 class Dataset:
-    def __init__(self, dname: Name, is_test=False):
-        self.name = dname.name.lower()
+    def __init__(self, builtin: Builtin, is_test=False):
+        self.info = builtin.value
+        self.name = builtin.name.lower()
         self.label_column:  Union[str, int] = TARGET_COLUMNS[dname]
         self.x = None
         self.y = None

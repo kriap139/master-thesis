@@ -1,5 +1,5 @@
 from Util.dataset import (
-    Dataset, extract_labels, Name
+    Dataset, extract_labels, Builtin
 ) 
 
 from Util.io_util import (
