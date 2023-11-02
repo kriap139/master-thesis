@@ -1,0 +1,9 @@
+matplotlib
+numpy
+pandas
+#PyQt6
+scipy
+lightgbm[scikit-learn,pandas]
+optuna
+sigopt
+scikit-optimize
