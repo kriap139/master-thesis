@@ -65,13 +65,13 @@ class Dataset:
     def __init__(self, builtin: Builtin, is_test=False):
         self.info = builtin.value
         self.name = builtin.name.lower()
-        self.label_column:  Union[str, int] = TARGET_COLUMNS[dname]
+        self.label_column:  Union[str, int] = builtin.value.label_column
         self.x = None
         self.y = None
         self.cat_features: list = []
         self.is_test = is_test
 
-        path = data_dir(f"datasets/{nm}")
+        path = data_dir(f"datasets/{self.name}")
         fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
 
         try:
@@ -96,7 +96,7 @@ class Dataset:
         if (self.is_test or force_load_test) and self.test_path is None:
             raise RuntimeError(f"Test path for {self.name} dataset not found")
         else:
-            path = self.test_path if load_test else self.train_path
+            path = self.test_path if self.is_test else self.train_path
         
         fn, ext = os.path.splitext(os.path.basename(path))
 

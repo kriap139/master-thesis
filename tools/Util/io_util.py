@@ -4,6 +4,7 @@ import os
 import json
 import dataclasses
 import numpy as np
+from typing import Union
 
 def json_serializer(o):
     if isinstance(o, np.integer):
