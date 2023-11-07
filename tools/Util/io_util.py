@@ -6,7 +6,7 @@ import dataclasses
 import numpy as np
 from typing import Union
 
-def json_serializer(o):
+def json_serialize_unknown(o):
     if isinstance(o, np.integer):
         return int(o)
     elif dataclasses.is_dataclass(o):
@@ -41,7 +41,7 @@ def save_json(fp: str, data: Union[dict, list], indent: int = 3, overwrite=False
         fp = find_file_ver(folder, os.path.basename(fp))
 
     with open(fp, mode='w') as f:
-        json.dump(data, f, indent=indent, default=json_serializer)
+        json.dump(data, f, indent=indent, default=json_serialize_unknown)
     
 
 def load_json(fp: str, default = None):
@@ -54,7 +54,10 @@ def data_dir(add: str) -> str:
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(data_dir):
         raise RuntimeError(f"data directory dosen't exist: {data_dir}")
-    return os.path.join(data_dir, add)
+
+    path = os.path.join(data_dir, add)
+    os.makedirs(path, exist_ok=True)
+    return path
 
 def load_arff(path: str) -> pd.DataFrame:
     data = arff.loadarff(path)
