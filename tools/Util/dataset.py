@@ -3,17 +3,26 @@ from typing import Tuple, Union, Optional
 import pandas as pd
 import os
 import subprocess
-from Util.io_util import arff_to_csv, data_dir, load_arff
-import lightgbm as lgm
+from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json
+import lightgbm as lgb
 import gc
+import logging
+from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, KFold, train_test_split
+
+TY_CV = Union[KFold, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold]
 
 class SizeGroup(Enum):
     SMALL = 0,
     MODERATE = 1,
     LARGE = 2
 
+class Task(Enum):
+    BINARY = 1
+    REGRESSION = 2
+    MULTICLASS = 3
+
 class DatasetInfo:
-    def __init__(self, label_column: any, task: str, size_group: SizeGroup, name = None):
+    def __init__(self, label_column: Union[str, int], task: Task, size_group: SizeGroup, name = None):
         self.name = name
         self.label_column = label_column
         self.task = task
@@ -21,16 +30,19 @@ class DatasetInfo:
 
 
 class Builtin(Enum):
-    HIGGS = DatasetInfo(0, "binary", SizeGroup.LARGE)
-    HEPMASS = DatasetInfo(0, "binary", SizeGroup.LARGE)
-    AIRLINES = DatasetInfo("DepDelay", "regression", SizeGroup.LARGE)
-    FPS = DatasetInfo("FPS", "regression", SizeGroup.MODERATE)
-    ACSI = DatasetInfo("PINCP", "binary", SizeGroup.MODERATE)
-    SGEMM_GKP = DatasetInfo("Run1", "regression", SizeGroup.SMALL)
-    PUF_128 = DatasetInfo(128, "binary", "large", SizeGroup.LARGE)
-    WAVE_E = DatasetInfo("energy_total", "regression", SizeGroup.SMALL)
-    OKCUPID_STEM = DatasetInfo("job", "multiclass", SizeGroup.SMALL)
-    ACCEL = DatasetInfo("wconfid", "multiclass", SizeGroup.SMALL)
+    HIGGS = DatasetInfo(0, Task.BINARY, SizeGroup.LARGE)
+    HEPMASS = DatasetInfo(0, Task.BINARY, SizeGroup.LARGE)
+    AIRLINES = DatasetInfo("DepDelay", Task.REGRESSION, SizeGroup.LARGE)
+    FPS = DatasetInfo("FPS", Task.REGRESSION, SizeGroup.MODERATE)
+    ACSI = DatasetInfo("PINCP", Task.BINARY, SizeGroup.MODERATE)
+    SGEMM_GKP = DatasetInfo("Run1", Task.REGRESSION, SizeGroup.SMALL)
+    PUF_128 = DatasetInfo(128, Task.BINARY, "large", SizeGroup.LARGE)
+    WAVE_E = DatasetInfo("energy_total", Task.REGRESSION, SizeGroup.SMALL)
+    OKCUPID_STEM = DatasetInfo("job", Task.MULTICLASS, SizeGroup.SMALL)
+    ACCEL = DatasetInfo("wconfid", Task.MULTICLASS, SizeGroup.SMALL)
+
+    def info(self) -> DatasetInfo:
+        return self.value
 
 
 def extract_labels( 
@@ -41,37 +53,52 @@ def extract_labels(
     """Exstracts labels from dataset"""
 
     if type(label_column) == str:
-        indexes = data.columns.get_indexer([label_column])
-        assert len(indexes) == 1
-        print(f"column index {int(indexes[0])} found for column label '{label_column}'")
-        label_column = int(indexes[0])
-
-
-    if label_column == 0:
-        y = data.iloc[:, :1].copy()
-    elif label_column == data.shape[1]:
-        y = data.iloc[:, data.shape[1]:].copy()
+        y = data[label_column].copy()
+        col = label_column
     else:
-        last = label_column + 1
-        y = data.iloc[:, label_column:last].copy()
+        if label_column == 0:
+            y = data.iloc[:, :1].copy()
+        elif label_column == data.shape[1]:
+            y = data.iloc[:, data.shape[1]:].copy()
+        else:
+            last = label_column + 1
+            y = data.iloc[:, label_column:last].copy()
+        
+        col = data.columns[label_column]
 
     if remove:
         x = data
-        data.drop(data.columns[0], axis=1, inplace=inplace)
+        data.drop(col, axis=1, inplace=inplace)
 
     return x, y
 
-class Dataset:
-    def __init__(self, builtin: Builtin, is_test=False):
-        self.info = builtin.value
-        self.name = builtin.name.lower()
-        self.label_column:  Union[str, int] = builtin.value.label_column
+class Dataset(DatasetInfo):
+    FOLDS_FILE_PREFIX = "_folds"
+
+    def __init__(self, bn: Builtin, is_test=False):
+        super().__init__(bn.info().label_column, bn.info().task, bn.info().size_group, bn.name.lower())
         self.x = None
         self.y = None
         self.cat_features: list = []
         self.is_test = is_test
 
+        self.test_path = None
+        self.train_path = None
+        self.saved_folds_path = None
+        self.__saved_folds_fn = f"{self.name}{self.FOLDS_FILE_PREFIX}.json"
+        self.__set_dataset_paths()
+    
+    def get_builtin(self):
+        return Builtin[self.name]
+
+    def get_dir(self) -> str:
         path = data_dir(f"datasets/{self.name}")
+        if not os.path.exists(path):
+            raise RuntimeError(f"Dataset path dosen't exist: {path}")
+        return path
+    
+    def __set_dataset_paths(self):
+        path = self.get_dir()
         fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
 
         try:
@@ -91,9 +118,48 @@ class Dataset:
 
         if (self.test_path is not None) and (not os.path.exists(self.test_path)):
             raise RuntimeError(f"Test data for dataset '{self.name}' not found in data folder: {self.test_path}")
+        
+        fn, ext = os.path.splitext(self.__saved_folds_fn)
+        if (fn in fns) and (exts[fns.index(fn)] == ".json"):
+            self.saved_folds_path = os.path.join(path, self.__saved_folds_fn)
+
+    def has_saved_folds(self) -> bool:
+        return self.saved_folds_path is not None
+    
+    def has_test_set(self) -> bool:
+        return self.test_path is not None
+    
+    def load_saved_folds_file(self) -> dict:
+        if self.saved_folds_path is not None:
+            data = load_json(self.saved_folds_path)
+            folds = data["folds"]
+            data["folds"] = [(fold["train"], fold["test"]) for fold in folds]
+            return data
+        else:
+            raise RuntimeError(f"No saved folds data found for dataset {self.name}")
+
+    def load_saved_folds_info(self):
+        return self.load_saved_folds_file()["info"]
+    
+    def load_saved_folds(self) -> dict:
+        return self.load_saved_folds_file()["folds"]
+        
+    def save_folds(self, cv: TY_CV):
+        info = self.get_cv_info(cv)
+        folds = []
+        for train_idx, test_idx in cv.split(self.x, self.y):
+            folds.append(
+                dict(
+                    train=train_idx.tolist(),
+                    test=test_idx.tolist()
+                )
+            )
+
+        path = os.path.join(self.get_dir(), self.__saved_folds_fn)
+        save_json(path, data=dict(info=info, folds=folds), indent=None)
     
     def __load(self, load_labels_only=False, force_load_test=False) -> pd.DataFrame:
-        if (self.is_test or force_load_test) and self.test_path is None:
+        if (self.is_test or force_load_test) and (self.test_path is None):
             raise RuntimeError(f"Test path for {self.name} dataset not found")
         else:
             path = self.test_path if self.is_test else self.train_path
@@ -105,10 +171,26 @@ class Dataset:
         elif ext.strip() == ".arff":
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
     
+    def load_test_dataset(self) -> 'Dataset':
+        return Dataset(self.get_builtin(), is_test=True)
+    
     def load(self) -> 'Dataset':
         data = self.__load()
+        shape = data.shape
         self.x, self.y = extract_labels(data, label_column=self.label_column)
         self.cat_features = self.x.select_dtypes('object').columns.tolist()
+
+        self.y = self.y.to_numpy()
+        self.y.shape = (-1,)
+
+        print(f"data={shape}, x={self.x.shape}, y={self.y.shape}")
+        assert self.y.shape == (shape[0],)
+        assert self.x.shape == (shape[0], shape[1] - 1)
+
+        if len(self.cat_features):
+            for col in self.cat_features:
+                self.x[col] = self.x[col].astype('category')
+
         return self
 
     def load_labels(self, include_test=True) -> 'Dataset':
@@ -131,3 +213,63 @@ class Dataset:
         
         self.y = y
         return self
+    
+    def create_train_test_splits(self, force=False, tests_size=0.3, shuffle=True):
+        if (self.test_path is not None) and not force:
+            print("train test split already exists!")
+            return
+        
+        if self.x is None:
+            self.load()
+        
+        x_train, x_test, y_train, y_test = train_test_split(self.x, self.y, test_size=tests_size, shuffle=shuffle)
+        
+        print(f"trainX={x_train.shape}, trainY{y_train.shape}, testX={x_test.shape}, testY={y_test.shape}")
+
+        if type(self.label_column) == str:
+            x_train[self.label_column] = y_train
+            x_test[self.label_column] = y_test
+        else:
+            x_train.insert(self.label_column, self.label_column, y_train)
+            x_test.insert(self.label_column, self.label_column, y_test)
+
+        path = data_dir(f"datasets/{self.name}")
+        fn, ext = os.path.splitext(os.path.basename(path))
+        train_path = os.path.join(path, f"{self.name}_train{ext}")
+        test_path = os.path.join(path, f"{self.name}_test{ext}")
+
+        x_train.to_csv(train_path, index=False, index_label=False, header=False)
+        x_test.to_csv(test_path, index=False, index_label=False, header=False)
+
+        self.__set_dataset_paths()
+        self.load()
+        return self
+    
+    @classmethod
+    def get_cv_info(cls, cv: TY_CV) -> dict:
+        name = cv.__class__.__name__
+        info = dict(
+            name=name, 
+            random_state=cv.random_state,
+        )
+
+        if hasattr(cv, "n_repeats"):
+            info["n_repeats"] = cv.n_repeats
+        if "Stratified" in name:
+            info["stratified"] = True
+
+        for attr in ("n_splits", "shuffle"):
+            if hasattr(cv, attr):
+                info[attr] = getattr(cv, attr)
+            elif hasattr(cv, "cv"):
+                if hasattr(cv.cv, attr):
+                    info[attr] = getattr(cv.cv, attr)
+                elif hasattr(cv, "cvargs"):
+                    if attr in cv.cvargs.keys():
+                        info[attr] = cv.cvargs[attr]
+        
+        if "n_splits" in info.keys():
+            n_folds = info.pop("n_splits")
+            info["n_folds"] = n_folds
+        
+        return info

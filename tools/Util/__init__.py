@@ -1,7 +1,7 @@
-from Util.dataset import (
-    Dataset, extract_labels, Builtin
+from .dataset import (
+    Dataset, extract_labels, Builtin, Task, SizeGroup, TY_CV
 ) 
 
-from Util.io_util import (
+from .io_util import (
     arff_to_csv, data_dir, load_arff
 )
