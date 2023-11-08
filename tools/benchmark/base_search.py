@@ -27,29 +27,27 @@ class BaseSearch:
         self._model = model
 
         self._save_timestamp = datetime.now().strftime("%d-%m-%Y@%H:%M:%S")
-        self._save_path = save_file
-        self._save = save_file is not None
+        self._save_path = save_path
+        self._save = save_path is not None
         
-        if self._save_path is not None and os.path.exists(save_file):
+        if self._save_path is not None and os.path.exists(self._save_path):
             logging.debug("Save file already exists!")
 
         # save file data
         self._params = []
         self._train_scores = []
         self._test_scores = []
+        self._result = None
 
     
     def init_save(self, exstra_keys: dict = None):
         data = load_json(self._save_path, default={})
 
-        scoring = self.sco
-
-        data[self._save_timestamp] = dict(
+        data = dict(
             info=dict(
                 dataset=self.train_data.name,
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
-                scoring=scoring,
                 cv=Dataset.get_cv_info(self.cv) if self.cv is not None else None,
                 inner_cv=Dataset.get_cv_info(self.inner_cv) if self.inner_cv is not None else None
             ),
@@ -59,47 +57,48 @@ class BaseSearch:
         )
         if exstra_keys is not None:
             data.update(exstra_keys)
+        
+        if callable(self.scoring):
+            data["scoring"] = self.scoring.__name__
+        else:
+            data["scoring"] = self.scoring
 
         save_json(self._save_path, data)
     
     def update_save(self, append_keys: dict = None, replace_keys: dict = None, update_keys: dict = None):
         data = load_json(self._save_path, default={})
-
-        if self.__save_identifier not in data:
-            raise RuntimeError("Save file modified from initialization!")
         
         if replace_keys is not None:
             for k, v in replace_keys.items():
                 data[k] = v
         
         if append_keys is not None:
-            for k, v in replace_keys.items():
+            for k, v in append_keys.items():
                 if isinstance(v, Iterable) and isinstance(data[k], Iterable):
                     data[k].extend(v)
         
         if update_keys is not None:
             data.update(update_keys)
 
-        save_json(fp, data, overwrite=True)
+        save_json(self._save_path, data, overwrite=True)
     
     def _add_iteration_stats(self, params: dict, train_score: float, test_score: float):
-        self.__params.append(params)
-        self.__train_scores.append(train_score)
-        self.__test_scores.append(test_score)
+        self._params.append(params)
+        self._train_scores.append(train_score)
+        self._test_scores.append(test_score)
     
     def _clear_iterations_stats_cache(self):
-        self.__params.clear()
-        self.__test_scores.clear()
-        self.__train_scores.clear()
+        self._params.clear()
+        self._test_scores.clear()
+        self._train_scores.clear()
     
     def _flush_iterations_stats(self, append_keys: dict = None, replace_keys: dict = None, update_keys: dict = None, clear_cache=True):
-
         if append_keys is None:
             append_keys = {}
 
-        append_keys["params"] = self.__params
-        append_keys["train_scores"] = self.__train_scores
-        append_keys["test_scores"] = self.__test_scores
+        append_keys["params"] = self._params
+        append_keys["train_scores"] = self._train_scores
+        append_keys["test_scores"] = self._test_scores
 
         self.update_save(append_keys, replace_keys, update_keys)
 
@@ -126,5 +125,14 @@ class BaseSearch:
         model.fit(X=self.train_data.x, y=self.train_data.y, categorical_feature=self.train_data.cat_features)
         return self.score(model, self.test_data.x, self.test_data.y)
     
+    def _set_result(self, time: float):
+        self.result = dict(
+            mean_train_acc=np.mean(self._train_scores),
+            std_train_acc=np.std(self._train_scores),
+            mean_test_acc=np.mean(self._test_scores),
+            std_test_acc=np.std(self._test_scores),
+            time=time
+        )
+
     def search(self, params: dict, fixed_params: dict):
         raise RuntimeError("Not implemented")

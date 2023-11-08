@@ -5,3 +5,7 @@ from .dataset import (
 from .io_util import (
     arff_to_csv, data_dir, load_arff
 )
+
+from .space import (
+    Integer, Real, Categorical
+)

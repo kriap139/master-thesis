@@ -50,13 +50,20 @@ def load_json(fp: str, default = None):
             return json.load(f)
     return default
 
-def data_dir(add: str) -> str:
+def data_dir(add: str = None) -> str:
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(data_dir):
         raise RuntimeError(f"data directory dosen't exist: {data_dir}")
 
-    path = os.path.join(data_dir, add)
-    os.makedirs(path, exist_ok=True)
+    
+    if add is not None and len(os.path.basename(add)):
+        path = os.path.join(data_dir, os.path.dirname(add))
+        os.makedirs(path, exist_ok=True)
+        path = os.path.join(data_dir, add)
+    else:
+        path = os.path.join(data_dir, add)
+        os.makedirs(path, exist_ok=True)
+        
     return path
 
 def load_arff(path: str) -> pd.DataFrame:

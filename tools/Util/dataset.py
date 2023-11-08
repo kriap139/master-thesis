@@ -8,6 +8,8 @@ import lightgbm as lgb
 import gc
 import logging
 from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, KFold, train_test_split
+from numbers import Integral
+import numpy as np
 
 TY_CV = Union[KFold, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold]
 
@@ -130,14 +132,19 @@ class Dataset(DatasetInfo):
         return self.test_path is not None
     
     def load_saved_folds_file(self) -> dict:
-        if self.saved_folds_path is not None:
-            data = load_json(self.saved_folds_path)
-            folds = data["folds"]
-            data["folds"] = [(fold["train"], fold["test"]) for fold in folds]
-            return data
-        else:
+        if self.saved_folds_path is None:
             raise RuntimeError(f"No saved folds data found for dataset {self.name}")
 
+        data = load_json(self.saved_folds_path)
+        folds = data["folds"]
+        data["folds"] = [
+            (
+                np.array(fold["train"]).reshape(fold["shape_train"]), 
+                np.array(fold["test"]).reshape(fold["shape_test"])
+            ) for fold in folds]
+
+        return data
+    
     def load_saved_folds_info(self):
         return self.load_saved_folds_file()["info"]
     
@@ -151,12 +158,15 @@ class Dataset(DatasetInfo):
             folds.append(
                 dict(
                     train=train_idx.tolist(),
-                    test=test_idx.tolist()
+                    test=test_idx.tolist(),
+                    shape_train=train_idx.shape,
+                    shape_test=test_idx.shape
                 )
             )
 
         path = os.path.join(self.get_dir(), self.__saved_folds_fn)
         save_json(path, data=dict(info=info, folds=folds), indent=None)
+        self.__set_dataset_paths()
     
     def __load(self, load_labels_only=False, force_load_test=False) -> pd.DataFrame:
         if (self.is_test or force_load_test) and (self.test_path is None):
