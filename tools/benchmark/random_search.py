@@ -5,6 +5,7 @@ import lightgbm as lgb
 from typing import Callable
 import time
 import numpy as np
+import json
 
 class RandomSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
@@ -36,7 +37,7 @@ class RandomSearch(BaseSearch):
             acc = self.score(best, x_test, y_test)
             self._add_iteration_stats(search.best_params_, search.best_score_, acc)
 
-            print(f"{i}: best_score={search.best_score_}, test_score={acc}")
+            print(f"{i}: best_score={round(search.best_score_, 4)}, test_score={round(acc, 4)}, params={json.dumps(search.best_params_)}")
 
         end = start - time.perf_counter()
         self._set_result(end)
