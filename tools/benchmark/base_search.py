@@ -7,7 +7,6 @@ from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Sequence, Union, Optional, Iterable
 from Util.dataset import Dataset, Builtin, Task, TY_CV
 from Util.io_util import load_json, save_json, data_dir
-from skopt.space import Real, Integer
 import gc
 from typing import Callable
 import os
