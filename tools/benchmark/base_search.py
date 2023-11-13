@@ -40,7 +40,7 @@ class BaseSearch:
         self._result = None
 
     
-    def init_save(self, exstra_keys: dict = None):
+    def init_save(self, exstra_keys: dict = None, info_append: dict = None):
         data = load_json(self._save_path, default={})
 
         data = dict(
@@ -57,6 +57,10 @@ class BaseSearch:
         )
         if exstra_keys is not None:
             data.update(exstra_keys)
+
+        if info_append:
+            for k, v in info_append.items():
+                data["info"][k] = v
         
         if callable(self.scoring):
             data["scoring"] = self.scoring.__name__
@@ -77,7 +81,7 @@ class BaseSearch:
                 if isinstance(v, Iterable) and isinstance(data[k], Iterable):
                     data[k].extend(v)
         
-        if update_keys is not None:
+        if update_keys is not None:   
             data.update(update_keys)
 
         save_json(self._save_path, data, overwrite=True)
