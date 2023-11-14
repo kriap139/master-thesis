@@ -6,3 +6,5 @@ scipy>=1.11.3
 lightgbm[scikit-learn,pandas]>=4.1.0
 optuna>=3.4.0
 sigopt>=8.8.2
+psutil
+joblib

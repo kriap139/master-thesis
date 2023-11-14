@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1       ## Number of tasks that will be allocated
+#SBATCH -A master        # Replace with the desired account name
+#SBATCH -p normal        # Replace with the desired partition name
+
+source venv/bin/activate                # activate venv
+
+python3 ./tools/search.py

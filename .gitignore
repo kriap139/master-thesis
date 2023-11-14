@@ -2,4 +2,4 @@ venv/
 __pycache__/
 data/datasets/**/
 
-job-result.out
+*.out

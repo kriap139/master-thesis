@@ -6,3 +6,5 @@ scipy
 lightgbm[scikit-learn,pandas]
 optuna
 sigopt
+psutil
+joblib

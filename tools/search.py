@@ -3,6 +3,7 @@ import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RandomSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
 from typing import Union
+import psutil
 
 OBJECTIVES = {
         Task.BINARY: "binary",
@@ -28,6 +29,7 @@ def get_sklearn_model(dataset: Dataset, **params) -> Union[lgb.LGBMClassifier, l
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
+    print(f"CPU Cores: {psutil.cpu_count(logical=False)}, Logical Cores: {psutil.cpu_count(logical=True)}")
 
     search_space = dict(
         n_estimators=Integer(1, 500, name="n_estimators"),
