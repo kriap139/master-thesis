@@ -3,7 +3,7 @@ from .dataset import (
 ) 
 
 from .io_util import (
-    arff_to_csv, data_dir, load_arff
+    arff_to_csv, data_dir, load_arff, json_to_str
 )
 
 from .space import (
