@@ -4,7 +4,8 @@ import os
 import json
 import dataclasses
 import numpy as np
-from typing import Union
+from typing import Union, Iterable
+import csv
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -15,6 +16,33 @@ def json_serialize_unknown(o):
         return o.tolist()
     else:
         raise TypeError(f"Object of class {type(o)} is not JSON serializable")
+
+def find_dir_ver(folder: str) -> str:
+    if not os.path.exists(folder):
+        return folder
+    
+    head, tail = os.path.split(folder)
+    new_dir = os.path.join(head, f"{tail} (1)")
+
+    if not os.path.exists(new_dir):
+        return new_dir
+
+    dirs = [tup[0] for tup in os.walk(head) if tail in tup[0]]
+    for d in dirs:
+        nums.extend(re.findall(r'(\d+)', d))
+    
+    if len(nums):
+        nums.sort(reverse=True)
+        num = int(nums[0]) + 1
+        new_dir = os.path.join(head, f"{tail} ({num})")  
+    else:
+        raise RuntimeError(f"Failed to find new directory version for directory: {tail}")
+    
+    if os.path.exists(new_dir):
+        raise RuntimeError(f"Failed to find new directory version as it already exists: {new_dir}")
+    
+    return new_dir
+
 
 def find_file_ver(folder: str, name: str) -> str:
     if not os.path.exists(os.path.join(folder, name)):
@@ -52,6 +80,19 @@ def load_json(fp: str, default = None):
         with open(fp, mode='r') as f:
             return json.load(f)
     return default
+
+def save_csv(fp: str, data: Union[dict, list, Iterable[dict]], append=True):
+    mode = 'a' if append else 'w'
+    with open(fp, mode=mode) as f:
+        if isinstance(data, Iterable):
+            csv.DictWriter(f).writerows(data)
+        elif type(data) == dict:
+            csv.DictWriter(f).writerow(data)
+        elif type(data) == list:
+            csv.writer()
+
+def load_csv(fp: str, default = None) -> pd.DataFrame:
+    return pd.read_csv(fp)
 
 def data_dir(add: str = None) -> str:
     data_dir = os.path.join(os.getcwd(), "data")

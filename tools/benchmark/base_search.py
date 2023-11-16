@@ -1,4 +1,4 @@
-from Util import Dataset
+from Util import Dataset, find_dir_ver, load_csv, save_csv, Integer, Real, Categorical, find_file_ver
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
@@ -6,16 +6,25 @@ from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold, Re
 from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Sequence, Union, Optional, Iterable
 from Util.dataset import Dataset, Builtin, Task, TY_CV
-from Util.io_util import load_json, save_json, data_dir
+from Util.io_util import load_json, save_json, data_dir, json_to_str
 import gc
 from typing import Callable
 import os
 from datetime import datetime
 import logging
+from dataclasses import dataclass
+import time
+
+class InnerResult:
+    def __init__(self, best_params: dict, best_score: float, best_model):
+        self.best_params = best_params
+        self.best_score = best_score
+        self.best_model = best_model
+
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_path=None):
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None):
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
@@ -25,88 +34,101 @@ class BaseSearch:
         self.scoring = scoring
         self._model = model
 
-        self._save_timestamp = datetime.now().strftime("%d-%m-%Y@%H:%M:%S")
-        self._save_path = save_path
-        self._save = save_path is not None
-        
-        if self._save_path is not None and os.path.exists(self._save_path):
-            logging.debug("Save file already exists!")
+        self._save_dir = save_dir
+        self._result_fp = None
+        self._history_fp = None
+        self._models_dir = None
 
-        # save file data
-        self._params = []
-        self._train_scores = []
-        self._test_scores = []
+        if self._save_dir is not None:
+            log = os.path.exists(self._save_dir)
+            self.__init_save_dir()
+            if log:
+                logging.debug(f"Save directory already exists, saving to alternative directory ({self._save_dir}) instead!")
+
         self._result = None
-
     
-    def init_save(self, exstra_keys: dict = None, info_append: dict = None):
-        data = load_json(self._save_path, default={})
+    def __init_save_dir(self):
+        if os.path.exists(self._save_dir):
+            self._save_dir = find_dir_ver(self._save_dir)
+        self._history_fp = os.path.join(self._save_dir, "history.csv")
+        self._result_fp = os.path.join(self._save_dir, "result.json")
+        self._models_dir = os.path.join(self._models_dir, "models")
+    
+    def init_save(self, search_space: dict, exstra_keys: dict = None, info_append: dict = None):
+        data = load_json(self._save_dir, default={})
 
         data = dict(
             info=dict(
+                model=self._model.__name__,
                 dataset=self.train_data.name,
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
                 cv=Dataset.get_cv_info(self.cv) if self.cv is not None else None,
-                inner_cv=Dataset.get_cv_info(self.inner_cv) if self.inner_cv is not None else None
-            ),
-            params=[],
-            train_scores=[],
-            test_scores=[]
+                inner_cv=Dataset.get_cv_info(self.inner_cv) if self.inner_cv is not None else None,
+                method_params=self._get_search_method_info()
+            )
         )
-        if exstra_keys is not None:
-            data.update(exstra_keys)
 
-        if info_append:
-            for k, v in info_append.items():
-                data["info"][k] = v
-        
         if callable(self.scoring):
             data["scoring"] = self.scoring.__name__
         else:
             data["scoring"] = self.scoring
+        save_json(self._save_dir, data)
 
-        save_json(self._save_path, data)
+        history_head = [name for name, v in search_space.items()]
+        history_head.extend(("train_score", "test_score", "time"))
+        save_csv(self._history_fp, history_head)
+
+
+    def update_history(self, params: dict, train_score: float, test_score: float, time: float):
+        row = params.copy()
+        row["train_score"] = train_score
+        row["test:score"] = test_score
+        row["time"] = time
     
-    def update_save(self, append_keys: dict = None, replace_keys: dict = None, update_keys: dict = None):
-        data = load_json(self._save_path, default={})
+    def save_model(self, model, outer_id: int = None, inner_id: int = None):
+        if inner_id is None and outer_id is None:
+            raise RuntimeError(f"Both outer_id and inner_id cant't be None")
+        elif inner_id is None:
+            name = f"model_outer{outer_id}.txt"
+        elif outer_id is None:
+            name = f"model_inner{inner_id}.txt"
+        else:
+            name = f"model_inner{inner_id}_outer{outer_id}.txt"
+
+        fp = os.path.join(self._models_dir, name)
+        if os.path.exists(fp):
+            fp = find_file_ver(self._models_dir, name)
+            logging.warn(f"Selected model save name ({name})  exists, using new name: {os.path.basename(fp)}")
+
+        if hasattr(model, "save_model"):
+            model.save_model(fp)
+        elif hasattr(model, "booster_") and hasattr(model.booster_, "save_model"):
+            model.booster_.model.save_model(fp)
+        else:
+            raise RuntimeError(f"Unable to save model ({type(model)}) without a save_model method!")
+                
+    
+    def _calc_result(self):
+        data = load_csv(self._history_fp)
+
+        train_scores = data["train_score"]
+        test_scores = data["test_score"]
+        times = data["time"]
+        time = np.sum(times)
         
-        if replace_keys is not None:
-            for k, v in replace_keys.items():
-                data[k] = v
-        
-        if append_keys is not None:
-            for k, v in append_keys.items():
-                if isinstance(v, Iterable) and isinstance(data[k], Iterable):
-                    data[k].extend(v)
-        
-        if update_keys is not None:   
-            data.update(update_keys)
-
-        save_json(self._save_path, data, overwrite=True)
-    
-    def _add_iteration_stats(self, params: dict, train_score: float, test_score: float):
-        self._params.append(params)
-        self._train_scores.append(train_score)
-        self._test_scores.append(test_score)
-    
-    def _clear_iterations_stats_cache(self):
-        self._params.clear()
-        self._test_scores.clear()
-        self._train_scores.clear()
-    
-    def _flush_iterations_stats(self, append_keys: dict = None, replace_keys: dict = None, update_keys: dict = None, clear_cache=True):
-        if append_keys is None:
-            append_keys = {}
-
-        append_keys["params"] = self._params
-        append_keys["train_scores"] = self._train_scores
-        append_keys["test_scores"] = self._test_scores
-
-        self.update_save(append_keys, replace_keys, update_keys)
-
-        if clear_cache:
-            self._clear_iterations_stats_cache()
+        self.result = dict(
+            mean_train_acc=np.mean(train_scores),
+            std_train_acc=np.std(train_scores),
+            mean_test_acc=np.mean(test_scores),
+            std_test_acc=np.std(test_scores),
+            time=time,
+            mean_fold_time=np.mean(times),
+            std_fold_time=np.std(time)
+        )
+        _data = load_json(self._result_fp, default={})
+        _data["result"] = self.result
+        save_json(self._result_fp, _data, overwrite=True)
     
     def score(self, model, x_test: pd.DataFrame, y_test: pd.DataFrame) -> float:
         if self.scoring is not None:
@@ -123,19 +145,43 @@ class BaseSearch:
                 test_data = self.train_data.load_test_dataset()
         else:
             return
-        
         model = lgb.LGBMClassifier(**params, **fixed_params)
         model.fit(X=self.train_data.x, y=self.train_data.y, categorical_feature=self.train_data.cat_features)
         return self.score(model, self.test_data.x, self.test_data.y)
     
-    def _set_result(self, time: float):
-        self.result = dict(
-            mean_train_acc=np.mean(self._train_scores),
-            std_train_acc=np.std(self._train_scores),
-            mean_test_acc=np.mean(self._test_scores),
-            std_test_acc=np.std(self._test_scores),
-            time=time
-        )
+    def _get_search_method_info(self) -> dict:
+        return {}
+    
+    def _inner_search(self, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        raise RuntimeError("Unimplemented")
+    
+    def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
+        self.init_save()
+        
+        if not self.train_data.has_saved_folds():
+            print(f"Saveing folds for dataset {self.train_data.name}")
+            self.train_data.save_folds(self.cv)
+        
+        folds = self.train_data.load_saved_folds()
+        print("starting search")
+        start = 0
 
-    def search(self, params: dict, fixed_params: dict):
-        raise RuntimeError("Not implemented")
+        for i, (train_idx, test_idx) in enumerate(folds):
+            start = time.perf_counter()
+
+            x_train, x_test = self.train_data.x.iloc[train_idx, :], self.train_data.x.iloc[test_idx, :]
+            y_train, y_test = self.train_data.y[train_idx], self.train_data.y[test_idx]
+
+            result = self._inner_search(x_train, y_train, search_space, fixed_params)
+            acc = self.score(result.best_model, x_test, y_test)
+            end = start - time.perf_counter()
+
+            self.update_history(result.best_params, result.best_score, acc, end)
+            self.save_model(result.best_model, outer_id=i)
+            print(f"{i}: best_score={round(search.best_score_, 4)}, test_score={round(acc, 4)}, params={json_to_str(search.best_params_, indent=None)}")
+
+        end = start - time.perf_counter()
+        self._calc_result(end)
+        return self
+
+

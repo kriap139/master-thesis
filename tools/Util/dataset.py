@@ -182,7 +182,7 @@ class Dataset(DatasetInfo):
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
     
     def load_test_dataset(self) -> 'Dataset':
-        return Dataset(self.get_builtin(), is_test=True)
+        return Dataset(self.get_builtin(), is_test=True).load()
     
     def load(self) -> 'Dataset':
         data = self.__load()
