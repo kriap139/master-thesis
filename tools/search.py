@@ -5,8 +5,6 @@ from benchmark import BaseSearch, RandomSearch, RepeatedStratifiedKFold, Repeate
 from typing import Union
 import psutil
 
-SEARCH_N_JOBS = 4
-
 OBJECTIVES = {
         Task.BINARY: "binary",
         Task.MULTICLASS: "softmax",
@@ -31,8 +29,11 @@ def get_sklearn_model(dataset: Dataset, **params) -> Union[lgb.LGBMClassifier, l
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
+
+    SEARCH_N_JOBS = 4
     cpu_cores = psutil.cpu_count(logical=False)
-    print(f"CPU Cores: {cpu_cores}, Logical Cores: {psutil.cpu_count(logical=True)}")
+    n_jobs=int(float(cpu_cores) / SEARCH_N_JOBS)
+    print(f"CPU Cores: {cpu_cores}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={SEARCH_N_JOBS}")
 
     search_space = dict(
         n_estimators=Integer(1, 500, name="n_estimators"),
@@ -52,18 +53,15 @@ if __name__ == "__main__":
     fixed_params = dict(
         #objective=OBJECTIVES[dataset.get_builtin()],
         #metric=METRICS[dataset.get_builtin()]
-        n_jobs=int(float(cpu_cores) / SEARCH_N_JOBS),
         categorical_feature=dataset.cat_features,
     )
 
     tuner = RandomSearch
-    save_file = f"{tuner.__name__}[{dataset.name}].json"
-    save_path = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
-
-    model = get_sklearn_model(dataset, verbose=-1)
+    save_dir = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
+    model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
 
     cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=10)
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=None, cv=cv, inner_cv=None, scoring=None, save_path=save_path)
+                  n_jobs=SEARCH_N_JOBS, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir)
 
     tuner.search(search_space, fixed_params)

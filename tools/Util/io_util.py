@@ -72,7 +72,7 @@ def save_json(fp: str, data: Union[dict, list], indent: int = 3, overwrite=False
         json.dump(data, f, indent=indent, default=json_serialize_unknown)
 
 def json_to_str(data: Union[dict, list], indent=3) -> str:
-    return json.dumps(data, indent=indent)
+    return json.dumps(data, default=json_serialize_unknown, indent=indent)
     
 
 def load_json(fp: str, default = None):
@@ -81,15 +81,17 @@ def load_json(fp: str, default = None):
             return json.load(f)
     return default
 
-def save_csv(fp: str, data: Union[dict, list, Iterable[dict]], append=True):
-    mode = 'a' if append else 'w'
+def save_csv(fp: str, field_names: Iterable[str], data: Union[dict, Iterable[dict]] = None):
+    mode = 'a' if os.path.exists(fp) else 'w'
+
     with open(fp, mode=mode) as f:
-        if isinstance(data, Iterable):
-            csv.DictWriter(f).writerows(data)
-        elif type(data) == dict:
-            csv.DictWriter(f).writerow(data)
-        elif type(data) == list:
-            csv.writer()
+        if mode == 'w':
+            csv.DictWriter(f, field_names).writeheader()
+        
+        if data is not None and type(data) == dict:
+            csv.DictWriter(f, field_names).writerow(data)
+        elif data is not None and isinstance(data, Iterable):
+            csv.DictWriter(f, field_names).writerows(data)
 
 def load_csv(fp: str, default = None) -> pd.DataFrame:
     return pd.read_csv(fp)
