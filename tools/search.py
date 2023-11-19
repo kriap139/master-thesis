@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     SEARCH_N_JOBS = 4
     cpu_cores = psutil.cpu_count(logical=False)
-    n_jobs=int(float(cpu_cores) / SEARCH_N_JOBS)
+    n_jobs=int(float(cpu_cores) / SEARCH_N_JOBS) if SEARCH_N_JOBS is not None else None
     print(f"CPU Cores: {cpu_cores}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={SEARCH_N_JOBS}")
 
     search_space = dict(
