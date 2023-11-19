@@ -14,6 +14,7 @@ from datetime import datetime
 import logging
 from dataclasses import dataclass
 import time
+from scipy.stats import mode
 
 class InnerResult:
     def __init__(self, best_params: dict, best_score: float, best_model):
@@ -132,8 +133,16 @@ class BaseSearch:
         self.result = dict(
             mean_train_acc=np.mean(train_scores),
             std_train_acc=np.std(train_scores),
+            min_train_acc=np.min(train_scores),
+            max_train_acc=np.max(train_scores),
+            mode_train_acc=mode(train_scores),
+            meadian_train_acc=np.median(train_scores),
             mean_test_acc=np.mean(test_scores),
             std_test_acc=np.std(test_scores),
+            min_test_acc=np.min(test_scores),
+            max_test_acc=np.max(test_scores),
+            mode_test_acc=mode(test_scores),
+            meadian_test_acc=np.median(test_scores),
             time=time,
             mean_fold_time=np.mean(times),
             std_fold_time=np.std(time)
