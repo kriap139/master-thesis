@@ -176,7 +176,6 @@ class BaseSearch:
         
         folds = self.train_data.load_saved_folds()
         print("starting search")
-        start = 0
 
         for i, (train_idx, test_idx) in enumerate(folds):
             start = time.perf_counter()
@@ -192,8 +191,7 @@ class BaseSearch:
             self.save_model(result.best_model, outer_id=i)
             print(f"{i}: best_score={round(result.best_score, 4)}, test_score={round(acc, 4)}, params={json_to_str(result.best_params, indent=None)}")
 
-        end = time.perf_counter() - start
-        self._calc_result(end)
+        self._calc_result()
         return self
 
 
