@@ -1,8 +1,11 @@
 #!/bin/bash
 
-#SBATCH --ntasks=1       ## Number of tasks that will be allocated
+#SBATCH -N 1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
 #SBATCH -A master        # Replace with the desired account name
 #SBATCH -p normal        # Replace with the desired partition name
+
 
 source venv/bin/activate                # activate venv
 
