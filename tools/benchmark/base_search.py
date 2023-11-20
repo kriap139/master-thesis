@@ -135,15 +135,23 @@ class BaseSearch:
             model.booster_.save_model(fp)
         else:
             raise RuntimeError(f"Unable to save model ({type(model)}) without a save_model method!")
-                
     
+    @classmethod
+    def time_to_str(cls, secs: float) -> str:
+        hours = round(secs) // 3600
+        secs = round(secs) % 3600
+        return f"{hours}:{secs}"
+
     def _calc_result(self):
         data = load_csv(self._history_fp)
 
         train_scores = data["train_score"]
         test_scores = data["test_score"]
         times = data["time"]
+
         time = np.sum(times)
+        mean_fold_time=np.mean(times)
+        std_fold_time=np.std(times)
         
         self.result = dict(
             mean_train_acc=np.mean(train_scores),
@@ -159,8 +167,11 @@ class BaseSearch:
             mode_test_acc=mode(test_scores)[0][0],
             meadian_test_acc=np.median(test_scores),
             time=time,
-            mean_fold_time=np.mean(times),
-            std_fold_time=np.std(times)
+            time_str=self.time_to_str(time),
+            mean_fold_time=mean_fold_time,
+            mean_fold_time_str=self.time_to_str(mean_fold_time),
+            std_fold_time=std_fold_time,
+            std_fold_time_str=self.time_to_str(std_fold_time)
         )
         _data = load_json(self._result_fp, default={})
         _data["result"] = self.result
