@@ -150,17 +150,17 @@ class BaseSearch:
             std_train_acc=np.std(train_scores),
             min_train_acc=np.min(train_scores),
             max_train_acc=np.max(train_scores),
-            mode_train_acc=mode(train_scores),
+            mode_train_acc=mode(train_scores)[0][0],
             meadian_train_acc=np.median(train_scores),
             mean_test_acc=np.mean(test_scores),
             std_test_acc=np.std(test_scores),
             min_test_acc=np.min(test_scores),
             max_test_acc=np.max(test_scores),
-            mode_test_acc=mode(test_scores),
+            mode_test_acc=mode(test_scores)[0][0],
             meadian_test_acc=np.median(test_scores),
             time=time,
             mean_fold_time=np.mean(times),
-            std_fold_time=np.std(time)
+            std_fold_time=np.std(times)
         )
         _data = load_json(self._result_fp, default={})
         _data["result"] = self.result
