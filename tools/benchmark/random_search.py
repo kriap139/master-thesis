@@ -15,4 +15,4 @@ class RandomSearch(BaseSearch):
     def _inner_search(self, search_id: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = RandomizedSearchCV(self._model, search_space, n_iter=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, refit=True)
         results = search.fit(x_train, y_train, **fixed_params)
-        return InnerResult(results.best_params_, results.best_score_, results.best_estimator_)
+        return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)

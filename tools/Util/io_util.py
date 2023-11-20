@@ -6,6 +6,8 @@ import dataclasses
 import numpy as np
 from typing import Union, Iterable
 import csv
+import re
+from .space import Integer, Real, Categorical
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -14,8 +16,20 @@ def json_serialize_unknown(o):
         return dataclasses.asdict(o)
     elif isinstance(o, np.ndarray):
         return o.tolist()
+    elif isinstance(o, Integer):
+         return dict(
+                high=o.high, low=o.low, base=o.base, prior=o.prior, 
+                transform=o.transform_
+            )
+    elif isinstance(o, Real):
+        return dict(
+            high=o.high, low=o.low, base=o.base, prior=o.prior, 
+            transform=o.transform_
+        )
+    elif isinstance(o, Categorical):
+        return dict(categories=o.categories, prior=o.prior, transform=o.transform_)
     else:
-        raise TypeError(f"Object of class {type(o)} is not JSON serializable")
+        raise TypeError(f"Object of class {type(o)} is not JSON serializable: {o}")
 
 def find_dir_ver(folder: str) -> str:
     if not os.path.exists(folder):
@@ -28,6 +42,7 @@ def find_dir_ver(folder: str) -> str:
         return new_dir
 
     dirs = [tup[0] for tup in os.walk(head) if tail in tup[0]]
+    nums = []
     for d in dirs:
         nums.extend(re.findall(r'(\d+)', d))
     
