@@ -283,3 +283,13 @@ class Dataset(DatasetInfo):
             info["n_folds"] = n_folds
         
         return info
+    
+    @classmethod
+    def merge_train_test(cls, d: Builtin):
+        dataset = Dataset(d)
+        train = dataset.__load()
+        test = dataset.__load(force_load_test=True)
+
+        joined = pd.concat([train, test], ignore_index=True)
+        path = os.path.join(os.path.dirname(dataset.train_path), f"{d.info().name}.csv")
+        joined.to_csv(path, index=False)
