@@ -2,5 +2,6 @@ venv/
 __pycache__/
 data/datasets/**/
 data/test_results
+data/test_archive
 
 *.out
