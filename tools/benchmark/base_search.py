@@ -25,7 +25,7 @@ class InnerResult:
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None):
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None, save_inner_history=True):
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
@@ -38,8 +38,11 @@ class BaseSearch:
         self._save_dir = save_dir
         self._result_fp = None
         self._history_fp = None
+        self._inner_history_fp = None
         self._models_dir = None
         self.history_head = None
+        self.inner_history_head = None
+        self.save_inner_history = save_inner_history
 
         if self._save_dir is None:
             raise RuntimeError("save_dir argument is required!")
@@ -55,6 +58,7 @@ class BaseSearch:
         if os.path.exists(self._save_dir):
             self._save_dir = find_dir_ver(self._save_dir)
         self._history_fp = os.path.join(self._save_dir, "history.csv")
+        self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
         self._result_fp = os.path.join(self._save_dir, "result.json")
         self._models_dir = os.path.join(self._save_dir, "models")
     
@@ -93,25 +97,26 @@ class BaseSearch:
             data["scoring"] = self.scoring
         save_json(self._result_fp, data)
 
-        self.history_head = ["outer_iter", "inner_iter"]
+        self.history_head = ["inner_index"]
         self.history_head.extend([name for name, v in search_space.items()])
         self.history_head.extend(("train_score", "test_score", "time"))
         save_csv(self._history_fp, self.history_head)
+
+        if self.save_inner_history:
+            self.inner_history_head = self._get_inner_history_head(search_space)
+            save_csv(self._inner_history_fp, self.inner_history_head)
+    
+    def _get_inner_history_head(self, search_space: dict) -> list:
+        return []
     
     def _update_info(self, update_keys: dict):
          data = load_json(self._result_fp, default=dict(info={}))
          data["info"].update(update_keys)
          save_json(self._result_fp, data)
-    
-    def extend_history(self, outer_id: Iterable[int], inner_id: Iterable[int], params: Iterable[dict], train_score: Iterable[float], test_score: Iterable[float], time: Iterable[float]):
-        rows = zip(outer_id, inner_id, params, train_score, test_score, time, strict=True)
-        save_csv(self._history_fp, self.history_head, row)
 
-    def update_history(self, outer_id: int, inner_id: int, params: dict, train_score: float, test_score: float, time: float):
-        row = params.copy()
-        row["train_score"] = train_score
-        row["test_score"] = test_score
-        row["time"] = time
+    def update_history(self, inner_index: int, params: dict, train_score: float, test_score: float, time: float):
+        row = dict(inner_index=inner_index, train_score=train_score, test_score=test_score, time=time)
+        row.update(params)
         save_csv(self._history_fp, self.history_head, row)
     
     def save_model(self, model, outer_id: int = None, inner_id: int = None):
@@ -226,7 +231,7 @@ class BaseSearch:
             acc = self.score(result.best_model, x_test, y_test)
             end = time.perf_counter() - start
 
-            self.update_history(i, result.best_index, result.best_params, result.best_score, acc, end)
+            self.update_history(result.best_index, result.best_params, result.best_score, acc, end)
             self.save_model(result.best_model, outer_id=i)
             print(f"{i}: best_score={round(result.best_score, 4)}, test_score={round(acc, 4)}, params={json_to_str(result.best_params, indent=None)}")
 

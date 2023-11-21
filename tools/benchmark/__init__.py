@@ -1,2 +1,4 @@
 from .base_search import BaseSearch, KFold, StratifiedKFold, RepeatedKFold, RepeatedStratifiedKFold
-from .random_search import RandomSearch
+from .sklearn_search import RandomSearch, GridSearch
+from .sequd_search import SeqUDSearch
+from .optuna_search import OptunaSearch
