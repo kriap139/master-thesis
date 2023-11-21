@@ -9,4 +9,5 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method RandomSearch --max-lgb-jobs 10 --dataset okcupid_stem
+python3 ./tools/search.py --method SeqUDSearch --max_lgb_jobs 10 --dataset okcupid_stem
+
