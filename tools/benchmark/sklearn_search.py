@@ -18,7 +18,7 @@ class SklearnSearch(BaseSearch):
         head.append("train_score")
         return head
     
-    def __update_inner_history(self, search_iter: int, clf: GridSearchCV):
+    def _update_inner_history(self, search_iter: int, clf: GridSearchCV):
         params = clf.cv_results_["params"].to_numpy()
         train_scores = clf.cv_results_["mean_test_score"].to_numpy()
         rows = [
@@ -37,7 +37,7 @@ class RandomSearch(SklearnSearch):
         results = search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
-            self.__update_inner_history(search_iter, search)
+            self._update_inner_history(search_iter, search)
 
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)
 
@@ -51,6 +51,6 @@ class GridSearch(SklearnSearch):
         results = search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
-            self.__update_inner_history(search_iter, search)
+            self._update_inner_history(search_iter, search)
 
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)
