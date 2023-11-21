@@ -8,3 +8,4 @@ optuna
 sigopt
 psutil
 joblib
+sequd @ git+https://github.com/kriap139/SeqUD.git
