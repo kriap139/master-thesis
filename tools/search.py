@@ -39,14 +39,21 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 def build_cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch"),
+        choices=("RandomSearch", "SeqUDSearch", "GridSearch"),
         type=str,
-        default=""
+        required=True
+    )
+    parser.add_argument("--dataset",
+        choices=tuple(b.name.lower() for b in Builtin), 
+        required=True
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
+
+    args = parser.parse_args()
+    args.dataset = Builtin[args.dataset.upper()]
     
-    return parser.parse_args()
+    return args
 
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
@@ -56,16 +63,26 @@ if __name__ == "__main__":
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
     print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
 
-    search_space = dict(
-        n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
-        learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
-        max_depth=Integer(0, 30, name="max_depth"),
-        num_leaves=Integer(10, 300, name="num_leaves", prior="log-uniform"),
-        min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf"),
-        feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
-    )
+    if args.method == "GridSearch":
+        search_space = dict(
+            n_estimators=[50, 100, 200, 500],
+            learning_rate=[0.001, 0.01, 0.05, 0.1],
+            max_depth=[0, 5, 10, 20],
+            num_leaves=[20, 60, 130, 200],
+            min_data_in_leaf=[0, 10, 20, 30],
+            feature_fraction=[0.1, 0.35, 0.7, 1.0]
+        )
+    else:
+        search_space = dict(
+            n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
+            learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
+            max_depth=Integer(0, 30, name="max_depth"),
+            num_leaves=Integer(10, 300, name="num_leaves", prior="log-uniform"),
+            min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf"),
+            feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
+        )
 
-    dataset = Dataset(Builtin.OKCUPID_STEM).load()
+    dataset = Dataset(args.dataset).load()
     #print(dataset.x.info())
     print(f"column names: {list(dataset.x.columns)}")
     print(f"cat_features: {dataset.cat_features}")
@@ -85,5 +102,5 @@ if __name__ == "__main__":
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
                   n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir)
 
-    print(f"Results sved to: {tuner._save_dir}")
+    print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
