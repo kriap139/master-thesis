@@ -37,7 +37,7 @@ class RandomSearch(SklearnSearch):
         results = search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
-            self.__save_history(search_iter, search)
+            self.__update_inner_history(search_iter, search)
 
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)
 
@@ -51,6 +51,6 @@ class GridSearch(SklearnSearch):
         results = search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
-            self.__save_history(search_iter, search)
+            self.__update_inner_history(search_iter, search)
 
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)

@@ -291,5 +291,5 @@ class Dataset(DatasetInfo):
         test = dataset.__load(force_load_test=True)
 
         joined = pd.concat([train, test], ignore_index=True)
-        path = os.path.join(os.path.dirname(dataset.train_path), f"{d.info().name}.csv")
+        path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
         joined.to_csv(path, index=False)
