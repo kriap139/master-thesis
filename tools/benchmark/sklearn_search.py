@@ -19,8 +19,8 @@ class SklearnSearch(BaseSearch):
         return head
     
     def _update_inner_history(self, search_iter: int, clf: GridSearchCV):
-        params = clf.cv_results_["params"].to_numpy()
-        train_scores = clf.cv_results_["mean_test_score"].to_numpy()
+        params = clf.cv_results_["params"]
+        train_scores = clf.cv_results_["mean_test_score"]
         rows = [
             dict(outer_iter=search_iter, param=param, train_score=score) 
             for param, score in  zip(params, train_scores, strict=True)
