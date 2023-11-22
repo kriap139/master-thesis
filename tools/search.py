@@ -98,7 +98,11 @@ if __name__ == "__main__":
     save_dir = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
 
-    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=10)
+    if dataset.task == Task.REGRESSION:
+        cv = RepeatedKFold(n_splits=5, n_repeats=10, random_state=10)
+    else:
+        cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=10)
+        
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
                   n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir)
 
