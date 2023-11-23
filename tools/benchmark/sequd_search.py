@@ -24,8 +24,8 @@ class SeqUDSearch(BaseSearch):
     
     def _get_inner_history_head(self, search_space: dict) -> list:
         head = ["outer_iter"]
-        head.extend([f"{name}_UD" for name in search_space.keys()])
-        head.extend([name for name in search_space.keys()])
+        for name in search_space.keys():
+            head.extend((name, f"{name}_UD"))
         head.extend(("score", "stage"))
         return head
     
@@ -49,7 +49,7 @@ class SeqUDSearch(BaseSearch):
         return space
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        search = SeqUD(search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, self.scoring, refit=True, verbose=True)
+        search = SeqUD(search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, self.scoring, refit=True, verbose=2)
         search.fit(x_train, y_train, fixed_params)
 
         if self.save_inner_history:
