@@ -143,9 +143,13 @@ class BaseSearch:
     
     @classmethod
     def time_to_str(cls, secs: float) -> str:
-        hours = round(secs) // 3600
-        secs = round(secs) % 3600
-        return f"{hours}:{secs}"
+        days, r = divmod(secs, 86400)
+        hours, r = divmod(r, 3600)
+        minutes, secs = divmod(r, 60)
+        if days == 0:
+            return "{:02}:{:02}:{:02}".format(hours, minutes, secs)
+        else:
+            return "{:02}:{:02}:{:02}:{:02}".format(days, hours, minutes, secs)
 
     def _calc_result(self):
         data = load_csv(self._history_fp)
@@ -172,10 +176,10 @@ class BaseSearch:
             mode_test_acc=mode(test_scores)[0][0],
             meadian_test_acc=np.median(test_scores),
             time=time,
-            time_str=self.time_to_str(time),
             mean_fold_time=mean_fold_time,
-            mean_fold_time_str=self.time_to_str(mean_fold_time),
             std_fold_time=std_fold_time,
+            time_str=self.time_to_str(time),
+            mean_fold_time_str=self.time_to_str(mean_fold_time),
             std_fold_time_str=self.time_to_str(std_fold_time)
         )
         _data = load_json(self._result_fp, default={})
