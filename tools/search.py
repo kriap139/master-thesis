@@ -6,9 +6,11 @@ from typing import Union
 import benchmark
 import psutil
 import argparse
+from sklearn.model_selection import ParameterGrid
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
+
 
 OBJECTIVES = {
         Task.BINARY: "binary",
@@ -65,13 +67,12 @@ if __name__ == "__main__":
 
     if args.method == "GridSearch":
         search_space = dict(
-            n_estimators=[50, 100, 200, 500],
-            learning_rate=[0.001, 0.01, 0.05, 0.1],
-            max_depth=[0, 5, 10, 20],
-            num_leaves=[20, 60, 130, 200],
-            min_data_in_leaf=[0, 10, 20, 30],
-            feature_fraction=[0.1, 0.35, 0.7, 1.0]
+            n_estimators=[50, 100, 200, 350, 500],
+            learning_rate=[0.001, 0.01, 0.05, 0.1, 0.02],
+            max_depth=[0, 5, 10, 20, 25],
+            num_leaves=[20, 60, 130, 200, 250],
         )
+        print(f"GridSearch runs: {len(ParameterGrid(search_space))}")
     else:
         search_space = dict(
             n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
