@@ -143,6 +143,7 @@ class BaseSearch:
     
     @classmethod
     def time_to_str(cls, secs: float) -> str:
+        secs = int(secs)
         days, r = divmod(secs, 86400)
         hours, r = divmod(r, 3600)
         minutes, secs = divmod(r, 60)
