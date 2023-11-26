@@ -187,11 +187,19 @@ class Dataset(DatasetInfo):
     def load(self) -> 'Dataset':
         data = self.__load()
         shape = data.shape
+
         self.x, self.y = extract_labels(data, label_column=self.label_column)
         self.cat_features = self.x.select_dtypes('object').columns.tolist()
-
+        
         self.y = self.y.to_numpy()
         self.y.shape = (-1,)
+
+        # make acsi dataset into a binary classification problem!
+        if self.name == "acsi":
+            self.y[self.y <= 50_000] = 0
+            self.y[self.y > 50_000] = 1
+            values, counts = np.unique(self.y, return_counts=True)
+            print(f"acsi value counts: values={values}, counts={counts}")
 
         print(f"data={shape}, x={self.x.shape}, y={self.y.shape}")
         assert self.y.shape == (shape[0],)
