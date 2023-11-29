@@ -19,8 +19,8 @@ from optuna.samplers import TPESampler
         
 class OptunaSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, save_inner_history=True):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save_dir, save_inner_history)
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, save_inner_history=True, max_outer_iter: int = None):
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save_dir, save_inner_history, max_outer_iter)
     
     def _get_inner_history_head(self, search_space: dict) -> list:
         head = ["outer_iter"]

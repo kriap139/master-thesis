@@ -34,6 +34,17 @@ def get_sklearn_model(dataset: Dataset, **params) -> Union[lgb.LGBMClassifier, l
         elif dataset.task == Task.REGRESSION:
             return lgb.LGBMRegressor(**params)
 
+def get_cv(dataset: Dataset, no_repeats: bool, n_splits=5, n_repeats=10, random_state=10, shuffle=False):
+    if dataset.task == Task.REGRESSION:
+        if no_repeats:
+            return KFold(n_splits=n_splits, random_state=random_state if shuffle else None, shuffle=shuffle)
+        return RepeatedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+        
+    else:
+        if no_repeats:
+            return StratifiedKFold(n_splits=n_splits, random_state=random_state if shuffle else None, shuffle=shuffle)
+        return RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+
 def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
     n_jobs = int(float(CPU_CORES) / search_n_jobs)
     return min(min(n_jobs, CPU_CORES), max_lgb_jobs)
@@ -51,6 +62,8 @@ def build_cli() -> argparse.Namespace:
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
+    parser.add_argument("--no-repeats", action='store_true')
+    parser.add_argument("--max-outer-iter", type=int, default=None)
 
     args = parser.parse_args()
     args.dataset = Builtin[args.dataset.upper()]
@@ -98,14 +111,10 @@ if __name__ == "__main__":
     tuner = getattr(benchmark, args.method)
     save_dir = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
-
-    if dataset.task == Task.REGRESSION:
-        cv = RepeatedKFold(n_splits=5, n_repeats=10, random_state=10)
-    else:
-        cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=10)
+    cv = get_cv(dataset, args.no_repeats)
         
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir)
+                  n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir, max_outer_iter=args.max_outer_iter)
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)

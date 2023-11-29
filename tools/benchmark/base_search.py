@@ -15,6 +15,7 @@ import logging
 from dataclasses import dataclass
 import time
 from scipy.stats import mode
+import sys
 
 class InnerResult:
     def __init__(self, best_index: int, best_params: dict, best_score: float, best_model):
@@ -25,11 +26,12 @@ class InnerResult:
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None, save_inner_history=True):
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None, save_inner_history=True, max_outer_iter: int = None):
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
         self.n_jobs = n_jobs
+        self.max_outer_iter = max_outer_iter
         self.cv = cv
         self.inner_cv = inner_cv
         self.scoring = scoring
@@ -43,6 +45,9 @@ class BaseSearch:
         self.history_head = None
         self.inner_history_head = None
         self.save_inner_history = save_inner_history
+
+        if self.max_outer_iter is None:
+            self.max_outer_iter = sys.maxsize
 
         if self._save_dir is None:
             raise RuntimeError("save_dir argument is required!")
@@ -85,6 +90,7 @@ class BaseSearch:
                 dataset=self.train_data.name,
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
+                max_outer_iter=self.max_outer_iter if (self.max_outer_iter != sys.maxsize) else None,
                 cv=Dataset.get_cv_info(self.cv) if self.cv is not None else None,
                 inner_cv=Dataset.get_cv_info(self.inner_cv) if self.inner_cv is not None else None,
                 method_params=self._get_search_method_info()
@@ -194,7 +200,7 @@ class BaseSearch:
         elif hasattr(model, "score"):
             return model.score(x_test, y_test)
         else:
-            raise ValueError("No valid scoring function prestent")
+            raise ValueError("No valid scoring function present")
 
     def test_model(self, params: dict, fixed_params: dict):
         if self.train_data.has_test_set():
@@ -222,11 +228,18 @@ class BaseSearch:
             print(f"Saveing folds for dataset {self.train_data.name}")
             self.train_data.save_folds(self.cv)
         
-        folds = self.train_data.load_saved_folds()
+        data = self.train_data.load_saved_folds_file()
+        folds = data["folds"]
+        assert data["info"] == Dataset.get_cv_info(self.cv)
+        
         search_space = self._encode_search_space(search_space)
         print("starting search")
 
         for i, (train_idx, test_idx) in enumerate(folds):
+            if i > self.max_outer_iter:
+                print(f"Max number of outer fold iterations reached ({self.max_outer_iter}), terminating!")
+                break
+
             start = time.perf_counter()
 
             x_train, x_test = self.train_data.x.iloc[train_idx, :], self.train_data.x.iloc[test_idx, :]
