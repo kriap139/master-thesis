@@ -183,7 +183,6 @@ class Dataset(DatasetInfo):
                 n_cols = get_n_csv_columns(self.train_path)
                 head = tuple(range(n_cols))
                 data = pd.read_csv(path, names=head) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column], names=head)
-                print(f"column names: {list(data.columns)}")
                 return data
         elif ext.strip() == ".arff":
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
