@@ -3,7 +3,7 @@ from typing import Tuple, Union, Optional
 import pandas as pd
 import os
 import subprocess
-from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json
+from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json, has_csv_header, get_n_csv_columns
 import lightgbm as lgb
 import gc
 import logging
@@ -177,7 +177,14 @@ class Dataset(DatasetInfo):
         fn, ext = os.path.splitext(os.path.basename(path))
 
         if ext.strip() == ".csv":
-            return pd.read_csv(path) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column])
+            if has_csv_header(self.test_path):
+                return pd.read_csv(path) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column])
+            else:
+                n_cols = get_n_csv_columns(self.train_path)
+                head = tuple(range(n_cols))
+                data = pd.read_csv(path, names=head) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column], names=head)
+                print(f"column names: {list(data.columns)}")
+                return data
         elif ext.strip() == ".arff":
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
     

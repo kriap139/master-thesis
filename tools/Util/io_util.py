@@ -111,11 +111,20 @@ def save_csv(fp: str, field_names: Iterable[str], data: Union[dict, Iterable[dic
 def load_csv(fp: str, default = None) -> pd.DataFrame:
     return pd.read_csv(fp)
 
-def has_csv_header(fp: str) -> bool:
+def has_csv_header(fp: str, n_sample=20) -> bool:
     with open(fp, mode='r') as f:
-        sample = f.readlines(20)
-        sniffer = csv.Sniffer(b''.join(sample))
-        return sniffer.has_header(sam)
+        head = [next(f) for _ in range(n_sample)]
+        head = "".join(head)
+
+        sniffer = csv.Sniffer()
+        return sniffer.has_header(head)
+
+def get_n_csv_columns(fp: str) -> int:
+    with open(fp, mode='r') as f:
+        reader = csv.reader(f)
+        ncol = len(next(reader))
+        f.seek(0)    
+        return ncol
 
 def data_dir(add: str = None) -> str:
     data_dir = os.path.join(os.getcwd(), "data")

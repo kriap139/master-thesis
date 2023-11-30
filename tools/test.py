@@ -12,10 +12,12 @@ from sklearn.metrics import make_scorer, accuracy_score
 from sequd import SeqUD
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header
 import lightgbm as lgb
 from search import get_sklearn_model
 import logging
+
+import csv
 
 def search_test():
     logging.getLogger().setLevel(logging.DEBUG)
@@ -48,4 +50,5 @@ def search_test():
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
 
-dataset = Dataset(Builtin.ACSI).load()
+dataset = Dataset(Builtin.PUF_128).load()
+print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")
