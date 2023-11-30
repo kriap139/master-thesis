@@ -111,6 +111,12 @@ def save_csv(fp: str, field_names: Iterable[str], data: Union[dict, Iterable[dic
 def load_csv(fp: str, default = None) -> pd.DataFrame:
     return pd.read_csv(fp)
 
+def has_csv_header(fp: str) -> bool:
+    with open(fp, mode='r') as f:
+        sample = f.readlines(20)
+        sniffer = csv.Sniffer(b''.join(sample))
+        return sniffer.has_header(sam)
+
 def data_dir(add: str = None) -> str:
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(data_dir):
