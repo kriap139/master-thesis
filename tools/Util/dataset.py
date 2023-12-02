@@ -38,10 +38,11 @@ class Builtin(Enum):
     FPS = DatasetInfo("FPS", Task.REGRESSION, SizeGroup.MODERATE)
     ACSI = DatasetInfo("PINCP", Task.BINARY, SizeGroup.MODERATE)
     SGEMM_GKP = DatasetInfo("Run1", Task.REGRESSION, SizeGroup.SMALL)
-    PUF_128 = DatasetInfo(128, Task.BINARY, "large", SizeGroup.LARGE)
+    PUF_128 = DatasetInfo(128, Task.BINARY, SizeGroup.LARGE)
     WAVE_E = DatasetInfo("energy_total", Task.REGRESSION, SizeGroup.SMALL)
     OKCUPID_STEM = DatasetInfo("job", Task.MULTICLASS, SizeGroup.SMALL)
     ACCEL = DatasetInfo("wconfid", Task.MULTICLASS, SizeGroup.SMALL)
+    RCV1 = DatasetInfo("class", Task.BINARY, SizeGroup.MODERATE)
 
     def info(self) -> DatasetInfo:
         return self.value
