@@ -64,6 +64,7 @@ def build_cli() -> argparse.Namespace:
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
     parser.add_argument("--no-repeats", action='store_true')
     parser.add_argument("--max-outer-iter", type=int, default=None)
+    parser.add_argument("--n-repeats", type=int, default=10)
 
     args = parser.parse_args()
     args.dataset = Builtin[args.dataset.upper()]
@@ -98,6 +99,7 @@ if __name__ == "__main__":
 
     dataset = Dataset(args.dataset).load()
     #print(dataset.x.info())
+    print(f"args: {args}")
     print(f"column names: {list(dataset.x.columns)}")
     print(f"cat_features: {dataset.cat_features}")
     
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     tuner = getattr(benchmark, args.method)
     save_dir = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
-    cv = get_cv(dataset, args.no_repeats)
+    cv = get_cv(dataset, args.no_repeats, n_repeats=args.n_repeats)
         
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
                   n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir, max_outer_iter=args.max_outer_iter)
