@@ -168,13 +168,16 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
                 raise RuntimeError(f"Invalid category ('{cat}'), possible options: {self.categories}")
     
     def parse_string(s: str):
-        return np.nan if (s.strip() == '?') else s
+        s = s.strip()
+        return np.nan if (s == '?') else s
     
     def parse_int(s: str):
-        return np.nan if (s.strip() == '?') else int(s)
+        s = s.strip()
+        return np.nan if (s == '?') else int(s)
     
     def parse_float(s: str):
-        return np.nan if (s.strip() == '?') else float(s)
+        s = s.strip()
+        return np.nan if (s == '?') else float(s)
 
     def get_attr_type(attr: str) -> Union[str, ]:
         attr = attr.lower().strip()
@@ -206,11 +209,11 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
         if '{' in line and '}' in line:
             # Sparse data row
             line = line.replace('{', '').replace('}', '')
-            
+
             # init columns to zero
             for name in columns:
                 data[name] = 0
-
+            
             for data in line.split(','):
                 index, value = data.split()
                 index = int(index)
@@ -230,7 +233,7 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
     line = '\n'
 
     with open(path, 'r') as fp:
-        line = fp.readline().strip()
+        line = fp.readline()
 
         # Parsing metadata
         while True:
@@ -240,18 +243,18 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
                 column_types.append(get_attr_type(ty))
             elif line.startswith(("@data", "@DATA")):
                 break
-            elif line.startswith(("@relation", "@RELATION", '%', '')) or (line == '\n'):
-                line = fp.readline().strip()
+            elif line.startswith(("@relation", "@RELATION", '%', '\n')):
+                line = fp.readline()
                 continue
             else:
                 raise RuntimeError(f"Invalid line in sparse arff file: {line}")
 
         data = {col: [] for col in columns}
-        line = fp.readline().strip()
+        line = fp.readline()
 
         while line != '':
             parse_row(line, columns, column_types, data)
-            line = fp.readline().strip()
+            line = fp.readline()
             gc.collect()
 
     return pd.DataFrame.from_dict(data)
