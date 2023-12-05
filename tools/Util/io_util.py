@@ -8,6 +8,7 @@ from typing import Union, Iterable, List, Any, Tuple
 import csv
 import re
 from .space import Integer, Real, Categorical
+import gc
 
 
 def json_serialize_unknown(o):
@@ -143,7 +144,7 @@ def data_dir(add: str = None) -> str:
         
     return path
 
-# Code from: https://stackoverflow.com/questions/59271661/cannot-load-arff-dataset-with-scipy-arff-loadarff
+# Code based on answer from: https://stackoverflow.com/questions/59271661/cannot-load-arff-dataset-with-scipy-arff-loadarff
 def load_sparse_arff(path: str) -> pd.DataFrame:
     """
     Converts an ARFF file to a DataFrame.
@@ -155,7 +156,42 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
         pd.DataFrame: Converted DataFrame.
     """
 
-    def parse_row(line: str, row_len: int) -> List[Any]:
+    class CategoryParser:
+        def __init__(self, categories: list):
+            self.categories = categories
+        
+        def __call__(self, cat: str):
+            cat = cat.strip("'")
+            if cat in self.categories:
+                return cat
+            else:
+                raise RuntimeError(f"Invalid category ('{cat}'), possible options: {self.categories}")
+    
+    def parse_string(s: str):
+        return np.nan if (s.strip() == '?') else s
+    
+    def parse_int(s: str):
+        return np.nan if (s.strip() == '?') else int(s)
+    
+    def parse_float(s: str):
+        return np.nan if (s.strip() == '?') else float(s)
+
+    def get_attr_type(attr: str) -> Union[str, ]:
+        attr = attr.lower().strip()
+        if attr in ('numeric', 'real'):
+            return parse_float
+        elif attr == 'integer':
+            return parse_int
+        elif attr == 'string':
+            return parse_string
+        elif '{' in line and '}' in line:
+            line = line.replace('{', '').replace('}', '')
+            cats = line.split(',')
+            return CategoryParser(cats)
+        else:
+            raise RuntimeError(f"Unsupported attribute datatype ('{attr}') encountered while parseing sparse_arff file")
+
+    def parse_row(line: str, columns: list, column_types: list, data: dict):
         """
         Parses a row of data from an ARFF file.
 
@@ -166,58 +202,59 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
         Returns:
             List[Any]: Parsed row as a list of values.
         """
-        line = line.strip()  # Strip the newline character
+
         if '{' in line and '}' in line:
             # Sparse data row
             line = line.replace('{', '').replace('}', '')
-            row = np.zeros(row_len, dtype=object)
+            
+            # init columns to zero
+            for name in columns:
+                data[name] = 0
+
             for data in line.split(','):
                 index, value = data.split()
-                try:
-                    row[int(index)] = float(value)
-                except ValueError:
-                    row[int(index)] = np.nan if value == '?' else value.strip("'")
+                index = int(index)
+                data[columns[index]] = column_types[index](value)
+                indexes.append(indexes)
         else:
             # Dense data row
-            row = [
-                float(value) if value.replace(".", "", 1).isdigit()
-                else (np.nan if value == '?' else value.strip("'"))
-                for value in line.split(',')
-            ]
+            for i, value in enumerate(line.split(',')):
+                data[columns[i]] = column_types[i](value)
 
         return row
+    
+    columns = []
+    column_types = []
 
-    def extract_columns_and_data_start_index(
-            file_content: List[str]
-    ) -> Tuple[List[str], int]:
-        """
-        Extracts column names and the index of the @data line from ARFF file content.
-
-        Args:
-            file_content (List[str]): List of lines from the ARFF file.
-
-        Returns:
-            Tuple[List[str], int]: List of column names and the index of the @data line.
-        """
-        columns = []
-        len_attr = len('@attribute')
-
-        for i, line in enumerate(file_content):
-            if line.startswith('@attribute '):
-                col_name = line[len_attr:].split()[0]
-                columns.append(col_name)
-            elif line.startswith('@data'):
-                return columns, i
-
-        return columns, 0
+    len_attr = len('@attribute')
+    line = '\n'
 
     with open(path, 'r') as fp:
-        file_content = fp.readlines()
+        line = fp.readline().strip()
 
-    columns, data_index = extract_columns_and_data_start_index(file_content)
-    len_row = len(columns)
-    rows = [parse_row(line, len_row) for line in file_content[data_index + 1:]]
-    return pd.DataFrame(data=rows, columns=columns)
+        # Parsing metadata
+        while True:
+            if line.startswith(('@attribute ', '@ATTRIBUTE ')):
+                name, ty = line[len_attr:].split()
+                columns.append(name.strip())
+                column_types.append(get_attr_type(ty))
+            elif line.startswith(("@data", "@DATA")):
+                break
+            elif line.startswith(("@relation", "@RELATION", '%', '')) or (line == '\n'):
+                line = fp.readline().strip()
+                continue
+            else:
+                raise RuntimeError(f"Invalid line in sparse arff file: {line}")
+
+        data = {col: [] for col in columns}
+        line = fp.readline().strip()
+
+        while line != '':
+            parse_row(line, columns, column_types, data)
+            line = fp.readline().strip()
+            gc.collect()
+
+    return pd.DataFrame.from_dict(data)
 
 def load_arff(path: str) -> pd.DataFrame:
     try:
