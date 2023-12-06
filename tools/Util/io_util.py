@@ -8,8 +8,8 @@ from typing import Union, Iterable, List, Any, Tuple
 import csv
 import re
 from .space import Integer, Real, Categorical
+from .sparse_arff import load_sparse_arff
 import gc
-
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -143,121 +143,6 @@ def data_dir(add: str = None) -> str:
         os.makedirs(path, exist_ok=True)
         
     return path
-
-# Code based on answer from: https://stackoverflow.com/questions/59271661/cannot-load-arff-dataset-with-scipy-arff-loadarff
-def load_sparse_arff(path: str) -> pd.DataFrame:
-    """
-    Converts an ARFF file to a DataFrame.
-
-    Args:
-        path (Union[str, Path]): Path to the input ARFF file.
-
-    Returns:
-        pd.DataFrame: Converted DataFrame.
-    """
-
-    class CategoryParser:
-        def __init__(self, categories: list):
-            self.categories = categories
-        
-        def __call__(self, cat: str):
-            cat = cat.strip("'")
-            if cat in self.categories:
-                return cat
-            else:
-                raise RuntimeError(f"Invalid category ('{cat}'), possible options: {self.categories}")
-    
-    def parse_string(s: str):
-        s = s.strip()
-        return np.nan if (s == '?') else s
-    
-    def parse_int(s: str):
-        s = s.strip()
-        return np.nan if (s == '?') else int(s)
-    
-    def parse_float(s: str):
-        s = s.strip()
-        return np.nan if (s == '?') else float(s)
-
-    def get_attr_type(attr: str) -> Union[str, ]:
-        attr = attr.lower().strip()
-        if attr in ('numeric', 'real'):
-            return parse_float
-        elif attr == 'integer':
-            return parse_int
-        elif attr == 'string':
-            return parse_string
-        elif '{' in line and '}' in line:
-            line = line.replace('{', '').replace('}', '')
-            cats = line.split(',')
-            return CategoryParser(cats)
-        else:
-            raise RuntimeError(f"Unsupported attribute datatype ('{attr}') encountered while parseing sparse_arff file")
-
-    def parse_row(line: str, columns: list, column_types: list, data: dict):
-        """
-        Parses a row of data from an ARFF file.
-
-        Args:
-            line (str): A row from the ARFF file.
-            row_len (int): Length of the row.
-
-        Returns:
-            List[Any]: Parsed row as a list of values.
-        """
-
-        if '{' in line and '}' in line:
-            # Sparse data row
-            line = line.replace('{', '').replace('}', '')
-
-            # init columns to zero
-            for name in columns:
-                data[name] = 0
-            
-            for data in line.split(','):
-                index, value = data.split()
-                index = int(index)
-                data[columns[index]] = column_types[index](value)
-                indexes.append(indexes)
-        else:
-            # Dense data row
-            for i, value in enumerate(line.split(',')):
-                data[columns[i]] = column_types[i](value)
-
-        return row
-    
-    columns = []
-    column_types = []
-
-    len_attr = len('@attribute')
-    line = '\n'
-
-    with open(path, 'r') as fp:
-        line = fp.readline()
-
-        # Parsing metadata
-        while True:
-            if line.startswith(('@attribute ', '@ATTRIBUTE ')):
-                name, ty = line[len_attr:].split()
-                columns.append(name.strip())
-                column_types.append(get_attr_type(ty))
-            elif line.startswith(("@data", "@DATA")):
-                break
-            elif line.startswith(("@relation", "@RELATION", '%', '\n')):
-                line = fp.readline()
-                continue
-            else:
-                raise RuntimeError(f"Invalid line in sparse arff file: {line}")
-
-        data = {col: [] for col in columns}
-        line = fp.readline()
-
-        while line != '':
-            parse_row(line, columns, column_types, data)
-            line = fp.readline()
-            gc.collect()
-
-    return pd.DataFrame.from_dict(data)
 
 def load_arff(path: str) -> pd.DataFrame:
     try:
