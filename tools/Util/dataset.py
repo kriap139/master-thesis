@@ -176,9 +176,10 @@ class Dataset(DatasetInfo):
             path = self.test_path if self.is_test else self.train_path
         
         fn, ext = os.path.splitext(os.path.basename(path))
+        print(f"Loading dataset from path: {path}")
 
         if ext.strip() == ".csv":
-            if has_csv_header(self.test_path):
+            if has_csv_header(self.train_path):
                 return pd.read_csv(path) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column])
             else:
                 n_cols = get_n_csv_columns(self.train_path)
