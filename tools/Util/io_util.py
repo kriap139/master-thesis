@@ -8,7 +8,8 @@ from typing import Union, Iterable, List, Any, Tuple
 import csv
 import re
 from .space import Integer, Real, Categorical
-
+from .sparse_arff import load_sparse_arff
+import gc
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -142,82 +143,6 @@ def data_dir(add: str = None) -> str:
         os.makedirs(path, exist_ok=True)
         
     return path
-
-# Code from: https://stackoverflow.com/questions/59271661/cannot-load-arff-dataset-with-scipy-arff-loadarff
-def load_sparse_arff(path: str) -> pd.DataFrame:
-    """
-    Converts an ARFF file to a DataFrame.
-
-    Args:
-        path (Union[str, Path]): Path to the input ARFF file.
-
-    Returns:
-        pd.DataFrame: Converted DataFrame.
-    """
-
-    def parse_row(line: str, row_len: int) -> List[Any]:
-        """
-        Parses a row of data from an ARFF file.
-
-        Args:
-            line (str): A row from the ARFF file.
-            row_len (int): Length of the row.
-
-        Returns:
-            List[Any]: Parsed row as a list of values.
-        """
-        line = line.strip()  # Strip the newline character
-        if '{' in line and '}' in line:
-            # Sparse data row
-            line = line.replace('{', '').replace('}', '')
-            row = np.zeros(row_len, dtype=object)
-            for data in line.split(','):
-                index, value = data.split()
-                try:
-                    row[int(index)] = float(value)
-                except ValueError:
-                    row[int(index)] = np.nan if value == '?' else value.strip("'")
-        else:
-            # Dense data row
-            row = [
-                float(value) if value.replace(".", "", 1).isdigit()
-                else (np.nan if value == '?' else value.strip("'"))
-                for value in line.split(',')
-            ]
-
-        return row
-
-    def extract_columns_and_data_start_index(
-            file_content: List[str]
-    ) -> Tuple[List[str], int]:
-        """
-        Extracts column names and the index of the @data line from ARFF file content.
-
-        Args:
-            file_content (List[str]): List of lines from the ARFF file.
-
-        Returns:
-            Tuple[List[str], int]: List of column names and the index of the @data line.
-        """
-        columns = []
-        len_attr = len('@attribute')
-
-        for i, line in enumerate(file_content):
-            if line.startswith('@attribute '):
-                col_name = line[len_attr:].split()[0]
-                columns.append(col_name)
-            elif line.startswith('@data'):
-                return columns, i
-
-        return columns, 0
-
-    with open(path, 'r') as fp:
-        file_content = fp.readlines()
-
-    columns, data_index = extract_columns_and_data_start_index(file_content)
-    len_row = len(columns)
-    rows = [parse_row(line, len_row) for line in file_content[data_index + 1:]]
-    return pd.DataFrame(data=rows, columns=columns)
 
 def load_arff(path: str) -> pd.DataFrame:
     try:

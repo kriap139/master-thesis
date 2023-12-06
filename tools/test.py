@@ -50,5 +50,5 @@ def search_test():
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
 
-dataset = Dataset(Builtin.PUF_128).load()
-print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")
+dataset = Dataset(Builtin.RCV1).load()
+#print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")
