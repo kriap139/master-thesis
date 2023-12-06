@@ -8,4 +8,5 @@ optuna>=3.4.0
 sigopt>=8.8.2
 psutil
 joblib
+liac-arff>=2.5.0
 sequd @ git+https://github.com/kriap139/SeqUD.git
