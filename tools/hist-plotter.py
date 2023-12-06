@@ -5,7 +5,8 @@ from scipy.stats import skew
 from Util import Dataset, Builtin
 import numpy as np
 
-y = Dataset(Builtin.RCV1).load_labels().y
+dataset = Dataset(Builtin.RCV1)
+y = dataset.load_labels().y
 labels, counts = np.unique(y.to_numpy(), return_counts=True)
 
 print(f"labels={labels}, counts={counts}")
