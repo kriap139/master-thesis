@@ -43,6 +43,8 @@ class Builtin(Enum):
     OKCUPID_STEM = DatasetInfo("job", Task.MULTICLASS, SizeGroup.SMALL)
     ACCEL = DatasetInfo("wconfid", Task.MULTICLASS, SizeGroup.SMALL)
     RCV1 = DatasetInfo("class", Task.BINARY, SizeGroup.MODERATE)
+    DELAYS_ZURICH = DatasetInfo("delay", Task.REGRESSION, SizeGroup.LARGE)
+    COMET_MC = DatasetInfo("label", Task.MULTICLASS, SizeGroup.LARGE)
 
     def info(self) -> DatasetInfo:
         return self.value
