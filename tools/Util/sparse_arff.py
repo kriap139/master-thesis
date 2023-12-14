@@ -15,5 +15,7 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
     col = d['data'][2]
 
     columns = tuple(tup[0] for tup in d["attributes"])  
-    matrix = sparse.coo_matrix((data, (row, col)), shape=(max(row)+1, max(col)+1))
-    return pd.DataFrame.sparse.from_spmatrix(matrix, columns=columns)
+    matrix = sparse.coo_matrix((data, (row, col)), shape=(max(row) + 1, max(col) + 1))
+    df = pd.DataFrame.sparse.from_spmatrix(matrix, columns=columns)
+    print(df.info())
+    return df

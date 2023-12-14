@@ -51,4 +51,5 @@ def search_test():
     tuner.search(search_space, fixed_params)
 
 dataset = Dataset(Builtin.RCV1).load()
+print(f"x={dataset.x.shape}, y={dataset.y.shape}")
 #print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")
