@@ -10,6 +10,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import make_scorer, accuracy_score
 from sequd import SeqUD
+from scipy.sparse import coo_matrix
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header
@@ -52,4 +53,12 @@ def search_test():
 
 dataset = Dataset(Builtin.RCV1).load()
 print(f"x={dataset.x.shape}, y={dataset.y.shape}")
+print(dataset.x.info(), '\n')
+
+is_sparse = dataset.x.dtypes.apply(pd.api.types.is_sparse).all()
+print(f"is_sparse: {is_sparse}")
+
+if is_sparse:
+    x: coo_matrix  = dataset.x.sparse.to_coo()
+    print(f"Sparse: size={x.size}, shape={x.shape}")
 #print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")

@@ -235,6 +235,11 @@ class BaseSearch:
         search_space = self._encode_search_space(search_space)
         print("starting search")
 
+        train_x = self.train_data.x
+        is_sparse = train_x.dtypes.apply(pd.api.types.is_sparse).all()
+        if is_sparse:
+            train_x = self.train_data.x.sparse.to_coo()
+
         for i, (train_idx, test_idx) in enumerate(folds):
             if i > self.max_outer_iter:
                 print(f"Max number of outer fold iterations reached ({self.max_outer_iter}), terminating!")
@@ -242,7 +247,7 @@ class BaseSearch:
 
             start = time.perf_counter()
 
-            x_train, x_test = self.train_data.x.iloc[train_idx, :], self.train_data.x.iloc[test_idx, :]
+            x_train, x_test = train_x.iloc[train_idx, :], self.train_data.x.iloc[test_idx, :]
             y_train, y_test = self.train_data.y[train_idx], self.train_data.y[test_idx]
 
             result = self._inner_search(i, x_train, y_train, search_space, fixed_params)
