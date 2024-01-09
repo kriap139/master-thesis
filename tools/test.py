@@ -6,11 +6,12 @@ from sklearn import svm
 from sklearn.datasets import load_iris, load_breast_cancer
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score
 from scipy.stats import uniform
-from sklearn.model_selection import KFold 
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import make_scorer, accuracy_score
 from sequd import SeqUD
 from scipy.sparse import coo_matrix
+from sklearn.metrics import get_scorer, get_scorer_names
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header
@@ -51,7 +52,12 @@ def search_test():
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
 
-dataset = Dataset(Builtin.RCV1).load()
+
+scorer = get_scorer_names() #get_scorer("")
+print(scorer)
+exit(1)
+
+dataset = Dataset(Builtin.ACCEL).load()
 print(f"x={dataset.x.shape}, y={dataset.y.shape}")
 print(dataset.x.info(), '\n')
 
@@ -61,4 +67,3 @@ print(f"is_sparse: {is_sparse}")
 if is_sparse:
     x: coo_matrix  = dataset.x.sparse.to_coo()
     print(f"Sparse: size={x.size}, shape={x.shape}")
-#print(f"{dataset.name.upper()}: {has_csv_header(dataset.train_path)}")

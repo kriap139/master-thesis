@@ -7,6 +7,7 @@ import benchmark
 import psutil
 import argparse
 from sklearn.model_selection import ParameterGrid
+from sklearn.metrics import get_scorer_names
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
@@ -65,9 +66,13 @@ def build_cli() -> argparse.Namespace:
     parser.add_argument("--no-repeats", action='store_true')
     parser.add_argument("--max-outer-iter", type=int, default=None)
     parser.add_argument("--n-repeats", type=int, default=10)
+    parser.add_argument("--scoring", type=str, default=None, choices=get_scorer_names())
 
     args = parser.parse_args()
     args.dataset = Builtin[args.dataset.upper()]
+
+    if args.scoring is not None and (args.scoring not in get_scorer_names()):
+        raise RuntimeError(f"Unnsupported scoring {args.scoring}")
     
     return args
 
@@ -116,7 +121,7 @@ if __name__ == "__main__":
     cv = get_cv(dataset, args.no_repeats, n_repeats=args.n_repeats)
         
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=None, save_dir=save_dir, max_outer_iter=args.max_outer_iter)
+                  n_jobs=search_n_jobs, cv=cv, inner_cv=None, scoring=args.scoring, save_dir=save_dir, max_outer_iter=args.max_outer_iter)
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
