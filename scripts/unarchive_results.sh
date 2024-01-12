@@ -18,8 +18,9 @@ for tar in $(find "$results_dir" -name '*.tar.gz'); do tar -xf "$tar" -C "$resul
 IFS=$SAVEIFS
 
 nested_dir="$(basename $archive)"
-nested_dir="${nested_dir%%.*}"
+nested_dir="$results_dir/${nested_dir%%.*}"
 
+echo "Nested_dir: $nested_dir"
 if [ -d "$nested_dir" ]; then
     rm -r "$nested_dir"
 else
