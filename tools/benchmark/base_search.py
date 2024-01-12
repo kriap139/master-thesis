@@ -58,7 +58,7 @@ class BaseSearch:
             if log:
                 logging.debug(f"Save directory already exists, saving to alternative directory: {self._save_dir}")
 
-        self._result = None
+        self.result = None
     
     def __init_save_paths(self):
         if os.path.exists(self._save_dir):
@@ -158,6 +158,17 @@ class BaseSearch:
             return "{:02}:{:02}:{:02}".format(hours, minutes, secs)
         else:
             return "{:02}:{:02}:{:02}:{:02}".format(days, hours, minutes, secs)
+    
+    @classmethod
+    def recalc_results(cls, result_dir: str) -> dict:
+        search = BaseSearch(None, None, save_dir=os.path.join(result_dir, "dummy"))
+        search._history_fp = os.path.join(result_dir, "history.csv")
+        search._result_fp = os.path.join(result_dir, "results.tmp.json")
+        search._calc_result()
+
+        _data = load_json(os.path.join(result_dir, "result.json"), default={})
+        _data["result"] = search.result
+        return dict(result=search.result)
 
     def _calc_result(self):
         data = load_csv(self._history_fp)
@@ -175,13 +186,13 @@ class BaseSearch:
             std_train_acc=np.std(train_scores),
             min_train_acc=np.min(train_scores),
             max_train_acc=np.max(train_scores),
-            mode_train_acc=mode(train_scores)[0][0],
+            mode_train_acc=mode(train_scores, keepdims=True)[0][0],
             meadian_train_acc=np.median(train_scores),
             mean_test_acc=np.mean(test_scores),
             std_test_acc=np.std(test_scores),
             min_test_acc=np.min(test_scores),
             max_test_acc=np.max(test_scores),
-            mode_test_acc=mode(test_scores)[0][0],
+            mode_test_acc=mode(test_scores, keepdims=True)[0][0],
             meadian_test_acc=np.median(test_scores),
             time=time,
             mean_fold_time=mean_fold_time,
