@@ -14,8 +14,18 @@ class ResultFolder:
     search_method: str
     version: int = 0
 
-def load_result_files(ignore_datasets: List[Builtin] = None) -> Dict[str, Dict[str, ResultFolder]]:
+def select_version(current: ResultFolder, new_version: int, select_versions: Dict[str, Dict[str, int]] = None) -> bool:
+    versions = select_versions.get(current.dataset.name, None)
+    version = versions.get(current.search_method, None) if versions is not None else None
+    if versions is not None:
+        return new_version == version
+    return current.version < new_version
+    
+
+def load_result_folders(ignore_datasets: List[Builtin] = None, select_versions: Dict[str, Dict[str, int]] = None) -> Dict[str, Dict[str, ResultFolder]]:
     result_dir = data_dir(add="test_results")
+    if select_versions is not None:
+        select_versions = {key.upper(): v for key, v in select_versions.items()}
 
     ignore_datasets = tuple() if ignore_datasets is None else tuple(map(lambda s: s.upper(), ignore_datasets))
     results: Dict[str, Dict[str, ResultFolder]] = {}
@@ -40,7 +50,7 @@ def load_result_files(ignore_datasets: List[Builtin] = None) -> Dict[str, Dict[s
             result = dataset_results.get(method, None)
             if result is None:
                 dataset_results[method] = ResultFolder(path, Builtin[dataset], method, version)
-            elif result.version < version:
+            elif select_version(result, version, select_versions):
                 result.dir_path = path
                 result.version = version
     
@@ -120,7 +130,7 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
 
 if __name__ == "__main__":
     ignore_datasets = (Builtin.AIRLINES.name, )
-    result_folders = load_result_files(ignore_datasets)
+    result_folders = load_result_folders(ignore_datasets)
 
     for method, result in result_folders.items():
         datasets = tuple(result.keys())
