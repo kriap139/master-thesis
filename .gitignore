@@ -4,6 +4,7 @@ data/datasets/**/
 data/test_results
 data/test_archive
 
+table.txt
 *.out
 *.zip
 *.tar.gz

@@ -1,8 +1,8 @@
 import os
-from Util import Dataset, Builtin, data_dir
+from Util import Dataset, Builtin, data_dir, Task
 from Util.io_util import load_json
 from benchmark import BaseSearch
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import re
 from dataclasses import dataclass
 import pandas as pd
@@ -15,7 +15,7 @@ class ResultFolder:
     version: int = 0
 
 def select_version(current: ResultFolder, new_version: int, select_versions: Dict[str, Dict[str, int]] = None) -> bool:
-    versions = select_versions.get(current.dataset.name, None)
+    versions = select_versions.get(current.dataset.name, None) if select_versions is not None else None
     version = versions.get(current.search_method, None) if versions is not None else None
     if versions is not None:
         return new_version == version
@@ -58,6 +58,7 @@ def load_result_folders(ignore_datasets: List[Builtin] = None, select_versions: 
 
 @dataclass
 class EvalMetrics:
+    folders: Dict[str, Dict[str, ResultFolder]]
     results: Dict[str, Dict[str, dict]]
     mean_accs: pd.DataFrame
     mean_ranks: pd.DataFrame
@@ -69,6 +70,25 @@ class EvalMetrics:
     nas: pd.DataFrame
     nrs: pd.DataFrame
     js: pd.DataFrame
+
+    def get_method_names(self) -> List[str]:
+        names = set()
+        for d in self.results.values():
+            for (method, folder) in d.items():
+                names.add(method)
+        return tuple(names)
+
+    def get_reg_results(self) -> Dict[str, Dict[str, dict]]:
+        return {k: v for (k, v) in self.results.items() if Builtin[k].info().task == Task.REGRESSION}
+    
+    def get_cls_results(self) -> Dict[str, Dict[str, dict]]:
+        return {k: v for (k, v) in self.results.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
+    
+    def get_reg_folders(self) -> Dict[str, Dict[str, dict]]:
+        return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task == Task.REGRESSION}
+    
+    def get_cls_results(self) -> Dict[str, Dict[str, dict]]:
+        return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
 def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
@@ -122,11 +142,36 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
     js = nas + nrs
 
     return EvalMetrics(
+        data,
         results,
         mean_frame, mean_ranks, max_frame, max_ranks,
         norm_frame, agg_scores, rank_scores,
         nas, nrs, js
     )
+
+def time_frame(data: EvalMetrics) -> pd.DataFrame:
+    columns = ["Dataset"]
+    columns.extend(data.get_method_names())
+
+    time_dict = dict()
+    for _, results in data.results.items():
+        for method, result in results.items():
+            method_result = time_dict.get(method, None)
+            if method_result is None:
+                time_dict[method] = [result["result"]["time"]]
+            else:
+                method_result.append(result["result"]["time"])
+    
+    frame = pd.DataFrame.from_dict(time_dict)
+    frame.index = tuple(data.results.keys())
+    return frame
+
+def time_frame_pct(data: EvalMetrics) -> pd.DataFrame:
+    frame = time_frame(data)
+    mins = frame.min(axis=1)
+    norm = frame.div(mins, axis='index')
+    pct = norm * 100
+    return pct
 
 if __name__ == "__main__":
     ignore_datasets = (Builtin.AIRLINES.name, )
