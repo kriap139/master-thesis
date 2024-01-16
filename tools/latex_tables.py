@@ -7,6 +7,9 @@ SPACES_L1 = "   "
 SPACES_L2 = SPACES_L1 * 2
 SPACES_L3 = SPACES_L1 * 3
 
+ROW_LINE = "\\hline"
+ROW_LINE_NL = f"\n{SPACES_L3}{ROW_LINE}"
+
 """
 \\begin{tabular}{c|c|c|c|c|c|c|c|c|c|c}
     \hline 
@@ -34,11 +37,14 @@ def latex_table_skel(tabular: str, caption: str, label: str) -> str:
         f"\\end{{table}}"
     ) 
 
-def col_format(n_cols: int, col_lines=True, outer_col_lines=True) -> str:
+def col_format(n_cols: int, col_lines=True, outer_col_lines=True, multicol_header=False) -> str:
     if col_lines and outer_col_lines:
         col_format = "|" + ("c|" * n_cols)
     elif col_lines and not outer_col_lines:
-        col_format =  "c|" * (n_cols - 1) + 'c'
+        if multicol_header:
+            col_format = "c|"
+        else:
+            col_format =  "c|" * (n_cols - 1) + 'c'
     else:
         col_format = "c" * n_cols
     return col_format
@@ -72,16 +78,23 @@ def latex_tabular_multicol_header(labels: List[str], sub_labels: List[str], rest
     if bold_sub_labels:
         sub_labels = [f"\\textbf{{{label}}}" for label in sub_labels]
 
-    row_line = " \\hline\n" if row_lines else "\n"
+    if rest_space_idx is not None:
+        cline = f"\n{SPACES_L3}\\cline{{{len(sub_labels)}-{len(labels) * len(sub_labels) - len(sub_labels) + 1}}}\n"
+    else:
+        cline = ROW_LINE_NL
+
+    row_line = "\\hline\n" if row_lines else "\n"
     parts = []
 
     for i, label in enumerate(labels):
         if rest_space_idx is not None and (i == rest_space_idx):
             parts.append(f"\\multirow{{{len(sub_labels)}}}{{*}}{{{label}}}")
+        elif (i == len(labels) - 1):
+            parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{col_format(1, col_lines, False)}}}{{{label}}}")
         else:
-            parts.append(f"\\multirow{{{len(sub_labels)}}}{{{col_format(1, col_lines, outer_col_lines)}}}{{{label}}}")
+            parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{col_format(1, col_lines, False, True)}}}{{{label}}}")
     
-    label_header = f"{SPACES_L3}\\hline\n" + SPACES_L3 + " & ".join(parts) + " \\\\\n"
+    label_header = f"{SPACES_L3}\\hline\n" + SPACES_L3 + " & ".join(parts) + f" \\\\{cline}"
     parts.clear()
 
     for i, _ in enumerate(labels):
@@ -98,11 +111,11 @@ def latex_tabular_multicol_header(labels: List[str], sub_labels: List[str], rest
     return label_header
 
 def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
-    table_rows = []
-    row_line = "\\hline" if row_lines else ""
+    table_rows = [f"{SPACES_L3}{ROW_LINE}"] if outer_row_lines else []
+    row_line = ROW_LINE_NL if row_lines else ""
 
     def rounder(v: Any):
-        if n_round is None or (not isinstance(v, numbers.Number)):
+        if n_round is None:
             return v
         elif n_round == 0:
             return int(round(v, n_round))
@@ -110,7 +123,10 @@ def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, 
             return round(v, n_round)
 
     def create_cell(col: int, v: Any):
-        v = str(rounder(v))       
+        if isinstance(v, numbers.Number):
+            v = str(rounder(v))
+        v = v.replace("_", "\\_")
+
         if type(col_cells_postfix) == str:
             return v + col_cells_postfix
         elif type(col_cells_postfix) == list:
@@ -119,15 +135,17 @@ def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, 
             return v
     
     if add_row_labels:
-        row_labels = [f"{label} & " for label in data.index]
+        row_labels = [f"{label} & ".replace("_", "\\_") for label in data.index]
     else:
         row_labels = ["" for _ in data.index]
 
-    n_rows = len(data.index)
+    last_row = len(data.index) - 1
     for i, (label, row) in enumerate(data.iterrows()):
         row_data = [create_cell(col, cell) for col, cell in enumerate(row)]
-        if (i == n_rows - 1) and not outer_row_lines:
+        if (i == last_row) and not outer_row_lines:
             table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
+        elif (i == last_row) and outer_row_lines and not row_lines:
+            table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {ROW_LINE_NL}")
         else:
             table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {row_line}")
     return table_rows
@@ -242,6 +260,24 @@ def create_test_results_stats_table(data: EvalMetrics) -> str:
     frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
     return create_multicol_latex_table(frame, "test_result_stats", None, round=3)
 
+def create_train_test_table(data: EvalMetrics) -> str:
+    table_data = dict()
+    labels = ["Dataset"]
+    labels.extend(data.get_method_names())
+    sub_labels = ["Train", "Test"]
+    
+    header = encode_multicol_labels(labels, sub_labels, rest_space_idx=0)
+    for i, (dataset, results) in enumerate(data.results.items()):
+        row = [None for _ in header]
+        row[0] = dataset.lower()
+        for (method, result) in results.items():
+            row[header.index(f"sublabel_{method}_Train")] = result["result"]["mean_train_acc"]
+            row[header.index(f"sublabel_{method}_Test")] = result["result"]["mean_test_acc"]
+        table_data[i] = row
+    
+    frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
+    return create_multicol_latex_table(frame, "test_result_stats", None, round=3, row_lines=False, outer_col_lines=False)
+
 def create_time_pct_table(data: EvalMetrics) -> str:
     pct = time_frame_pct(data)
     latex_dict = dict(Dataset=list(map(lambda s: s.lower(), data.results.keys())))
@@ -295,7 +331,7 @@ if __name__ == "__main__":
     metrics = calc_eval_metrics(result_folders)
     print()
 
-    table = create_method_metrics_table(metrics)
+    table = create_train_test_table(metrics)
     print(table)
     save_table(table)
 
