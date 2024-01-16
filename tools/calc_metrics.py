@@ -2,7 +2,7 @@ import os
 from Util import Dataset, Builtin, data_dir, Task
 from Util.io_util import load_json
 from benchmark import BaseSearch
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Callable, Any
 import re
 from dataclasses import dataclass
 import pandas as pd
@@ -20,9 +20,33 @@ def select_version(current: ResultFolder, new_version: int, select_versions: Dic
     if versions is not None:
         return new_version == version
     return current.version < new_version
+
+def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
+    joined: List[ResultFolder] = []
+    for (dataset, methods) in folders.items():
+        joined.extend(methods.values())
+    
+    joined.sort(key=fn, reverse=reverse)
+    folders.clear()
+
+    for folder in joined:
+        methods = folders.get(folder.dataset.name, None)
+        if methods is None:
+            folders[folder.dataset.name] = {folder.search_method: folder}
+        else:
+            methods[folder.search_method] = folder
+    
+    return folders
+
     
 
-def load_result_folders(ignore_datasets: List[Builtin] = None, select_versions: Dict[str, Dict[str, int]] = None) -> Dict[str, Dict[str, ResultFolder]]:
+def load_result_folders(
+        ignore_datasets: List[Builtin] = None, 
+        select_versions: Dict[str, Dict[str, int]] = None, 
+        print_results=True, 
+        sort_fn: Callable[[ResultFolder], Any] = None, 
+        reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
+
     result_dir = data_dir(add="test_results")
     if select_versions is not None:
         select_versions = {key.upper(): v for key, v in select_versions.items()}
@@ -53,6 +77,17 @@ def load_result_folders(ignore_datasets: List[Builtin] = None, select_versions: 
             elif select_version(result, version, select_versions):
                 result.dir_path = path
                 result.version = version
+    
+    if sort_fn:
+        results = sort_folders(results, fn=sort_fn, reverse=reverse)
+    
+    if print_results:
+        #for method, result in results.items():
+        #    datasets = tuple(result.keys())
+        #    print(f"{method}: {datasets}, len={len(datasets)}")
+        for (dataset, methods) in results.items():
+            string = f"{dataset}: \n" + "\n".join([f"\t{method}: {d.dir_path}" for method, d in methods.items()])
+            print(string)
     
     return results
 
@@ -98,11 +133,16 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
     max_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     datasets_max_acc: [str, float] = {dataset: 0 for dataset in data.keys()}
 
+    printed_newline = False
     for dataset, methods in data.items():
         for (method, folder) in methods.items():
             file_data = load_json(os.path.join(folder.dir_path, "result.json"))
 
             if 'result' not in file_data.keys():
+                if not printed_newline:
+                    print()
+                    printed_newline = True
+                    
                 print(f"Result for {method} on the {dataset} dataset, doesn't exist. Computing it")
                 file_data = BaseSearch.recalc_results(folder.dir_path)
 
@@ -112,6 +152,9 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
             mean_accs[dataset][method] = file_data["result"]["mean_test_acc"]
             max_accs[dataset][method] = file_data["result"]["max_test_acc"]
             results[dataset][method] = file_data
+    
+    if printed_newline:
+        print()
 
     for dataset, methods in results.items():
         for (method, result) in methods.items():

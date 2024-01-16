@@ -20,31 +20,30 @@ class SizeGroup(Enum):
 
 class Task(Enum):
     BINARY = 1
-    REGRESSION = 2
-    MULTICLASS = 3
+    MULTICLASS = 2
+    REGRESSION = 3
 
 class DatasetInfo:
-    def __init__(self, label_column: Union[str, int], task: Task, size_group: SizeGroup, name = None):
+    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup):
         self.name = name
         self.label_column = label_column
         self.task = task
         self.size_group = size_group
 
-
 class Builtin(Enum):
-    HIGGS = DatasetInfo(0, Task.BINARY, SizeGroup.LARGE)
-    HEPMASS = DatasetInfo(0, Task.BINARY, SizeGroup.LARGE)
-    AIRLINES = DatasetInfo("DepDelay", Task.REGRESSION, SizeGroup.LARGE)
-    FPS = DatasetInfo("FPS", Task.REGRESSION, SizeGroup.MODERATE)
-    ACSI = DatasetInfo("PINCP", Task.BINARY, SizeGroup.MODERATE)
-    SGEMM_GKP = DatasetInfo("Run1", Task.REGRESSION, SizeGroup.SMALL)
-    PUF_128 = DatasetInfo(128, Task.BINARY, SizeGroup.LARGE)
-    WAVE_E = DatasetInfo("energy_total", Task.REGRESSION, SizeGroup.SMALL)
-    OKCUPID_STEM = DatasetInfo("job", Task.MULTICLASS, SizeGroup.SMALL)
-    ACCEL = DatasetInfo("wconfid", Task.MULTICLASS, SizeGroup.SMALL)
-    RCV1 = DatasetInfo("class", Task.BINARY, SizeGroup.MODERATE)
-    DELAYS_ZURICH = DatasetInfo("delay", Task.REGRESSION, SizeGroup.LARGE)
-    COMET_MC = DatasetInfo("label", Task.MULTICLASS, SizeGroup.LARGE)
+    HIGGS = DatasetInfo("HIGGS", 0, Task.BINARY, SizeGroup.LARGE)
+    HEPMASS = DatasetInfo("HEPMASS", 0, Task.BINARY, SizeGroup.LARGE)
+    AIRLINES = DatasetInfo("AIRLINES", "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
+    FPS = DatasetInfo("FPS", "FPS", Task.REGRESSION, SizeGroup.MODERATE)
+    ACSI = DatasetInfo("ACSI", "PINCP", Task.BINARY, SizeGroup.MODERATE)
+    SGEMM_GKP = DatasetInfo("SGEMM_GKP", "Run1", Task.REGRESSION, SizeGroup.SMALL)
+    PUF_128 = DatasetInfo("PUF_128", 128, Task.BINARY, SizeGroup.LARGE)
+    WAVE_E = DatasetInfo("WAVE_E", "energy_total", Task.REGRESSION, SizeGroup.SMALL)
+    OKCUPID_STEM = DatasetInfo("OKCUPID_STEM", "job", Task.MULTICLASS, SizeGroup.SMALL)
+    ACCEL = DatasetInfo("ACCEL", "wconfid", Task.MULTICLASS, SizeGroup.SMALL)
+    RCV1 = DatasetInfo("RCV1", "class", Task.BINARY, SizeGroup.MODERATE)
+    DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH", "delay", Task.REGRESSION, SizeGroup.LARGE)
+    COMET_MC = DatasetInfo("COMET_MC", "label", Task.MULTICLASS, SizeGroup.LARGE)
 
     def info(self) -> DatasetInfo:
         return self.value
