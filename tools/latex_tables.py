@@ -1,7 +1,16 @@
 import pandas as pd
-from typing import List, Tuple, Dict, Any, Union
-from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct
+from typing import List, Tuple, Dict, Any, Union, Iterable
+from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, sort_folders
+from Util import Task, SizeGroup
 import numbers
+from dataclasses import dataclass
+
+@dataclass(frozen=True, eq=True)
+class RowLabel:
+   start_idx: int
+   label: str
+   bold: bool 
+   end_idx: int = None
 
 SPACES_L1 = "   "
 SPACES_L2 = SPACES_L1 * 2
@@ -10,20 +19,22 @@ SPACES_L3 = SPACES_L1 * 3
 ROW_LINE = "\\hline"
 ROW_LINE_NL = f"\n{SPACES_L3}{ROW_LINE}"
 
-"""
-\\begin{tabular}{c|c|c|c|c|c|c|c|c|c|c}
-    \hline 
-    \multirow{2}{*}{Dataset}  & \multicolumn{2}{c|}{Random Search} & \multicolumn{2}{c|}{Grid Search} & \multicolumn{2}{c|}{SeqUD} & \multicolumn{2}{c|}{SigOpt} & \multicolumn{2}{c}{Optuna} \\
-    \cline{2-11}
-    & Train & Test & Train & Test & Train & Test & Train & Test & Train & Test \\
-    \hline
-    Wave\_E & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? \\
-    sgemm\_GKP & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? \\
-    FPS & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? \\
-    Airlines & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? \\
-    \hline
-\end{tabular}  
-"""
+
+
+class Latex:
+    def __init__(self):
+        self.table = ""
+    
+
+
+
+class LatexTable(Latex):
+    pass
+
+class LatexMulticolTable(Latex):
+    pass
+
+
 
 def latex_table_skel(tabular: str, caption: str, label: str) -> str:
     return (
@@ -61,16 +72,24 @@ def latex_tabular_skel(header: str, rows: List[str], n_cols: int, col_lines=True
 def latex_tabular_header(column_labels: List[str], bold=True, row_lines=True, outer_row_lines=True, add_row_label: str = None):
     if bold:
         labels = [f"\\textbf{{{label}}}" for label in column_labels]
+        if add_row_label is not None:
+            add_row_label = f"\\textbf{{{add_row_label}}}"
     else:
         labels = column_labels
     
     if add_row_label is not None:
-        row_label = f"{add_row_label} & "
+        row_label = f"{SPACES_L3}{add_row_label} & "
     else:
-        row_label = ""
+        row_label = f"{SPACES_L3}"
     
     header = row_label + " & ".join(labels) + " \\\\"
-    return (SPACES_L3 + "\\hline\n" + SPACES_L3 + header + " \\hline\n") if row_lines else header
+    
+    if outer_row_lines:
+        header = ROW_LINE_NL + header
+    if row_lines:
+        header += ROW_LINE_NL
+
+    return header + '\n'
 
 def latex_tabular_multicol_header(labels: List[str], sub_labels: List[str], rest_space_idx: int = None, bold_labels=True, bold_sub_labels=False, row_lines=True, outer_row_lines=True, col_lines=True, outer_col_lines=True) -> str:
     if bold_labels:
@@ -110,9 +129,33 @@ def latex_tabular_multicol_header(labels: List[str], sub_labels: List[str], rest
     label_header += SPACES_L3 + "".join(parts) + row_line
     return label_header
 
+def latex_span_row_label(label: str, n_cols: int, bold=False, row_line_top=True, row_line_bottom=True, outer_col_lines=True) -> str:
+    col_fmt = col_format(1, col_lines=False, outer_col_lines=outer_col_lines)
+    row_line_top = f"{SPACES_L3}{ROW_LINE}\n" if row_line_top else ""
+    row_line_bottom = ROW_LINE_NL if row_line_bottom else ""
+
+    if bold:
+        label = f"\\textbf{{{label}}}"
+
+    return f"{row_line_top}{SPACES_L3}\\multicolumn{{{n_cols}}}{{{col_fmt}}}{{{label}}} \\\\ {row_line_bottom}"
+
+def latex_string_escapes(s: str) -> str:
+    escapes = ["_", "%"]
+    for esc in escapes:
+        s = s.replace(esc, f"\\{esc}")
+    return s
+
 def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
-    table_rows = [f"{SPACES_L3}{ROW_LINE}"] if outer_row_lines else []
+    table_rows = []
     row_line = ROW_LINE_NL if row_lines else ""
+
+    if col_cells_postfix is not None:
+        if type(col_cells_postfix) == str:
+            col_cells_postfix = latex_string_escapes(col_cells_postfix)
+        elif type(col_cells_postfix) == list:
+            col_cells_postfix = [latex_string_escapes(s) for s in col_cells_postfix]
+        else:
+            raise RuntimeError(f"col_cells_postfix is of invalid type({type(col_cells_postfix)}): {col_cells_postfix}")
 
     def rounder(v: Any):
         if n_round is None:
@@ -125,7 +168,8 @@ def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, 
     def create_cell(col: int, v: Any):
         if isinstance(v, numbers.Number):
             v = str(rounder(v))
-        v = v.replace("_", "\\_")
+        else:
+            v = latex_string_escapes(v) 
 
         if type(col_cells_postfix) == str:
             return v + col_cells_postfix
@@ -135,7 +179,7 @@ def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, 
             return v
     
     if add_row_labels:
-        row_labels = [f"{label} & ".replace("_", "\\_") for label in data.index]
+        row_labels = [f"{latex_string_escapes(label)} & " for label in data.index]
     else:
         row_labels = ["" for _ in data.index]
 
@@ -149,6 +193,24 @@ def latex_tabular_rows(data: pd.DataFrame, n_round: int = None, row_lines=True, 
         else:
             table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {row_line}")
     return table_rows
+
+def latex_tabular_rows_with_label_rows(data: pd.DataFrame, n_cols: int, label_rows: Iterable[RowLabel], n_round: int = None, row_lines=True, outer_row_lines=True, outer_col_lines=False, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
+    rows = []
+
+    for lr in label_rows:
+        if lr.end_idx is not None:
+            rows.append(latex_span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
+            subset = data.iloc[lr.start_idx:lr.end_idx, :]
+            rows.extend(
+                latex_tabular_rows(subset, n_round, row_lines, False, add_row_labels, col_cells_postfix)
+            )
+        else:
+            rows.append(latex_span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
+            subset = data.iloc[lr.start_idx:, :]
+            rows.extend(
+                latex_tabular_rows(subset, n_round, row_lines, outer_row_lines, add_row_labels, col_cells_postfix)
+            )
+    return rows
 
 def create_latex_table(
     data: pd.DataFrame,
@@ -222,7 +284,8 @@ def create_multicol_latex_table(
     outer_row_lines=True,
     col_lines=True,
     outer_col_lines=True,
-    col_cells_postfix: Union[str, List[str]] = None) -> str:
+    col_cells_postfix: Union[str, List[str]] = None,
+    row_labels: Iterable[RowLabel] = None) -> str:
 
     if caption is None:
         caption = str(caption)
@@ -234,16 +297,29 @@ def create_multicol_latex_table(
         col_labels, col_sub_labels, rest_space_idx, bold_header, 
         bold_sub_header, row_lines, outer_row_lines, col_lines, outer_col_lines
     )
-    rows = latex_tabular_rows(data, round, row_lines, outer_row_lines, False, col_cells_postfix)
+
+    if row_labels is None:
+        rows = latex_tabular_rows(data, round, row_lines, outer_row_lines, False, col_cells_postfix)
+    else:
+        rows = latex_tabular_rows_with_label_rows(data, len(data.columns), row_labels, round, row_lines, outer_row_lines, outer_col_lines, False, col_cells_postfix)
+
     tabular = latex_tabular_skel(header, rows, len(data.columns), col_lines, outer_col_lines)
     table = latex_table_skel(tabular, caption, label)
     return table
 
-def create_test_results_stats_table(data: EvalMetrics) -> str:
+def create_task_filter_fn(task: Task):
+    return lambda folder: folder.dataset.info().task in task
+
+
+
+def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='test_result_stats') -> str:
+    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
+    data = calc_eval_metrics(folders)
+
     table_data = dict()
     labels = ["Dataset"]
     labels.extend(data.get_method_names())
-    sub_labels = ["mean", "std", "min", "max", "median"]
+    sub_labels = ["mean", "std", "min", "max"]
     
     header = encode_multicol_labels(labels, sub_labels, rest_space_idx=0)
     for i, (dataset, results) in enumerate(data.results.items()):
@@ -254,13 +330,22 @@ def create_test_results_stats_table(data: EvalMetrics) -> str:
             row[header.index(f"sublabel_{method}_std")] = result["result"]["std_test_acc"]
             row[header.index(f"sublabel_{method}_min")] = result["result"]["min_test_acc"]
             row[header.index(f"sublabel_{method}_max")] = result["result"]["max_test_acc"]
-            row[header.index(f"sublabel_{method}_median")] = result["result"]["meadian_test_acc"]
         table_data[i] = row
     
     frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
-    return create_multicol_latex_table(frame, "test_result_stats", None, round=3)
+    return create_multicol_latex_table(frame, label, None, round=3, row_lines=False, outer_col_lines=False)
 
-def create_train_test_table(data: EvalMetrics) -> str:
+def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+    reg = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse)
+    classif = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse)
+    return f"{reg}\n\n{classif}"
+
+
+
+def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
+    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
+
+    data = calc_eval_metrics(folders)
     table_data = dict()
     labels = ["Dataset"]
     labels.extend(data.get_method_names())
@@ -276,35 +361,79 @@ def create_train_test_table(data: EvalMetrics) -> str:
         table_data[i] = row
     
     frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
-    return create_multicol_latex_table(frame, "test_result_stats", None, round=3, row_lines=False, outer_col_lines=False)
+    return create_multicol_latex_table(frame, label, None, round=3, row_lines=False, outer_col_lines=False)
 
-def create_time_pct_table(data: EvalMetrics) -> str:
+def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+    reg = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse, label='baseline_results_reg_train_test')
+    classif = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse, label='baseline_results_cls_train_test')
+    return f"{reg}\n\n{classif}"
+
+
+
+def create_time_pct_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='baseline_times_pct') -> str:
+    folders = load_result_folders(ignore_datasets, sort_fn=sort_fn, reverse=True)
+    data = calc_eval_metrics(folders)
     pct = time_frame_pct(data)
+
+    mins = pct.min().sort_values()
+    pct = pct[mins.index]
+
     latex_dict = dict(Dataset=list(map(lambda s: s.lower(), data.results.keys())))
     latex_dict.update(pct.to_dict(orient='list'))
     latex_frame = pd.DataFrame.from_dict(latex_dict)
-    return create_latex_table(latex_frame, "test_result_times", None, round=0, col_cells_postfix='%')
 
-def create_ns_rank_table(data: EvalMetrics) -> str:
+    cells_postfix = [""]
+    cells_postfix.extend(['%' for _ in range(len(latex_frame.columns) - 1)])
+
+    return create_latex_table(latex_frame, label, None, round=0, row_lines=False, outer_col_lines=False, col_cells_postfix=cells_postfix)
+
+
+
+def create_ns_rank_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='baseline_ns_ranks') -> str:
+    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
+    data = calc_eval_metrics(folders)
+
     table_data = dict()
     labels = ["Dataset"]
     labels.extend(data.get_method_names())
     sub_labels = ["ns", "rank"]
-    
     header = encode_multicol_labels(labels, sub_labels, rest_space_idx=0)
-    ranks = data.mean_accs.rank(axis=1, ascending=False)
+    
     for i, (dataset, results) in enumerate(data.results.items()):
         row = [None for _ in header]
         row[0] = dataset.lower()
         for (method, result) in results.items():
             row[header.index(f"sublabel_{method}_ns")] = data.normalized_scores.at[method, dataset]
-            row[header.index(f"sublabel_{method}_rank")] = ranks.at[dataset, method]
+            row[header.index(f"sublabel_{method}_rank")] = data.mean_ranks.at[dataset, method]
         table_data[i] = row
     
     frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
-    return create_multicol_latex_table(frame, "test_result_stats", None, round=3)
 
-def create_method_metrics_table(data: EvalMetrics) -> str:
+    methods = data.get_method_names()
+    labels = [f"sublabel_{method}_ns" for method in methods]
+    summed = frame[labels].sum().sort_values(ascending=False)
+    
+    labels = ["rest_space_Dataset"]
+    for label in summed.index:
+        method = label.split("_")[1].strip()
+        labels.append(f"sublabel_{method}_ns")
+        labels.append(f"sublabel_{method}_rank")
+    
+    frame = frame[labels]
+
+    return create_multicol_latex_table(frame, label, None, round=3, row_lines=False, outer_col_lines=False)
+
+def create_ns_rank_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+    reg = create_ns_rank_table(ignore_datasets, None, sort_fn, sort_reverse, label='baseline_ns_ranks_reg')
+    classif = create_ns_rank_table(ignore_datasets, None, sort_fn, sort_reverse, label='baseline_ns_ranks_cls')
+    return f"{reg}\n\n{classif}"
+
+
+
+def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='basline_metric') -> str:
+    folders = load_result_folders(ignore_datasets, sort_fn=sort_fn, reverse=True)
+    data = calc_eval_metrics(folders)
+
     latex_dict = dict(
         AS=data.agg_scores.to_dict(),
         RS=data.rank_scores.to_dict(),
@@ -313,7 +442,7 @@ def create_method_metrics_table(data: EvalMetrics) -> str:
         JS=data.js.to_dict()
     )
     frame = pd.DataFrame.from_dict(latex_dict)
-    return create_latex_table(frame, "method_metrics", None, round=3, add_row_label="Dataset")
+    return create_latex_table(frame, label, None, round=3, add_row_label="Dataset", row_lines=False, outer_col_lines=False)
 
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
@@ -321,17 +450,18 @@ def save_table(table: str):
 
 if __name__ == "__main__":
     ignore_datasets = (Builtin.AIRLINES.name, )
-    result_folders = load_result_folders(ignore_datasets)
 
-    for method, result in result_folders.items():
-        datasets = tuple(result.keys())
-        print(f"{method}: {datasets}, len={len(datasets)}")
+    folder_sorter = lambda folder: ( 
+        folder.dataset.info().task in (Task.BINARY, Task.MULTICLASS), 
+        folder.dataset.info().task == Task.REGRESSION,
+        folder.dataset.info().size_group == SizeGroup.SMALL,
+        folder.dataset.info().size_group == SizeGroup.MODERATE,
+        folder.dataset.info().size_group == SizeGroup.LARGE,
+        folder.dataset.name, 
+        folder.search_method
+    )
 
-    print()
-    metrics = calc_eval_metrics(result_folders)
-    print()
-
-    table = create_train_test_table(metrics)
+    table = create_time_pct_table(ignore_datasets, folder_sorter, sort_reverse=True)
     print(table)
     save_table(table)
 

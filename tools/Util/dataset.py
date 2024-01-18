@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, Flag, auto
 from typing import Tuple, Union, Optional
 import pandas as pd
 import os
@@ -18,10 +18,10 @@ class SizeGroup(Enum):
     MODERATE = 1,
     LARGE = 2
 
-class Task(Enum):
-    BINARY = 1
-    MULTICLASS = 2
-    REGRESSION = 3
+class Task(Flag):
+    BINARY = auto()
+    MULTICLASS = auto()
+    REGRESSION = auto()
 
 class DatasetInfo:
     def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup):
