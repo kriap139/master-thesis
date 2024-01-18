@@ -21,10 +21,14 @@ def select_version(current: ResultFolder, new_version: int, select_versions: Dic
         return new_version == version
     return current.version < new_version
 
-def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
+def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], filter_fn: Callable[[ResultFolder], bool] = None, reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
     joined: List[ResultFolder] = []
     for (dataset, methods) in folders.items():
         joined.extend(methods.values())
+    
+    if filter_fn is not None:
+        joined = list(filter(filter_fn, joined))
+        
     
     joined.sort(key=fn, reverse=reverse)
     folders.clear()
@@ -45,6 +49,7 @@ def load_result_folders(
         select_versions: Dict[str, Dict[str, int]] = None, 
         print_results=True, 
         sort_fn: Callable[[ResultFolder], Any] = None, 
+        filter_fn: Callable[[ResultFolder], bool] = None, 
         reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
 
     result_dir = data_dir(add="test_results")
@@ -79,7 +84,7 @@ def load_result_folders(
                 result.version = version
     
     if sort_fn:
-        results = sort_folders(results, fn=sort_fn, reverse=reverse)
+        results = sort_folders(results, fn=sort_fn, filter_fn=filter_fn, reverse=reverse)
     
     if print_results:
         #for method, result in results.items():
@@ -142,7 +147,7 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
                 if not printed_newline:
                     print()
                     printed_newline = True
-                    
+
                 print(f"Result for {method} on the {dataset} dataset, doesn't exist. Computing it")
                 file_data = BaseSearch.recalc_results(folder.dir_path)
 
