@@ -247,6 +247,12 @@ class BaseSearch:
         search_space = self._encode_search_space(search_space)
         is_sparse = self.train_data.x.dtypes.apply(pd.api.types.is_sparse).all()
         print("starting search")
+
+        if is_sparse:
+            train_x: coo_matrix = self.train_data.x.sparse.to_coo()
+            train_x = train_data.tocsr()
+        else:
+            train_x = None
         
         for i, (train_idx, test_idx) in enumerate(folds):
             if i > self.max_outer_iter:
@@ -256,12 +262,11 @@ class BaseSearch:
             start = time.perf_counter()
 
             if is_sparse:
-                x: coo_matrix = self.train_data.x.sparse.to_coo()
-                print(type(x))
-                exit(0)
+                x_train, x_test = train_x[train_idx, :], train_x[test_idx, :]
             else:
                 x_train, x_test = self.train_data.x.iloc[train_idx, :], self.train_data.x.iloc[test_idx, :]
-                y_train, y_test = self.train_data.y[train_idx], self.train_data.y[test_idx]
+            
+            y_train, y_test = self.train_data.y[train_idx], self.train_data.y[test_idx]
 
             result = self._inner_search(i, x_train, y_train, search_space, fixed_params)
             acc = self.score(result.best_model, x_test, y_test)
