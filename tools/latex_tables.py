@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Tuple, Dict, Any, Union, Iterable
-from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, sort_folders
+from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders
 from Util import Task, SizeGroup
 import numbers
 from dataclasses import dataclass
@@ -387,7 +387,35 @@ def create_time_pct_table(ignore_datasets: List[str] = None, sort_fn=None, sort_
 
     return create_latex_table(latex_frame, label, None, round=0, row_lines=False, outer_col_lines=False, col_cells_postfix=cells_postfix)
 
+def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
+    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
+    data = calc_eval_metrics(folders)
+    pct = time_frame_pct(data)
+    stamps = time_frame_stamps(data)
 
+    mins = pct.min().sort_values()
+    pct = pct[mins.index]
+    stamps = stamps[mins.index]
+
+    table_data = dict()
+    labels = ["Dataset"]
+    labels.extend(pct.columns)
+    sub_labels = ["pct", "stamp"]
+    
+    header = encode_multicol_labels(labels, sub_labels, rest_space_idx=0)
+    cells_postfix = ["" for _ in header]
+
+    for i, (dataset, results) in enumerate(pct.iterrows()):
+        row = [None for _ in header]
+        row[0] = dataset.lower()
+        for (method, pct) in results.items():
+            row[header.index(f"sublabel_{method}_pct")] = pct
+            row[header.index(f"sublabel_{method}_stamp")] = stamps.at[dataset, method]
+            cells_postfix[header.index(f"sublabel_{method}_pct")] = '%'
+        table_data[i] = row
+        
+    frame = pd.DataFrame.from_dict(table_data, orient='index', columns=header)
+    return create_multicol_latex_table(frame, label, None, round=0, row_lines=False, outer_col_lines=False, col_cells_postfix=cells_postfix)
 
 def create_ns_rank_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='baseline_ns_ranks') -> str:
     folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
@@ -461,7 +489,7 @@ if __name__ == "__main__":
         folder.search_method
     )
 
-    table = create_time_pct_table(ignore_datasets, folder_sorter, sort_reverse=True)
+    table = create_time_table(ignore_datasets, folder_sorter, sort_reverse=True)
     print(table)
     save_table(table)
 

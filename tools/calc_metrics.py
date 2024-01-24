@@ -198,9 +198,6 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
     )
 
 def time_frame(data: EvalMetrics) -> pd.DataFrame:
-    columns = ["Dataset"]
-    columns.extend(data.get_method_names())
-
     time_dict = dict()
     for _, results in data.results.items():
         for method, result in results.items():
@@ -212,6 +209,8 @@ def time_frame(data: EvalMetrics) -> pd.DataFrame:
     
     frame = pd.DataFrame.from_dict(time_dict)
     frame.index = tuple(data.results.keys())
+
+    frame = frame.sort_values(by=f"{frame.columns[0]}")
     return frame
 
 def time_frame_pct(data: EvalMetrics) -> pd.DataFrame:
@@ -220,6 +219,11 @@ def time_frame_pct(data: EvalMetrics) -> pd.DataFrame:
     norm = frame.div(mins, axis='index')
     pct = norm * 100
     return pct
+
+def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
+    frame = time_frame(data)
+    return frame.map(BaseSearch.time_to_str)
+
 
 if __name__ == "__main__":
     ignore_datasets = (Builtin.AIRLINES.name, )

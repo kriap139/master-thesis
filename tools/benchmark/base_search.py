@@ -157,7 +157,7 @@ class BaseSearch:
         if days == 0:
             return "{:02}:{:02}:{:02}".format(hours, minutes, secs)
         else:
-            return "{:02}:{:02}:{:02}:{:02}".format(days, hours, minutes, secs)
+            return "{}d,{:02}:{:02}:{:02}".format(days, hours, minutes, secs)
     
     @classmethod
     def recalc_results(cls, result_dir: str) -> dict:
