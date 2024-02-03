@@ -31,23 +31,22 @@ class DatasetInfo:
         self.size_group = size_group
 
 class Builtin(Enum):
-    HIGGS = DatasetInfo("HIGGS", 0, Task.BINARY, SizeGroup.LARGE)
-    HEPMASS = DatasetInfo("HEPMASS", 0, Task.BINARY, SizeGroup.LARGE)
-    AIRLINES = DatasetInfo("AIRLINES", "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
-    FPS = DatasetInfo("FPS", "FPS", Task.REGRESSION, SizeGroup.MODERATE)
-    ACSI = DatasetInfo("ACSI", "PINCP", Task.BINARY, SizeGroup.MODERATE)
-    SGEMM_GKP = DatasetInfo("SGEMM_GKP", "Run1", Task.REGRESSION, SizeGroup.SMALL)
-    PUF_128 = DatasetInfo("PUF_128", 128, Task.BINARY, SizeGroup.LARGE)
-    WAVE_E = DatasetInfo("WAVE_E", "energy_total", Task.REGRESSION, SizeGroup.SMALL)
-    OKCUPID_STEM = DatasetInfo("OKCUPID_STEM", "job", Task.MULTICLASS, SizeGroup.SMALL)
-    ACCEL = DatasetInfo("ACCEL", "wconfid", Task.MULTICLASS, SizeGroup.SMALL)
-    RCV1 = DatasetInfo("RCV1", "class", Task.BINARY, SizeGroup.MODERATE)
-    DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH", "delay", Task.REGRESSION, SizeGroup.LARGE)
-    COMET_MC = DatasetInfo("COMET_MC", "label", Task.MULTICLASS, SizeGroup.LARGE)
+    HIGGS = DatasetInfo("HIGGS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
+    HEPMASS = DatasetInfo("HEPMASS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
+    AIRLINES = DatasetInfo("AIRLINES".lower(), "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
+    FPS = DatasetInfo("FPS".lower(), "FPS", Task.REGRESSION, SizeGroup.MODERATE)
+    ACSI = DatasetInfo("ACSI".lower(), "PINCP", Task.BINARY, SizeGroup.MODERATE)
+    SGEMM_GKP = DatasetInfo("SGEMM_GKP".lower(), "Run1", Task.REGRESSION, SizeGroup.SMALL)
+    PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
+    WAVE_E = DatasetInfo("WAVE_E".lower(), "energy_total", Task.REGRESSION, SizeGroup.SMALL)
+    OKCUPID_STEM = DatasetInfo("OKCUPID_STEM".lower(), "job", Task.MULTICLASS, SizeGroup.SMALL)
+    ACCEL = DatasetInfo("ACCEL".lower(), "wconfid", Task.MULTICLASS, SizeGroup.SMALL)
+    RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE)
+    DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)
+    COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)
 
     def info(self) -> DatasetInfo:
         return self.value
-
 
 def extract_labels( 
                 data: pd.DataFrame, 
@@ -76,11 +75,69 @@ def extract_labels(
 
     return x, y
 
-class Dataset(DatasetInfo):
-    FOLDS_FILE_PREFIX = "_folds"
+class CVInfo(dict):
+    def __init__(self, cv: Union[TY_CV, dict] = None):    
+        if cv is None:
+            print(f"cv is None, assuming default standard KFold!")
+            cv = KFold()
 
+        mappings = cv if isinstance(cv, dict) else self._create_info(cv)
+        dict.__init__(self, mappings)
+    
+    def fn(self) -> str:
+        return f"{str(self)}_folds.json"
+    
+    def path(self, dir: str) -> str:
+        return os.path.join(dir, fn)
+    
+    @staticmethod
+    def _str_filter_cond(pair) -> bool:
+        key, value = pair 
+        ignore_keys = ("name", "stratified")
+        if (key not in ignore_keys) and value is not None:
+            return value if type(value) == bool else True
+        return False
+
+    def __str__(self) -> str:
+        info = dict(filter(self._str_filter_cond, self.items()))
+        strings = [f"{k}={v}" for k, v in info.items()]
+        return f"{self['name']}[{','.join(strings)}]"
+
+    @classmethod
+    def _create_info(cls, cv: TY_CV) -> dict:
+        name = cv.__class__.__name__
+        info = dict(
+            name=name, 
+            random_state=cv.random_state,
+        )
+
+        if hasattr(cv, "n_repeats"):
+            info["n_repeats"] = cv.n_repeats
+        if "Stratified" in name:
+            info["stratified"] = True
+
+        for attr in ("n_splits", "shuffle"):
+            if hasattr(cv, attr):
+                info[attr] = getattr(cv, attr)
+            elif hasattr(cv, "cv"):
+                if hasattr(cv.cv, attr):
+                    info[attr] = getattr(cv.cv, attr)
+                elif hasattr(cv, "cvargs"):
+                    if attr in cv.cvargs.keys():
+                        info[attr] = cv.cvargs[attr]
+        
+        if "n_splits" in info.keys():
+            n_folds = info.pop("n_splits")
+            info["n_folds"] = n_folds
+
+        return info
+    
+    def to_dict(self) -> dict:
+        return {k:v for k, v in self.items()}
+
+class Dataset(DatasetInfo):
     def __init__(self, bn: Builtin, is_test=False):
-        super().__init__(bn.info().label_column, bn.info().task, bn.info().size_group, bn.name.lower())
+        super().__init__(bn.info().name, bn.info().label_column, bn.info().task, bn.info().size_group)
         self.x = None
         self.y = None
         self.cat_features: list = []
@@ -89,7 +146,6 @@ class Dataset(DatasetInfo):
         self.test_path = None
         self.train_path = None
         self.saved_folds_path = None
-        self.__saved_folds_fn = f"{self.name}{self.FOLDS_FILE_PREFIX}.json"
         self.__set_dataset_paths()
     
     def get_builtin(self):
@@ -122,22 +178,21 @@ class Dataset(DatasetInfo):
 
         if (self.test_path is not None) and (not os.path.exists(self.test_path)):
             raise RuntimeError(f"Test data for dataset '{self.name}' not found in data folder: {self.test_path}")
-        
-        fn, ext = os.path.splitext(self.__saved_folds_fn)
-        if (fn in fns) and (exts[fns.index(fn)] == ".json"):
-            self.saved_folds_path = os.path.join(path, self.__saved_folds_fn)
-
-    def has_saved_folds(self) -> bool:
-        return self.saved_folds_path is not None
     
     def has_test_set(self) -> bool:
         return self.test_path is not None
     
-    def load_saved_folds_file(self) -> dict:
-        if self.saved_folds_path is None:
-            raise RuntimeError(f"No saved folds data found for dataset {self.name}")
+    def has_saved_folds(self, cv: TY_CV) -> bool:
+        info = CVInfo(cv)
+        return os.path.exists(info.path(self.get_dir()))
 
-        data = load_json(self.saved_folds_path)
+    def load_saved_folds_file(self, cv: TY_CV) -> dict:
+        info = CVInfo(cv)
+        path = info.path(self.get_dir())
+        if not os.path.exists(path):
+            raise RuntimeError(f"No {str(info)} saved folds data found for dataset {self.name}")
+
+        data = load_json(path)
         folds = data["folds"]
         data["folds"] = [
             (
@@ -147,14 +202,16 @@ class Dataset(DatasetInfo):
 
         return data
     
-    def load_saved_folds_info(self):
-        return self.load_saved_folds_file()["info"]
+    def load_saved_cv_folds_info(self, cv: TY_CV):
+        return self.load_saved_folds_file(cv)["info"]
     
-    def load_saved_folds(self) -> dict:
-        return self.load_saved_folds_file()["folds"]
+    def load_saved_cv_folds(self, cv: TY_CV) -> dict:
+        return self.load_saved_folds_file(cv)["folds"]
         
     def save_folds(self, cv: TY_CV):
-        info = self.get_cv_info(cv)
+        info = CVInfo(cv)
+        path = info.path(self.get_dir())
+
         folds = []
         for train_idx, test_idx in cv.split(self.x, self.y):
             folds.append(
@@ -165,10 +222,7 @@ class Dataset(DatasetInfo):
                     shape_test=test_idx.shape
                 )
             )
-
-        path = os.path.join(self.get_dir(), self.__saved_folds_fn)
-        save_json(path, data=dict(info=info, folds=folds), indent=None)
-        self.__set_dataset_paths()
+        save_json(path, data=dict(info=info.to_dict(), folds=folds), indent=None)
     
     def __load(self, load_labels_only=False, force_load_test=False) -> pd.DataFrame:
         if (self.is_test or force_load_test) and (self.test_path is None):
@@ -271,35 +325,6 @@ class Dataset(DatasetInfo):
         self.__set_dataset_paths()
         self.load()
         return self
-    
-    @classmethod
-    def get_cv_info(cls, cv: TY_CV) -> dict:
-        name = cv.__class__.__name__
-        info = dict(
-            name=name, 
-            random_state=cv.random_state,
-        )
-
-        if hasattr(cv, "n_repeats"):
-            info["n_repeats"] = cv.n_repeats
-        if "Stratified" in name:
-            info["stratified"] = True
-
-        for attr in ("n_splits", "shuffle"):
-            if hasattr(cv, attr):
-                info[attr] = getattr(cv, attr)
-            elif hasattr(cv, "cv"):
-                if hasattr(cv.cv, attr):
-                    info[attr] = getattr(cv.cv, attr)
-                elif hasattr(cv, "cvargs"):
-                    if attr in cv.cvargs.keys():
-                        info[attr] = cv.cvargs[attr]
-        
-        if "n_splits" in info.keys():
-            n_folds = info.pop("n_splits")
-            info["n_folds"] = n_folds
-        
-        return info
     
     @classmethod
     def merge_train_test(cls, d: Builtin):

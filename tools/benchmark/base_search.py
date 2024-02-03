@@ -1,4 +1,4 @@
-from Util import Dataset, find_dir_ver, load_csv, save_csv, Integer, Real, Categorical, find_file_ver
+from Util import Dataset, find_dir_ver, load_csv, save_csv, Integer, Real, Categorical, find_file_ver, CVInfo
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
@@ -92,8 +92,8 @@ class BaseSearch:
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
                 max_outer_iter=self.max_outer_iter if (self.max_outer_iter != sys.maxsize) else None,
-                cv=Dataset.get_cv_info(self.cv) if self.cv is not None else None,
-                inner_cv=Dataset.get_cv_info(self.inner_cv) if self.inner_cv is not None else None,
+                cv=CVInfo(self.cv) if self.cv is not None else None,
+                inner_cv=CVInfo(self.inner_cv) if self.inner_cv is not None else None,
                 method_params=self._get_search_method_info()
             )
         )
@@ -236,13 +236,13 @@ class BaseSearch:
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         self.init_save(search_space, fixed_params)
         
-        if not self.train_data.has_saved_folds():
-            print(f"Saveing folds for dataset {self.train_data.name}")
+        if not self.train_data.has_saved_folds(self.cv):
+            print(f"Saveing {CVInfo(self.cv)} folds for dataset {self.train_data.name}")
             self.train_data.save_folds(self.cv)
         
-        data = self.train_data.load_saved_folds_file()
+        data = self.train_data.load_saved_folds_file(cv)
         folds = data["folds"]
-        assert data["info"] == Dataset.get_cv_info(self.cv)
+        assert CVInfo(data["info"]) == CVInfo(self.cv)
         
         search_space = self._encode_search_space(search_space)
         is_sparse = self.train_data.x.dtypes.apply(pd.api.types.is_sparse).all()

@@ -14,10 +14,11 @@ from scipy.sparse import coo_matrix
 from sklearn.metrics import get_scorer, get_scorer_names
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo
 import lightgbm as lgb
-from search import get_sklearn_model
+from search import get_sklearn_model, get_cv, build_cli
 import logging
+
 
 import csv
 
@@ -52,14 +53,16 @@ def search_test():
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
 
+dataset = Dataset(Builtin.ACCEL)
+args = build_cli()
+#print(f"x={dataset.x.shape}, y={dataset.y.shape}")
+#print(dataset.x.info(), '\n')
 
-scorer = get_scorer_names() #get_scorer("")
-print(scorer)
-exit(1)
-
-dataset = Dataset(Builtin.ACCEL).load()
-print(f"x={dataset.x.shape}, y={dataset.y.shape}")
-print(dataset.x.info(), '\n')
+cv = get_cv(dataset, args.no_repeats, args.n_folds, n_repeats=args.n_repeats)
+inner_cv = get_cv(dataset, True, args.inner_n_folds, shuffle=args.inner_shuffle, no_stratify=True)
+print(CVInfo(cv))
+print(CVInfo(inner_cv))
+exit(0)
 
 is_sparse = dataset.x.dtypes.apply(pd.api.types.is_sparse).all()
 print(f"is_sparse: {is_sparse}")
