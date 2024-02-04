@@ -5,8 +5,10 @@
 #SBATCH --cpus-per-task=64
 #SBATCH -A master        # Replace with the desired account name
 #SBATCH -p normal        # Replace with the desired partition name
+#SBATCH --output=R-%x.%j.out
+#SBATCH --error=R-%x.%j.err
 
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/save_result_fix.py
+python3 ./tools/search.py --method Seq
