@@ -9,4 +9,4 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method OptunaSearch --max-lgb-jobs 10 --dataset okcupid_stem
+python3 ./tools/search.py --method OptunaSearch --max-lgb-jobs 10 --n-repeats 3 --n-jobs 1 --dataset rcv1

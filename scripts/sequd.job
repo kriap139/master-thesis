@@ -9,5 +9,5 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method SeqUDSearch --max-lgb-jobs 10 --dataset okcupid_stem
+python3 ./tools/search.py --method SeqUDSearch --max-lgb-jobs 10 --n-repeats 3 --dataset delays_zurich
 

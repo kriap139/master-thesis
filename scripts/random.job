@@ -6,7 +6,6 @@
 #SBATCH -A master        # Replace with the desired account name
 #SBATCH -p normal        # Replace with the desired partition name
 
-
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method RandomSearch --max-lgb-jobs 10 --dataset okcupid_stem
+python3 ./tools/search.py --method RandomSearch --max-lgb-jobs 10 --n-jobs 1 --n-repeats 3 --dataset rcv1
