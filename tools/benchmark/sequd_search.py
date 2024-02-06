@@ -7,6 +7,7 @@ import numpy as np
 import json
 from sequd import SeqUD
 import pandas as pd
+from itertools import chain
 
 class SeqUDSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
@@ -23,10 +24,9 @@ class SeqUDSearch(BaseSearch):
         )
     
     def _get_inner_history_head(self, search_space: dict) -> list:
-        head = ["outer_iter"]
-        for name in search_space.keys():
-            head.extend((name, f"{name}_UD"))
-        head.extend(("score", "stage"))
+        params = [name for name in search_space.keys()]
+        params_ud = [f"{name}_UD" for name in search_space.keys()]
+        head = list(chain.from_iterable(("outer_iter", ), params, params_ud, ("score", "stage")))
         return head
     
     def __update_inner_history(self, search_iter: int, clf: SeqUD):
