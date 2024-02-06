@@ -10,7 +10,7 @@ import pandas as pd
 from itertools import chain
 from .sequd_search import SeqUDSearch
 
-class SeqUDSearch(SeqUDSearch):
+class SeqUD2Search(SeqUDSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
                  n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, 
                  n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None,
