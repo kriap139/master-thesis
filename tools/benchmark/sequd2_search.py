@@ -14,24 +14,27 @@ class SeqUD2Search(SeqUDSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
                  n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, 
                  n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None,
-                 approx_method='linear', t=0.1):
+                 adjust_method='linear', t=0.25, exp_step=0.18):
         super().__init__(
             model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save_dir, 
             n_runs_per_stage, max_outer_iter, save_inner_history, max_outer_iter
         )
-        self.approx_method = approx_method
+        
         self.t = t
+        self.exp_step = exp_step
+        self.adjust_method = adjust_method
     
     def _get_search_method_info(self) -> dict:
         info = super()._get_search_method_info()
-        info["approx_method"] = self.approx_method
+        info["adjust_method"] = self.adjust_method
         info["t"] = self.t
+        info["exp_step"] = exp_step
         return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = SeqUD2(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
-            self.scoring, refit=True, verbose=2, approx_method=self.approx_method, t=self.t
+            self.scoring, refit=True, verbose=2, adjust_method=self.adjust_method, t=self.t, adjust_method=self.adjust_method, exp_step=self.exp_step
         )
         search.fit(x_train, y_train, fixed_params)
 

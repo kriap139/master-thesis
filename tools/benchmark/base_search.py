@@ -92,8 +92,8 @@ class BaseSearch:
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
                 max_outer_iter=self.max_outer_iter if (self.max_outer_iter != sys.maxsize) else None,
-                cv=CVInfo(self.cv) if self.cv is not None else None,
-                inner_cv=CVInfo(self.inner_cv) if self.inner_cv is not None else None,
+                cv=CVInfo(self.cv).to_dict() if self.cv is not None else None,
+                inner_cv=CVInfo(self.inner_cv).to_dict() if self.inner_cv is not None else None,
                 method_params=self._get_search_method_info()
             )
         )
