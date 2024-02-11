@@ -26,7 +26,7 @@ class SeqUDSearch(BaseSearch):
     def _get_inner_history_head(self, search_space: dict) -> list:
         params = [name for name in search_space.keys()]
         params_ud = [f"{name}_UD" for name in search_space.keys()]
-        head = list(chain.from_iterable(("outer_iter", ), params, params_ud, ("score", "stage")))
+        head = list(chain.from_iterable([("outer_iter",), params, params_ud, ("score", "stage")]))
         return head
     
     def __update_inner_history(self, search_iter: int, clf: SeqUD):
