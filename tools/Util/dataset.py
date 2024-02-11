@@ -88,7 +88,7 @@ class CVInfo(dict):
         return f"{str(self)}_folds.json"
     
     def path(self, dir: str) -> str:
-        return os.path.join(dir, fn)
+        return os.path.join(dir, self.fn())
     
     @staticmethod
     def _str_filter_cond(pair) -> bool:

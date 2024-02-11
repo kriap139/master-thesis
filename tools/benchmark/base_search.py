@@ -240,7 +240,7 @@ class BaseSearch:
             print(f"Saveing {CVInfo(self.cv)} folds for dataset {self.train_data.name}")
             self.train_data.save_folds(self.cv)
         
-        data = self.train_data.load_saved_folds_file(cv)
+        data = self.train_data.load_saved_folds_file(self.cv)
         folds = data["folds"]
         assert CVInfo(data["info"]) == CVInfo(self.cv)
         
