@@ -9,8 +9,9 @@ from sequd import SeqUD, SeqUD2
 import pandas as pd
 from itertools import chain
 from .sequd_search import SeqUDSearch
+from pysequd import AdjustedSequd
 
-class SeqUD2Search(SeqUDSearch):
+class AdjustedSeqUDSearch(SeqUDSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
                  n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, 
                  n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None,
@@ -32,7 +33,7 @@ class SeqUD2Search(SeqUDSearch):
         return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        search = SeqUD2(
+        search = AdjustedSequd(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
             self.scoring, refit=True, verbose=2, adjust_method=self.adjust_method, t=self.t, adjust_method=self.adjust_method, exp_step=self.exp_step
         )

@@ -50,16 +50,17 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
     n_jobs = int(float(CPU_CORES) / search_n_jobs)
     return min(min(n_jobs, CPU_CORES), max_lgb_jobs)
 
-def build_cli() -> argparse.Namespace:
+def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=CPU_CORES, test_n_jobs=MAX_SEARCH_JOBS) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
+
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch", "SeqUD2Search", "GridSearch", "OptunaSearch"),
+        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch"),
         type=str,
-        required=True
+        required=not test,
     )
     parser.add_argument("--dataset",
         choices=tuple(b.name.lower() for b in Builtin), 
-        required=True
+        required=not test
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
@@ -76,16 +77,22 @@ def build_cli() -> argparse.Namespace:
     parser.add_argument("--scoring", type=str, default=None, choices=get_scorer_names())
 
     args = parser.parse_args()
-    args.dataset = Builtin[args.dataset.upper()]
+
+    if test_method is not None:
+        args.method = test_method
+        args.dataset = test_dataset
+        args.max_lgb_jobs = test_max_lgb_jobs
+        args.n_jobs = test_n_jobs
+    else:
+        args.dataset = Builtin[args.dataset.upper()]
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
     
     return args
 
-if __name__ == "__main__":
+def search(args: argparse.Namespace):
     logging.getLogger().setLevel(logging.DEBUG)
-    args = build_cli()
 
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
@@ -134,3 +141,7 @@ if __name__ == "__main__":
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
+
+if __name__ == "__main__":
+    args = build_cli()
+    search(args)
