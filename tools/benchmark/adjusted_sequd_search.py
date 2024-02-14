@@ -35,7 +35,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = AdjustedSequd(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
-            self.scoring, refit=True, verbose=2, adjust_method=self.adjust_method, t=self.t, adjust_method=self.adjust_method, exp_step=self.exp_step
+            self.scoring, refit=True, verbose=2, adjust_method=self.adjust_method, t=self.t, exp_step=self.exp_step
         )
         search.fit(x_train, y_train, fixed_params)
 
