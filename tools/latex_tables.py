@@ -112,41 +112,45 @@ class Latex:
         return rows
     
     @classmethod
+    def rounder(cls, v: Any, n_round: int = None) -> Union[int, float, str]:
+        if n_round is None:
+            return v
+        elif n_round == 0:
+            return int(round(v, n_round))
+        else:
+            return round(v, n_round)
+    
+    @classmethod
+    def cell(cls, v: Any, n_round = None, postfix: str = None) -> str:
+        if isinstance(v, numbers.Number):
+            v = str(rounder(v))
+        else:
+            v = cls.escapes(v)
+        return v if postfix is None else v + postfix
+    
+    @classmethod
     def tabular_rows(cls, data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
         table_rows = []
         row_line = ROW_LINE_NL if row_lines else ""
+
         if col_cells_postfix is not None:
             col_cells_postfix = cls.escapes(col_cells_postfix)
-
-        def rounder(v: Any):
-            if n_round is None:
-                return v
-            elif n_round == 0:
-                return int(round(v, n_round))
-            else:
-                return round(v, n_round)
-
-        def create_cell(col: int, v: Any):
-            if isinstance(v, numbers.Number):
-                v = str(rounder(v))
-            else:
-                v = cls.escapes(v) 
-
-            if type(col_cells_postfix) == str:
-                return v + col_cells_postfix
-            elif type(col_cells_postfix) == list:
-                return v + col_cells_postfix[col]
-            else:
-                return v
         
         if add_row_labels:
             row_labels = [f"{cls.escapes(label)} & " for label in data.index]
         else:
             row_labels = ["" for _ in data.index]
+        
+        if type(col_cells_postfix) == str:
+            col_cells_postfix = [col_cells_postfix for _ in data.columns]
+        elif type(col_cells_postfix) == list:
+            assert len(col_cells_postfix) == len(data.columns)
+        else:
+            col_cells_postfix = ["" for _ in data.columns]
 
         last_row = len(data.index) - 1
         for i, (label, row) in enumerate(data.iterrows()):
-            row_data = [create_cell(col, cell) for col, cell in enumerate(row)]
+            row_data = [cls.cell(cell, n_round, col_cells_postfix[col]) for col, cell in enumerate(row)]
             if (i == last_row) and not outer_row_lines:
                 table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
             elif (i == last_row) and outer_row_lines and not row_lines:

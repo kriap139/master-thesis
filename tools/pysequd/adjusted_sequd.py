@@ -76,14 +76,15 @@ class AdjustedSequd(SeqUD):
 
         set_vecs = center_ud - para_set_ud
         transformed: pd.DataFrame = para_set_ud + self.adjust(set_vecs)
-
         mapping_data = super()._para_mapping(transformed)
+
         if log_append:
             transformed.columns = [f"{name}_adjusted" for name in transformed.columns]
             log_aug = transformed.to_dict()
             log_aug[self.max_score_column_name] = max_score
             log_aug = pd.DataFrame(log_aug)
             mapping_data.logs_append = log_aug
+
         return mapping_data
     
     def _run(self, obj_func):
