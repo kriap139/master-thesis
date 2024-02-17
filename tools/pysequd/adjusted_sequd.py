@@ -42,10 +42,6 @@ class AdjustedSequd(SeqUD):
     def adjust_exp(self, set_vecs):
         frac = self.sigmoid(self.exp_step * (self.stage - 1)) 
         return frac * set_vecs
-
-    def _generate_init_design(self):
-        self._adjusted_ud_logs = pd.DataFrame()
-        return super()._generate_init_design()
     
     def _get_prev_stage_rows(self) -> pd.DataFrame:
         # self.logs to clf in stage and stage_rows for the increased score bug.
