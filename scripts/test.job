@@ -11,4 +11,4 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method SeqUDSearch --max-lgb-jobs 10 --n-repeats 10 --inner-n-folds 10 --inner-shuffle --inner-random-state 9 --dataset accel 
+python3 ./tools/test.py --method SeqUDSearch --max-lgb-jobs 10 --n-repeats 3 --inner-n-folds 10 --inner-shuffle --inner-random-state 9 --dataset accel 
