@@ -91,15 +91,9 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     
     return args
 
-def search(args: argparse.Namespace):
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
-    n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
-    print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
-
+def get_search_space(args: argparse.Namespace) -> dict:
     if args.method == "GridSearch":
-        search_space = dict(
+        return dict(
             n_estimators=[50, 100, 200, 350, 500],
             learning_rate=[0.001, 0.01, 0.05, 0.1, 0.02],
             max_depth=[0, 5, 10, 20, 25],
@@ -107,7 +101,7 @@ def search(args: argparse.Namespace):
         )
         print(f"GridSearch runs: {len(ParameterGrid(search_space))}")
     else:
-        search_space = dict(
+        return dict(
             n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
             learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
             max_depth=Integer(0, 30, name="max_depth"),
@@ -116,13 +110,20 @@ def search(args: argparse.Namespace):
             feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
         )
 
+def search(args: argparse.Namespace):
+    logging.getLogger().setLevel(logging.DEBUG)
+
+    search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
+    n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
+    print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
+
+    search_space = get_search_space(args)
     dataset = Dataset(args.dataset).load()
     #print(dataset.x.info())
     print(f"args: {args}")
     print(f"column names: {list(dataset.x.columns)}")
     print(f"cat_features: {dataset.cat_features}")
     
-
     fixed_params = dict(
         #objective=OBJECTIVES[dataset.get_builtin()],
         #metric=METRICS[dataset.get_builtin()]
