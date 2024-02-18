@@ -56,11 +56,11 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     parser.add_argument("--method", 
         choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch"),
         type=str,
-        required=not test,
+        required=test_dataset is not None,
     )
     parser.add_argument("--dataset",
         choices=tuple(b.name.lower() for b in Builtin), 
-        required=not test
+        required=test_dataset is not None
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
