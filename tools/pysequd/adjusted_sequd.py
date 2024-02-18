@@ -128,5 +128,5 @@ if __name__ == "__main__":
 
     # exp_step = 0.9824561403508772
     # t = 0.9824561403508772
-    print(f"SeqUD: 0.9807017543859649, SeqUD2: {clf2.best_score_}")
+    print(f"SeqUD: 0.9807017543859649, AdjustedSeqUD: {clf2.best_score_}")
 

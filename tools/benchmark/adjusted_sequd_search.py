@@ -5,7 +5,7 @@ from typing import Callable
 import time
 import numpy as np
 import json
-from sequd import SeqUD, SeqUD2
+from sequd import SeqUD
 import pandas as pd
 from itertools import chain
 from .sequd_search import SeqUDSearch
