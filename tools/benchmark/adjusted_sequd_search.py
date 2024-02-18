@@ -29,7 +29,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         info = super()._get_search_method_info()
         info["adjust_method"] = self.adjust_method
         info["t"] = self.t
-        info["exp_step"] = exp_step
+        info["exp_step"] = self.exp_step
         return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
