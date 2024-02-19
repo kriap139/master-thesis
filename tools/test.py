@@ -53,12 +53,22 @@ def plain_test(bn: Builtin, max_lgb_jobs=None, n_jobs=None):
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
 
+    train_scores = []
+    test_scores = []
+
     for i, (train_idx, test_idx) in enumerate(cv.split()):
         x_train, x_test = dataset.x.iloc[train_idx, :], dataset.x.iloc[test_idx, :]
         y_train, y_test = dataset.y[train_idx], dataset.y[test_idx]
         tuner = RandomizedSearchCV(get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs), search_space, n_iter=100, n_jobs=args.n_jobs, random_state=9, cv=inner_cv)
         test_acc = tuner.best_estimator_.score(x_test, y_test)
         print(f"{i}: train={tuner.best_score_}, test={test_acc}")
+        train_scores.append(tuner.best_score_)
+        test_scores.append(test_acc)
+    
+    train_score = np.mean(train_scores)
+    test_score = np.mean(test_scores)
+    print(f"Results: train={train_score}, test={test_score}")
+
 
 
 if "__main__" == __name__:
