@@ -16,7 +16,7 @@ from sklearn.metrics import get_scorer, get_scorer_names
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo
 import lightgbm as lgb
-from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space
+from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space, MAX_SEARCH_JOBS, CPU_CORES
 import logging
 import csv
 import argparse
