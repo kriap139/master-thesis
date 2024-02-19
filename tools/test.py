@@ -15,7 +15,7 @@ from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json
 import lightgbm as lgb
 from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space, MAX_SEARCH_JOBS, CPU_CORES
 import logging
@@ -56,15 +56,17 @@ def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterab
         dataset = Dataset.try_from(bn)
         if dataset is None:
             continue
+
         dataset.load()
         result = test(dataset, max_lgb_jobs=None, n_jobs=None)
         results[bn.name] = result
         del dataset
         gc.collect()
 
-    
-    if save_fn is not None:
-        save_json(os.path.join(data_dir(), save_fn), results, overwrite=True)
+        if save_fn is not None:
+            data = load_json(os.path.join(data_dir(), save_fn), default={})
+            data.update(results)
+            save_json(os.path.join(data_dir(), save_fn), data, overwrite=True)
 
 def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV, max_lgb_jobs=None, n_jobs=None) -> TestResult:
     search_space = get_search_space(args)
@@ -163,9 +165,11 @@ def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
 if "__main__" == __name__:
     #search_test(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=6, n_jobs=1)
 
-    run_basic_tests(basic_test, Builtin, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
-    run_basic_tests(basic_cv_test, Builtin, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
-    run_basic_tests(basic_cv_repeat_test, Builtin, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
+    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM] # Builtin
+
+    run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
+    run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
+    run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
 
 
 
