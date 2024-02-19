@@ -96,7 +96,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
     def _get_inner_history_head(self, search_space: dict) -> list:
         params = [name for name in search_space.keys()]
         params_ud = [f"{name}_UD" for name in search_space.keys()]
-        adjusted_ud = [f"{name}_UD_adjusted" for name in self.para_names]
+        adjusted_ud = [f"{name}_UD_adjusted" for name in search_space.keys()]
         head = list(chain.from_iterable([("outer_iter",), params, params_ud, adjusted_ud, ("max_prev_score", "score", "stage")]))
         return head
 
