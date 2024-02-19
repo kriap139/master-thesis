@@ -83,6 +83,10 @@ class AdjustedSequd(SeqUD):
 
         return mapping_data
     
+    def _generate_augment_design(self, ud_center):
+        print(f"maxiter: type={type(self.max_search_iter)}, value={self.max_search_iter}")
+        return super()._generate_augment_design(ud_center)
+    
     def _run(self, obj_func):
         super()._run(obj_func)
         # Sorting columns
