@@ -50,7 +50,7 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
     n_jobs = int(float(CPU_CORES) / n_search_jobs)
     return min(min(n_jobs, CPU_CORES), max_lgb_jobs)
 
-def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=CPU_CORES, test_n_jobs=MAX_SEARCH_JOBS) -> argparse.Namespace:
+def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
 
     parser.add_argument("--method", 
@@ -81,8 +81,10 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     if test_method is not None:
         args.method = test_method
         args.dataset = test_dataset
-        args.max_lgb_jobs = test_max_lgb_jobs
-        args.n_jobs = test_n_jobs
+        if test_max_lgb_jobs is not None:
+            args.max_lgb_jobs = test_max_lgb_jobs
+        if test_n_jobs is not None:
+            args.n_jobs = test_n_jobs
     else:
         args.dataset = Builtin[args.dataset.upper()]
 
