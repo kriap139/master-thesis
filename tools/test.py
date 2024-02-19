@@ -56,7 +56,7 @@ def plain_test(bn: Builtin, max_lgb_jobs=None, n_jobs=None):
     for i, (train_idx, test_idx) in enumerate(cv.split()):
         x_train, x_test = dataset.x.iloc[train_idx, :], dataset.x.iloc[test_idx, :]
         y_train, y_test = dataset.y[train_idx], dataset.y[test_idx]
-        tuner = RandomizedSearchCV(get_sklearn_model(dataset), search_space, n_iter=100, n_jobs=args.n_jobs, random_state=9, cv=inner_cv)
+        tuner = RandomizedSearchCV(get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs), search_space, n_iter=100, n_jobs=args.n_jobs, random_state=9, cv=inner_cv)
         test_acc = tuner.best_estimator_.score(x_test, y_test)
         print(f"{i}: train={tuner.best_score_}, test={test_acc}")
 
