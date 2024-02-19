@@ -30,7 +30,7 @@ class SeqUDSearch(BaseSearch):
         head = list(chain.from_iterable([("outer_iter",), params, params_ud, ("score", "stage")]))
         return head
     
-    def __update_inner_history(self, search_iter: int, clf: SeqUD):
+    def _update_inner_history(self, search_iter: int, clf: SeqUD):
         rows = clf.logs.to_dict(orient="records")
         for row in rows:
             row["outer_iter"] = search_iter
@@ -54,7 +54,7 @@ class SeqUDSearch(BaseSearch):
         search.fit(x_train, y_train, fixed_params)
 
         if self.save_inner_history:
-            self.__update_inner_history(search_iter, search)
+            self._update_inner_history(search_iter, search)
 
         return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
 
@@ -108,6 +108,6 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         search.fit(x_train, y_train, fixed_params)
 
         if self.save_inner_history:
-            self.__update_inner_history(search_iter, search)
+            self._update_inner_history(search_iter, search)
 
         return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
