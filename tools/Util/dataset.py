@@ -148,8 +148,17 @@ class Dataset(DatasetInfo):
         self.saved_folds_path = None
         self.__set_dataset_paths()
     
+    @classmethod
+    def try_from(cls, bn: Builtin, log=True) -> Optional['Dataset']:
+        try:
+            return cls(bn)
+        except RuntimeError as e:
+            if log:
+                print(e)
+            return None
+
     def get_builtin(self):
-        return Builtin[self.name]
+        return Builtin[self.name.upper()]
 
     def get_dir(self) -> str:
         path = data_dir(f"datasets/{self.name}")

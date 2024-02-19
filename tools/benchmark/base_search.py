@@ -250,7 +250,7 @@ class BaseSearch:
 
         if is_sparse:
             train_x: coo_matrix = self.train_data.x.sparse.to_coo()
-            train_x = train_data.tocsr()
+            train_x = train_x.tocsr()
         else:
             train_x = None
         

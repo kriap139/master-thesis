@@ -134,12 +134,15 @@ def data_dir(add: str = None) -> str:
         raise RuntimeError(f"data directory dosen't exist: {data_dir}")
 
     
-    if add is not None and len(os.path.basename(add)):
-        path = os.path.join(data_dir, os.path.dirname(add))
+    if add is not None:
+        if len(os.path.basename(add)):
+            path = os.path.join(data_dir, os.path.dirname(add))
+        else:
+            path = os.path.join(data_dir, add)
         os.makedirs(path, exist_ok=True)
         path = os.path.join(data_dir, add)
     else:
-        path = os.path.join(data_dir, add)
+        path = data_dir
         os.makedirs(path, exist_ok=True)
         
     return path
