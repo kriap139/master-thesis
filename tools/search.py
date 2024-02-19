@@ -47,7 +47,7 @@ def get_cv(dataset: Dataset, n_splits=5, n_repeats=10, random_state=None, shuffl
         return RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
 
 def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
-    n_jobs = int(float(CPU_CORES) / search_n_jobs)
+    n_jobs = int(float(CPU_CORES) / n_search_jobs)
     return min(min(n_jobs, CPU_CORES), max_lgb_jobs)
 
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=CPU_CORES, test_n_jobs=MAX_SEARCH_JOBS) -> argparse.Namespace:
