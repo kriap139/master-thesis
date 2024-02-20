@@ -32,7 +32,7 @@ class TestResult:
     test_score: Union[float, Iterable]
     info: dict
     means: Dict[str, float] = None
-    nested: Dict[int, 'TestResult'] = None
+    #nested: Dict[int, 'TestResult'] = None
     is_inner: bool = False
 
 def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argparse.Namespace:
@@ -46,11 +46,7 @@ def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argpar
         args = build_cli(method, dataset)
     return args
 
-def search_test(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None):
-    args = cli(method, dataset, max_lgb_jobs, n_jobs)
-    search(args)
-
-def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterable[Builtin], max_lgb_jobs=None, n_jobs=None, save_fn=None):
+def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterable[Builtin], args: argparse.Namespace, save_fn=None):
     results = {}
     for bn in bns:
         dataset = Dataset.try_from(bn)
@@ -58,8 +54,10 @@ def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterab
             continue
 
         dataset.load()
-        result = test(dataset, max_lgb_jobs=None, n_jobs=None)
+        result = test(args, dataset)
         results[bn.name] = result
+        del dataset.x
+        del dataset.y
         del dataset
         gc.collect()
 
@@ -68,7 +66,7 @@ def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterab
             data.update(results)
             save_json(os.path.join(data_dir(), save_fn), data, overwrite=True)
 
-def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV, max_lgb_jobs=None, n_jobs=None) -> TestResult:
+def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
@@ -93,16 +91,15 @@ def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, 
             x_train, x_test = dataset.x.iloc[train_idx, :], dataset.x.iloc[test_idx, :]
         
         y_train, y_test = dataset.y[train_idx], dataset.y[test_idx]
-        result = func(dataset, x_train, y_train, x_test, y_test, args, max_lgb_jobs, n_jobs)
+        result = func(dataset, x_train, y_train, x_test, y_test, args, search_n_jobs, n_jobs)
 
         if result.is_inner:
             if 'inner_cv' not in info:
                 info['inner_cv'] = result.info
-            raise RuntimeError("Unimplemented!")
-        else:
-            print(f"Fold {i}: train={result.train_score}, test={result.test_score}")
-            train_scores.append(result.train_score)
-            test_scores.append(result.test_score)
+                
+        print(f"Fold {i}: train={result.train_score}, test={result.test_score}")
+        train_scores.append(result.train_score)
+        test_scores.append(result.test_score)
     
     mean_train = np.mean(train_scores)
     mean_test = np.mean(test_scores)
@@ -110,37 +107,40 @@ def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, 
     
     return TestResult(train_scores, test_scores, info, means=dict(train=mean_train, test=mean_test))
 
-def _basic_cv_test_func(dataset: Dataset, x_train: pd.DataFrame, y_train: pd.DataFrame, x_test: pd.DataFrame, y_test: pd.DataFrame, args: argparse.Namespace, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
+def _basic_cv_test_func(dataset: Dataset, x_train: pd.DataFrame, y_train: pd.DataFrame, x_test: pd.DataFrame, y_test: pd.DataFrame, args: argparse.Namespace, n_search_jobs=None, n_lgb_jobs=None) -> TestResult:
+    model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_lgb_jobs)
     model.fit(x_train, y_train, categorical_feature=dataset.cat_features)
     train_score = model.score(x_train, y_train)
     test_score = model.score(x_test, y_test)
     return TestResult(train_score, test_score, {})
 
-def _basic_inner_cv_test_func(dataset: Dataset, x_train: pd.DataFrame, y_train: pd.DataFrame, x_test: pd.DataFrame, y_test: pd.DataFrame, args: argparse.Namespace, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
+def _basic_inner_cv_test_func(dataset: Dataset, x_train: pd.DataFrame, y_train: pd.DataFrame, x_test: pd.DataFrame, y_test: pd.DataFrame, args: argparse.Namespace, n_search_jobs=None, n_lgb_jobs=None) -> TestResult:
+    model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_lgb_jobs)
     cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
-    search = RandomizedSearchCV(model, get_search_space(args), n_iter=50, cv=cv)
+    search = RandomizedSearchCV(model, get_search_space(args), n_iter=50, cv=cv, n_jobs=n_search_jobs)
     search.fit(x_train, y=y_train, categorical_feature=dataset.cat_features)
 
-    print(pd.DataFrame(search.cv_results_))
-    return TestResult(train_score, test_score, {})
+    train_score = search.best_score_
+    test_score = search.best_estimator_.score(x_test, y_test)
+    return TestResult(train_score, test_score, CVInfo(cv).to_dict(), is_inner=True)
 
-def basic_cv_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    args = cli(AdjustedSeqUDSearch.__name__, dataset.get_builtin(), max_lgb_jobs, n_jobs)
+def basic_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
-    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv, max_lgb_jobs, n_jobs)
+    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv)
 
-def basic_cv_repeat_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    args = cli(AdjustedSeqUDSearch.__name__, dataset.get_builtin(), max_lgb_jobs, n_jobs)
+def basic_cv_repeat_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
-    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv, max_lgb_jobs, n_jobs)
+    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv)
     
-def basic_inner_cv_test(dataset: Dataset, x_train: pd.DataFrame, y_train: pd.DataFrame, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    pass
+def basic_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+    cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
 
-def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
-    args = cli(AdjustedSeqUDSearch.__name__, dataset.get_builtin(), max_lgb_jobs, n_jobs)
+def basic_inner_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+    cv = get_cv(dataset, args.n_folds, 0, args.random_state, args.inner_shuffle)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
+
+def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
@@ -148,12 +148,12 @@ def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
 
     is_sparse = dataset.x.dtypes.apply(lambda dtype: isinstance(dtype, pd.SparseDtype)).all()
 
+    train_x = dataset.x
     if is_sparse:
         train_x: coo_matrix = dataset.x.sparse.to_coo()
         train_x = train_x.tocsr()
-        x_train, x_test, y_train, y_test = train_test_split(train_x, dataset.y, test_size=0.30, random_state=9)
-    else:
-        x_train, x_test, y_train, y_test = train_test_split(dataset.x, dataset.y, test_size=0.30, random_state=9)
+        
+    x_train, x_test, y_train, y_test = train_test_split(train_x, dataset.y, test_size=0.30, random_state=9)
 
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
     model.fit(x_train, y_train, categorical_feature=dataset.cat_features)
@@ -165,13 +165,17 @@ def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
 
 
 if "__main__" == __name__:
-    #search_test(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=6, n_jobs=1)
+    # Args method and dataset is not Used in this script!
+    args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=2, n_jobs=2)
 
-    datasets = [Builtin.RCV1] # [Builtin.ACCEL, Builtin.OKCUPID_STEM] # Builtin
 
-    run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
-    run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
-    run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
+    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM]
+    datasets = Builtin
+    #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
+    #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
+    #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
+    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
+    run_basic_tests(basic_inner_inner_cv_test, datasets, args, save_fn=f"basic_inner_inner_cv_test.json")
 
 
 
