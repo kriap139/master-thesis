@@ -146,13 +146,15 @@ def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
     print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
 
-    fixed_params = dict(
-        #objective=OBJECTIVES[dataset.get_builtin()],
-        #metric=METRICS[dataset.get_builtin()]
-        categorical_feature=dataset.cat_features,
-    )
+    is_sparse = dataset.x.dtypes.apply(lambda dtype: isinstance(dtype, pd.SparseDtype)).all()
 
-    x_train, x_test, y_train, y_test = train_test_split(dataset.x, dataset.y, test_size=0.30, random_state=9)
+    if is_sparse:
+        train_x: coo_matrix = dataset.x.sparse.to_coo()
+        train_x = train_x.tocsr()
+        x_train, x_test, y_train, y_test = train_test_split(train_x, dataset.y, test_size=0.30, random_state=9)
+    else:
+        x_train, x_test, y_train, y_test = train_test_split(dataset.x, dataset.y, test_size=0.30, random_state=9)
+
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
     model.fit(x_train, y_train, categorical_feature=dataset.cat_features)
     train_score = model.score(x_train, y_train)
@@ -165,7 +167,7 @@ def basic_test(dataset: Dataset, max_lgb_jobs=None, n_jobs=None) -> TestResult:
 if "__main__" == __name__:
     #search_test(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=6, n_jobs=1)
 
-    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM] # Builtin
+    datasets = [Builtin.RCV1] # [Builtin.ACCEL, Builtin.OKCUPID_STEM] # Builtin
 
     run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
     run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
