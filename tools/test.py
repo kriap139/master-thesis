@@ -136,6 +136,10 @@ def basic_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResul
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
 
+def basic_inner_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+    cv = get_cv(dataset, args.n_folds, 0, args.random_state, args.inner_shuffle)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
+
 def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
@@ -166,10 +170,12 @@ if "__main__" == __name__:
 
 
     datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM]
+    datasets = Builtin
     #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
     #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
     #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
-    run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
+    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
+    run_basic_tests(basic_inner_inner_cv_test, datasets, args, save_fn=f"basic_inner_inner_cv_test.json")
 
 
 
