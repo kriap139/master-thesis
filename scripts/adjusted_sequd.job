@@ -10,5 +10,5 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/search.py --method AdjustedSeqUDSearch --max-lgb-jobs 10 --n-repeats 10 --inner-n-folds 10 --inner-shuffle --inner-random-state 9 --dataset okcupid_stem
+python3 ./tools/search.py --method AdjustedSeqUDSearch --max-lgb-jobs 10 --n-repeats 10 --inner-n-folds 10 --inner-shuffle --inner-random-state 9 --dataset accel
 
