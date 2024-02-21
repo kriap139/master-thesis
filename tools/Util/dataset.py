@@ -149,9 +149,9 @@ class Dataset(DatasetInfo):
         self.__set_dataset_paths()
     
     @classmethod
-    def try_from(cls, bn: Builtin, log=True) -> Optional['Dataset']:
+    def try_from(cls, bn: Builtin, log=True, load=True) -> Optional['Dataset']:
         try:
-            return cls(bn)
+            return cls(bn).load() if load else cls(bn)
         except RuntimeError as e:
             if log:
                 print(e)

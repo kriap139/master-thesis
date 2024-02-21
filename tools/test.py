@@ -12,7 +12,7 @@ from sklearn.metrics import make_scorer, accuracy_score
 from sequd import SeqUD
 from scipy.sparse import coo_matrix
 from sklearn.metrics import get_scorer, get_scorer_names
-from typing import Iterable, Callable, Tuple, Dict, Union
+from typing import Iterable, Callable, Tuple, Dict, Union, List
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files
@@ -27,6 +27,7 @@ import os
 import gc
 import random
 import re
+import time
 
 @dataclass
 class TestResult:
@@ -47,31 +48,46 @@ def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argpar
         args = build_cli(method, dataset)
     return args
 
-def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterable[Builtin], args: argparse.Namespace, save_fn=None):
-    results = {}
+def run_basic_tests(tests: List[Callable[[Dataset, int, int], TestResult]], bns: Iterable[Builtin], args: argparse.Namespace, save_fns: List[str]=None):
+    if save_fns is not None:
+        assert len(tests) == len(save_fns)
+
+    results = {test.__name__: {} for test in tests}
+    first_test = True
     for bn in bns:
-        dataset = Dataset.try_from(bn)
+        dataset = Dataset.try_from(bn, load=True)
         if dataset is None:
             continue
+        
+        print(f"{'-' * 60}{bn.name} Dataset{'-' * 60}")
+        for test in tests:
+            print(f"\n{'-' * 29}{test.__name__}{'-' * (29 + len(test.__name__))}")
+            start = time.perf_counter()
+            result = test(args, dataset, print_jobs_info=first_test)
+            end = time.perf_counter() - start
+            result.info["time"] = dict(secs=end, formated=BaseSearch.time_to_str(end))
+            print(f"Test time={BaseSearch.time_to_str(end)}")
+            results[test.__name__][bn.name] = result
+            first_test = False
+            
+        
+        if save_fns is not None:
+            for test, fn in zip(tests, save_fns):
+                data = load_json(os.path.join(data_dir(), fn), default={})
+                data.update(results[test.__name__])
+                save_json(os.path.join(data_dir(), fn), data, overwrite=True)
 
-        dataset.load()
-        result = test(args, dataset)
-        results[bn.name] = result
         del dataset.x
         del dataset.y
         del dataset
         gc.collect()
 
-        if save_fn is not None:
-            data = load_json(os.path.join(data_dir(), save_fn), default={})
-            data.update(results)
-            save_json(os.path.join(data_dir(), save_fn), data, overwrite=True)
-
-def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV, shuffle=False) -> TestResult:
+def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV, shuffle=False, print_jobs_info=True) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
-    print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
+    if print_jobs_info:
+        print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
     
     is_sparse = dataset.x.dtypes.apply(lambda dtype: isinstance(dtype, pd.SparseDtype)).all()
     if is_sparse:
@@ -83,7 +99,6 @@ def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, 
     train_scores = []
     test_scores = []
     info = CVInfo(cv).to_dict()
-    nested = {}
 
     for i, (train_idx, test_idx) in enumerate(cv.split(dataset.x, dataset.y)):
         if shuffle:
@@ -129,27 +144,28 @@ def _basic_inner_cv_test_func(dataset: Dataset, x_train: pd.DataFrame, y_train: 
     test_score = search.best_estimator_.score(x_test, y_test)
     return TestResult(train_score, test_score, CVInfo(cv).to_dict(), is_inner=True)
 
-def basic_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+def basic_cv_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
-    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv)
+    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv, print_jobs_info=print_jobs_info)
 
-def basic_cv_repeat_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+def basic_cv_repeat_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
-    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv)
+    return _cv_test_outer_loop(args, _basic_cv_test_func, dataset, cv, print_jobs_info=print_jobs_info)
     
-def basic_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+def basic_inner_cv_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
-    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv, print_jobs_info=print_jobs_info)
 
-def basic_no_repeat_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+def basic_no_repeat_inner_cv_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     cv = get_cv(dataset, args.n_folds, 0, args.random_state, shuffle=args.inner_shuffle)
-    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv, print_jobs_info=print_jobs_info)
 
-def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+def basic_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
-    print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
+    if print_jobs_info:
+        print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
 
     is_sparse = dataset.x.dtypes.apply(lambda dtype: isinstance(dtype, pd.SparseDtype)).all()
 
@@ -180,21 +196,31 @@ def print_basic_test_results():
             test_score = result['means']['test']
             print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}")
 
-
-# python tools/test.py --method 'RandomSearch' --dataset accel --n-jobs 2 --max-lgb-jobs 2 --n-repeats 3 --n-folds 5 --inner-n-folds 5 --inner-shuffle --inner-random-state 9
 if "__main__" == __name__:
     # Args method and dataset is not Used in this script!
     args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=1, n_jobs=3)
 
+    datasets = [Builtin.ACCEL]
+    #datasets = Builtin
 
-    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM]
-    datasets = Builtin
-    #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
-    #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
-    #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
-    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_inner_cv_tests.json")
-    #run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_no_outer_repeats_inner_cv_test.json")
-    print_basic_test_results()
+    tests = [
+        basic_test, 
+        basic_cv_test, 
+        basic_cv_repeat_test, 
+        basic_inner_cv_test, 
+        basic_no_repeat_inner_cv_test
+    ]
+
+    save_fns = [
+        f"basic_split_tests.json", 
+        f"basic_cv_tests.json", 
+        f"basic_cv_repeats_tests.json", 
+        f"basic_inner_cv_tests.json", 
+        f"basic_no_outer_repeats_inner_cv_test.json"
+    ]
+
+    run_basic_tests(tests, datasets, args, save_fns)
+    #print_basic_test_results()
 
 
 
