@@ -15,7 +15,7 @@ from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union
 
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files
 import lightgbm as lgb
 from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space, MAX_SEARCH_JOBS, CPU_CORES
 import logging
@@ -26,6 +26,7 @@ from dataclasses import dataclass
 import os
 import gc
 import random
+import re
 
 @dataclass
 class TestResult:
@@ -167,7 +168,20 @@ def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     print(f"Results: train={train_score}, test={test_score}")
     return TestResult(train_score, test_score, {})
 
+def print_basic_test_results():
+    files = find_files(os.path.join(data_dir(), f"basic_*.json"))
+    names = [re.sub(r'basic_|.json', '', os.path.basename(fn)) for fn in files]
+    datas = [load_json(file) for file in files]
 
+    for i, data in enumerate(datas):
+        print(f"{names[i]}:")
+        for dataset, result in data.items():
+            train_score = result['means']['train']
+            test_score = result['means']['test']
+            print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}")
+
+
+# python tools/test.py --method 'RandomSearch' --dataset accel --n-jobs 2 --max-lgb-jobs 2 --n-repeats 3 --n-folds 5 --inner-n-folds 5 --inner-shuffle --inner-random-state 9
 if "__main__" == __name__:
     # Args method and dataset is not Used in this script!
     args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=1, n_jobs=3)
@@ -178,8 +192,9 @@ if "__main__" == __name__:
     #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
     #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
     #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
-    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
-    run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_no_repeat_inner_cv_test.json")
+    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_inner_cv_tests.json")
+    #run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_no_outer_repeats_inner_cv_test.json")
+    print_basic_test_results()
 
 
 

@@ -10,6 +10,7 @@ import re
 from .space import Integer, Real, Categorical
 from .sparse_arff import load_sparse_arff
 import gc
+import glob
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -32,6 +33,9 @@ def json_serialize_unknown(o):
         return dict(categories=o.categories, prior=o.prior, transform=o.transform_)
     else:
         raise TypeError(f"Object of class {type(o)} is not JSON serializable: {o}")
+
+def find_files(exp: str, recursive=False) -> List[str]:
+    return glob.glob(exp, recursive=recursive)
 
 def find_dir_ver(folder: str) -> str:
     if not os.path.exists(folder):
