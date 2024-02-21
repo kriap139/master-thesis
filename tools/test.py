@@ -25,6 +25,7 @@ import psutil
 from dataclasses import dataclass
 import os
 import gc
+import random
 
 @dataclass
 class TestResult:
@@ -32,7 +33,6 @@ class TestResult:
     test_score: Union[float, Iterable]
     info: dict
     means: Dict[str, float] = None
-    #nested: Dict[int, 'TestResult'] = None
     is_inner: bool = False
 
 def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argparse.Namespace:
@@ -66,7 +66,7 @@ def run_basic_tests(test: Callable[[Dataset, int, int], TestResult], bns: Iterab
             data.update(results)
             save_json(os.path.join(data_dir(), save_fn), data, overwrite=True)
 
-def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV) -> TestResult:
+def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, int, argparse.Namespace], TestResult], dataset: Dataset, cv: TY_CV, shuffle=False) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
@@ -85,6 +85,10 @@ def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, 
     nested = {}
 
     for i, (train_idx, test_idx) in enumerate(cv.split(dataset.x, dataset.y)):
+        if shuffle:
+            random.shuffle(train_idx)
+            random.shuffle(test_idx)
+
         if is_sparse:
             x_train, x_test = train_x[train_idx, :], train_x[test_idx, :]
         else:
@@ -96,7 +100,7 @@ def _cv_test_outer_loop(args: argparse.Namespace, func: Callable[[Dataset, int, 
         if result.is_inner:
             if 'inner_cv' not in info:
                 info['inner_cv'] = result.info
-                
+
         print(f"Fold {i}: train={result.train_score}, test={result.test_score}")
         train_scores.append(result.train_score)
         test_scores.append(result.test_score)
@@ -136,6 +140,10 @@ def basic_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResul
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
 
+def basic_no_repeat_inner_cv_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
+    cv = get_cv(dataset, args.n_folds, 0, args.random_state, shuffle=args.inner_shuffle)
+    return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv)
+
 def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
@@ -162,15 +170,15 @@ def basic_test(args: argparse.Namespace, dataset: Dataset) -> TestResult:
 
 if "__main__" == __name__:
     # Args method and dataset is not Used in this script!
-    args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=2, n_jobs=2)
+    args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=1, n_jobs=3)
 
 
-    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM]
+    datasets = [Builtin.ACCEL]
     #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
     #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
     #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
-    run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
-
+    #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
+    run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_shuffle_cv_repeats_tests.json")
 
 
 
