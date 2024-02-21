@@ -173,12 +173,13 @@ if "__main__" == __name__:
     args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=1, n_jobs=3)
 
 
-    datasets = [Builtin.ACCEL]
+    datasets = [Builtin.ACCEL, Builtin.OKCUPID_STEM]
+    datasets = Builtin
     #run_basic_tests(basic_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_tests.json")
     #run_basic_tests(basic_cv_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_tests.json")
     #run_basic_tests(basic_cv_repeat_test, datasets, max_lgb_jobs=2, n_jobs=2, save_fn=f"basic_cv_repeats_tests.json")
     #run_basic_tests(basic_inner_cv_test, datasets, args, save_fn=f"basic_cv_repeats_tests.json")
-    run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_shuffle_cv_repeats_tests.json")
+    run_basic_tests(basic_no_repeat_inner_cv_test, datasets, args, save_fn=f"basic_no_repeat_inner_cv_test.json")
 
 
 
