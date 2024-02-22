@@ -8,6 +8,7 @@ import psutil
 import argparse
 from sklearn.model_selection import ParameterGrid
 from sklearn.metrics import get_scorer_names
+from itertools import chain
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
@@ -56,11 +57,11 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     parser.add_argument("--method", 
         choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch"),
         type=str,
-        required=test_dataset is not None,
+        required=test_method is None,
     )
     parser.add_argument("--dataset",
-        choices=tuple(b.name.lower() for b in Builtin), 
-        required=test_dataset is not None
+        choices=list(chain.from_iterable([("all", ), tuple(b.name.lower() for b in Builtin)])), 
+        required=test_dataset is None
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
@@ -78,15 +79,20 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     args = parser.parse_args()
 
+    if test_max_lgb_jobs is not None:
+        args.max_lgb_jobs = test_max_lgb_jobs
+    if test_n_jobs is not None:
+        args.n_jobs = test_n_jobs
     if test_method is not None:
         args.method = test_method
+
+    if test_dataset is not None:
         args.dataset = test_dataset
-        if test_max_lgb_jobs is not None:
-            args.max_lgb_jobs = test_max_lgb_jobs
-        if test_n_jobs is not None:
-            args.n_jobs = test_n_jobs
     else:
-        args.dataset = Builtin[args.dataset.upper()]
+        if args.dataset.strip() == 'all':
+            args.dataset = Builtin
+        else:
+            args.dataset = Builtin[args.dataset.upper()]
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")

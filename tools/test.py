@@ -14,7 +14,7 @@ from scipy.sparse import coo_matrix
 from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union, List
 
-from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch
+from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files
 import lightgbm as lgb
 from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space, MAX_SEARCH_JOBS, CPU_CORES
@@ -37,7 +37,7 @@ class TestResult:
     means: Dict[str, float] = None
     is_inner: bool = False
 
-def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argparse.Namespace:
+def cli(method: str = None, dataset: Builtin = None, max_lgb_jobs=None, n_jobs=None) -> argparse.Namespace:
     if (max_lgb_jobs is not None) and n_jobs is not None:
         args = build_cli(method, dataset, max_lgb_jobs, n_jobs)
     elif max_lgb_jobs is not None:
@@ -51,34 +51,33 @@ def cli(method: str, dataset: Builtin, max_lgb_jobs=None, n_jobs=None) -> argpar
 def run_basic_tests(tests: List[Callable[[Dataset, int, int], TestResult]], bns: Iterable[Builtin], args: argparse.Namespace, save_fns: List[str]=None):
     if save_fns is not None:
         assert len(tests) == len(save_fns)
-
-    results = {test.__name__: {} for test in tests}
     first_test = True
+
     for bn in bns:
         dataset = Dataset.try_from(bn, load=True)
         if dataset is None:
             continue
         
         print(f"{'-' * 60}{bn.name} Dataset{'-' * 60}")
-        for test in tests:
+        for i, test in enumerate(tests):
             print(f"\n{'-' * 29}{test.__name__}{'-' * (29 + len(test.__name__))}")
+            
             start = time.perf_counter()
             result = test(args, dataset, print_jobs_info=first_test)
             end = time.perf_counter() - start
             result.info["time"] = dict(secs=end, formated=BaseSearch.time_to_str(end))
-            print(f"Test time={BaseSearch.time_to_str(end)}")
-            results[test.__name__][bn.name] = result
             first_test = False
-            
-        
-        if save_fns is not None:
-            for test, fn in zip(tests, save_fns):
+
+            print(f"Test time={BaseSearch.time_to_str(end)}")
+
+            if save_fns is not None:
+                new_data = {bn.name: result}
+                fn = save_fns[i]
+
                 data = load_json(os.path.join(data_dir(), fn), default={})
-                data.update(results[test.__name__])
+                data.update(new_data)
                 save_json(os.path.join(data_dir(), fn), data, overwrite=True)
 
-        del dataset.x
-        del dataset.y
         del dataset
         gc.collect()
 
@@ -196,12 +195,11 @@ def print_basic_test_results():
             test_score = result['means']['test']
             print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}")
 
+# python tools/test.py --max-lgb-jobs 1 --n-jobs 3 --n-repeats 3 --n-folds 5 --random-state 9 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 if "__main__" == __name__:
-    # Args method and dataset is not Used in this script!
-    args = cli(AdjustedSeqUDSearch.__name__, Builtin.ACCEL, max_lgb_jobs=1, n_jobs=3)
-
-    datasets = [Builtin.ACCEL]
-    #datasets = Builtin
+    # Args method is not Used in this script!
+    args = cli(RandomSearch.__name__)
+    datasets = [args.dataset] if not isinstance(args.dataset, Iterable) else args.dataset
 
     tests = [
         basic_test, 
