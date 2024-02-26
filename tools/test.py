@@ -191,10 +191,10 @@ def print_basic_test_results():
     for i, data in enumerate(datas):
         print(f"{names[i]}:")
         for dataset, result in data.items():
-            if 'means' in result.keys() and (result['means'] in not None):
+            if 'means' in result.keys() and (result['means'] is not None):
                 train_score = result['means']['train']
                 test_score = result['means']['test']
-            elif isinstance(result['train_score', Iterable]):
+            elif isinstance(result['train_score'], Iterable):
                 train_score = np.mean(result['train_score'])
                 test_score = np.mean(result['test_score'])
             else:
