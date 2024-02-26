@@ -191,9 +191,18 @@ def print_basic_test_results():
     for i, data in enumerate(datas):
         print(f"{names[i]}:")
         for dataset, result in data.items():
-            train_score = result['means']['train']
-            test_score = result['means']['test']
-            print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}")
+            if 'means' in result.keys() and (result['means'] in not None):
+                train_score = result['means']['train']
+                test_score = result['means']['test']
+            elif isinstance(result['train_score', Iterable]):
+                train_score = np.mean(result['train_score'])
+                test_score = np.mean(result['test_score'])
+            else:
+                train_score = result['train_score']
+                test_score = result['test_score']
+
+            diff_score = np.abs(train_score - test_score)
+            print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}, diff={round(diff_score, 5)}")
 
 # python tools/test.py --max-lgb-jobs 1 --n-jobs 3 --n-repeats 3 --n-folds 5 --random-state 9 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 if "__main__" == __name__:
@@ -205,7 +214,7 @@ if "__main__" == __name__:
         basic_test, 
         basic_cv_test, 
         basic_cv_repeat_test, 
-        basic_inner_cv_test, 
+        #basic_inner_cv_test, 
         basic_no_repeat_inner_cv_test
     ]
 
@@ -213,12 +222,12 @@ if "__main__" == __name__:
         f"basic_split_tests.json", 
         f"basic_cv_tests.json", 
         f"basic_cv_repeats_tests.json", 
-        f"basic_inner_cv_tests.json", 
+        #f"basic_inner_cv_tests.json", 
         f"basic_no_outer_repeats_inner_cv_test.json"
     ]
 
-    run_basic_tests(tests, datasets, args, save_fns)
-    #print_basic_test_results()
+    #run_basic_tests(tests, datasets, args, save_fns)
+    print_basic_test_results()
 
 
 
