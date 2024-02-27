@@ -220,9 +220,8 @@ def print_basic_test_results(descriptions: dict):
             test_scores[names[i]].append(test_score)
             diff_scores[names[i]].append(diff_score)
 
-            print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}, diff={round(diff_score, 5)}")
+            print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}, diff={round(diff_score, 5)} \n")
 
-    print()
     for name in names:
         train_score = np.mean(train_scores[name])
         test_score = np.mean(test_scores[name])
