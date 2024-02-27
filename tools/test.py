@@ -187,6 +187,10 @@ def print_basic_test_results(descriptions: dict):
     names = [re.sub(r'basic_|.json', '', os.path.basename(fn)) for fn in files]
     datas = [load_json(file) for file in files]
 
+    for name in names:
+        descriptions[name] = descriptions[f"basic_{name}"]
+        del descriptions[f"basic_{name}"]
+
     train_scores = {}
     test_scores = {}
     diff_scores = {}
