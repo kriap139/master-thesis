@@ -196,7 +196,7 @@ def print_basic_test_results(descriptions: dict):
     diff_scores = {}
 
     for i, data in enumerate(datas):
-        print(f"#{descriptions[names[i]]}")
+        print(f"# {descriptions[names[i]]}")
         print(f"{names[i]}:")
         for dataset, result in data.items():
             if 'means' in result.keys() and (result['means'] is not None):
@@ -226,7 +226,7 @@ def print_basic_test_results(descriptions: dict):
         train_score = np.mean(train_scores[name])
         test_score = np.mean(test_scores[name])
         diff_score = np.mean(diff_scores[name])
-        print(f"# {descriptions[name]}\n{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
+        print(f"# {descriptions[name]}\n\t{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
 
 
 
