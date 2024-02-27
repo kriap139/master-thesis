@@ -48,9 +48,8 @@ def cli(method: str = None, dataset: Builtin = None, max_lgb_jobs=None, n_jobs=N
         args = build_cli(method, dataset)
     return args
 
-def run_basic_tests(tests: List[Callable[[Dataset, int, int], TestResult]], bns: Iterable[Builtin], args: argparse.Namespace, save_fns: List[str]=None):
-    if save_fns is not None:
-        assert len(tests) == len(save_fns)
+def run_basic_tests(tests: List[Callable[[Dataset, int, int], TestResult]], bns: Iterable[Builtin], args: argparse.Namespace, save=False):
+    save_fns = [f"{test.__name__}.json" for test in tests] if save else None
     first_test = True
 
     for bn in bns:
@@ -159,7 +158,7 @@ def basic_no_repeat_inner_cv_test(args: argparse.Namespace, dataset: Dataset, pr
     cv = get_cv(dataset, args.n_folds, 0, args.random_state, shuffle=args.inner_shuffle)
     return _cv_test_outer_loop(args, _basic_inner_cv_test_func, dataset, cv, print_jobs_info=print_jobs_info)
 
-def basic_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
+def basic_split_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True) -> TestResult:
     search_space = get_search_space(args)
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
@@ -183,10 +182,14 @@ def basic_test(args: argparse.Namespace, dataset: Dataset, print_jobs_info=True)
     print(f"Results: train={train_score}, test={test_score}")
     return TestResult(train_score, test_score, {})
 
-def print_basic_test_results():
+def print_basic_test_results(descriptions: dict):
     files = find_files(os.path.join(data_dir(), f"basic_*.json"))
     names = [re.sub(r'basic_|.json', '', os.path.basename(fn)) for fn in files]
     datas = [load_json(file) for file in files]
+
+    train_scores = {}
+    test_scores = {}
+    diff_scores = {}
 
     for i, data in enumerate(datas):
         print(f"{names[i]}:")
@@ -202,7 +205,27 @@ def print_basic_test_results():
                 test_score = result['test_score']
 
             diff_score = np.abs(train_score - test_score)
+
+            if names[i] not in train_scores.keys():
+                train_scores[names[i]] = []
+                test_scores[names[i]] = []
+                diff_scores[names[i]] = []
+            
+            train_scores[names[i]].append(train_score)
+            test_scores[names[i]].append(test_score)
+            diff_scores[names[i]].append(diff_score)
+
+            print(f"\t #{descriptions[names[i]]}")
             print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}, diff={round(diff_score, 5)}")
+
+    print()
+    for name in names:
+        train_score = np.mean(train_scores[name])
+        test_score = np.mean(test_scores[name])
+        diff_scores = np.mean(diff_scores[name])
+        print(f"{name} ({descriptions[name]}): train={round(train_score, 6)}, test={round(test_score), 6}, delta={round(diff_score, 6)}")
+
+
 
 # python tools/test.py --max-lgb-jobs 1 --n-jobs 3 --n-repeats 3 --n-folds 5 --random-state 9 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 if "__main__" == __name__:
@@ -211,23 +234,23 @@ if "__main__" == __name__:
     datasets = [args.dataset] if not isinstance(args.dataset, Iterable) else args.dataset
 
     tests = [
-        basic_test, 
+        basic_split_test, 
         basic_cv_test, 
         basic_cv_repeat_test, 
         #basic_inner_cv_test, 
         basic_no_repeat_inner_cv_test
     ]
 
-    save_fns = [
-        f"basic_split_tests.json", 
-        f"basic_cv_tests.json", 
-        f"basic_cv_repeats_tests.json", 
-        #f"basic_inner_cv_tests.json", 
-        f"basic_no_outer_repeats_inner_cv_test.json"
-    ]
+    descriptions = {
+        basic_cv_test.__name__: "Basic 5 fold cross validation",
+        basic_split_test.__name__: "train/test split (70/30)",
+        basic_no_repeat_inner_cv_test.__name__: "Nested 5-FoldCV",
+        basic_cv_repeat_test.__name__: "Repeated 5-FoldCV",
+        basic_inner_cv_test.__name__: "Nested 5-FoldCV (outer=RepeatedCV(iter=3, folds=5), inner=KFold(folds=5))"
+    }
 
-    #run_basic_tests(tests, datasets, args, save_fns)
-    print_basic_test_results()
+    #run_basic_tests(tests, datasets, args, save=True)
+    print_basic_test_results(descriptions)
 
 
 
