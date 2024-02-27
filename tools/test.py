@@ -226,7 +226,7 @@ def print_basic_test_results(descriptions: dict):
     for name in names:
         train_score = np.mean(train_scores[name])
         test_score = np.mean(test_scores[name])
-        diff_scores = np.mean(diff_scores[name])
+        diff_score = np.mean(diff_scores[name])
         print(f"{name} ({descriptions[name]}): train={round(train_score, 6)}, test={round(test_score), 6}, delta={round(diff_score, 6)}")
 
 
