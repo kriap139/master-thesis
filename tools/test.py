@@ -196,6 +196,7 @@ def print_basic_test_results(descriptions: dict):
     diff_scores = {}
 
     for i, data in enumerate(datas):
+        print(f"#{descriptions[names[i]]}")
         print(f"{names[i]}:")
         for dataset, result in data.items():
             if 'means' in result.keys() and (result['means'] is not None):
@@ -219,7 +220,6 @@ def print_basic_test_results(descriptions: dict):
             test_scores[names[i]].append(test_score)
             diff_scores[names[i]].append(diff_score)
 
-            print(f"\t #{descriptions[names[i]]}")
             print(f"\t{dataset} -> train={round(train_score, 4)}, test={round(test_score, 4)}, diff={round(diff_score, 5)}")
 
     print()
@@ -227,7 +227,7 @@ def print_basic_test_results(descriptions: dict):
         train_score = np.mean(train_scores[name])
         test_score = np.mean(test_scores[name])
         diff_score = np.mean(diff_scores[name])
-        print(f"{name} ({descriptions[name]}): train={round(train_score, 6)}, test={round(test_score), 6}, delta={round(diff_score, 6)}")
+        print(f"# {descriptions[name]}\n{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
 
 
 
@@ -241,7 +241,7 @@ if "__main__" == __name__:
         basic_split_test, 
         basic_cv_test, 
         basic_cv_repeat_test, 
-        #basic_inner_cv_test, 
+        basic_inner_cv_test, 
         basic_no_repeat_inner_cv_test
     ]
 
