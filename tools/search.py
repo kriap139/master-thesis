@@ -2,7 +2,7 @@ from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
-from typing import Union
+from typing import Union, Iterable
 import benchmark
 import psutil
 import argparse
@@ -88,11 +88,13 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     if test_dataset is not None:
         args.dataset = test_dataset
+    elif args.dataset.strip() == 'all':
+        args.dataset = Builtin
+    elif ',' in args.dataset:
+        datasets = args.dataset.strip().split(',')
+        args.dataset = [Builtin[dt.strip().upper()] for dt in datasets]
     else:
-        if args.dataset.strip() == 'all':
-            args.dataset = Builtin
-        else:
-            args.dataset = Builtin[args.dataset.upper()]
+        args.dataset = Builtin[args.dataset.upper()]
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
@@ -152,4 +154,11 @@ def search(args: argparse.Namespace):
 
 if __name__ == "__main__":
     args = build_cli()
-    search(args)
+
+    if isinstance(args.dataset, Iterable):
+        datasets = args.dataset
+        for dataset in datasets:
+            args.dataset = dataset
+            search(args)
+    else:
+        search(args)
