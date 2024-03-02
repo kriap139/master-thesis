@@ -27,7 +27,7 @@ class InnerResult:
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save_dir=None, save_inner_history=True, max_outer_iter: int = None):
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None):
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
@@ -38,7 +38,7 @@ class BaseSearch:
         self.scoring = scoring
         self._model = model
 
-        self._save_dir = save_dir
+        self._save = save
         self._result_fp = None
         self._history_fp = None
         self._inner_history_fp = None
@@ -46,23 +46,30 @@ class BaseSearch:
         self.history_head = None
         self.inner_history_head = None
         self.save_inner_history = save_inner_history
+        self._save_dir = self._create_save_dir() if save else None
 
         if self.max_outer_iter is None:
             self.max_outer_iter = sys.maxsize
 
-        if self._save_dir is None:
-            raise RuntimeError("save_dir argument is required!")
+        if self._save_dir is not None:
+            self._init_save_paths()
         else:
-            log = os.path.exists(self._save_dir)
-            self.__init_save_paths()
-            if log:
-                logging.debug(f"Save directory already exists, saving to alternative directory: {self._save_dir}")
+            self.save_inner_history = False
 
         self.result = None
     
-    def __init_save_paths(self):
+    def _create_save_dir(self, info: dict = None) -> str:
+        if info is not None:
+            info_str = ",".join([f"{k}={v}" for k, v in info.items()])
+            return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]")
+        return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]") 
+
+    def _init_save_paths(self):
         if os.path.exists(self._save_dir):
+            old_dir = self._save_dir
             self._save_dir = find_dir_ver(self._save_dir)
+            logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")
+
         self._history_fp = os.path.join(self._save_dir, "history.csv")
         self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
         self._result_fp = os.path.join(self._save_dir, "result.json")
@@ -161,7 +168,7 @@ class BaseSearch:
     
     @classmethod
     def recalc_results(cls, result_dir: str) -> dict:
-        search = BaseSearch(None, None, save_dir=os.path.join(result_dir, "dummy"))
+        search = BaseSearch(None, None)
         search._history_fp = os.path.join(result_dir, "history.csv")
         search._result_fp = os.path.join(result_dir, "results.tmp.json")
         search._calc_result()
@@ -201,9 +208,11 @@ class BaseSearch:
             mean_fold_time_str=self.time_to_str(mean_fold_time),
             std_fold_time_str=self.time_to_str(std_fold_time)
         )
-        _data = load_json(self._result_fp, default={})
-        _data["result"] = self.result
-        save_json(self._result_fp, _data, overwrite=True)
+
+        if self._save:
+            _data = load_json(self._result_fp, default={})
+            _data["result"] = self.result
+            save_json(self._result_fp, _data, overwrite=True)
     
     def score(self, model, x_test: pd.DataFrame, y_test: pd.DataFrame) -> float:
         if self.scoring is not None:
@@ -272,8 +281,10 @@ class BaseSearch:
             acc = self.score(result.best_model, x_test, y_test)
             end = time.perf_counter() - start
 
-            self.update_history(result.best_index, result.best_params, result.best_score, acc, end)
-            self.save_model(result.best_model, outer_id=i)
+            if self._save:
+                self.update_history(result.best_index, result.best_params, result.best_score, acc, end)
+                self.save_model(result.best_model, outer_id=i)
+
             print(f"{i}: best_score={round(result.best_score, 4)}, test_score={round(acc, 4)}, params={json_to_str(result.best_params, indent=None)}")
 
         self._calc_result()

@@ -139,14 +139,13 @@ def search(args: argparse.Namespace):
     )
 
     tuner = getattr(benchmark, args.method)
-    save_dir = data_dir(f"test_results/{tuner.__name__}[{dataset.name}]")
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
     
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
         
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save_dir=save_dir, max_outer_iter=args.max_outer_iter)
+                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter)
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)

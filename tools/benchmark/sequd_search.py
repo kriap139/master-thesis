@@ -12,9 +12,9 @@ from pysequd import AdjustedSequd
 
 class SeqUDSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save_dir=None, 
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save=False, 
                  n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save_dir, save_inner_history, max_outer_iter)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter)
         self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
     
@@ -61,6 +61,7 @@ class SeqUDSearch(BaseSearch):
 
 
 class AdjustedSeqUDSearch(SeqUDSearch):
+
     def __init__(
             self, 
             model, 
@@ -71,7 +72,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
             cv: TY_CV = None, 
             inner_cv: TY_CV = None, 
             scoring = None, 
-            save_dir=None, 
+            save=False, 
             n_runs_per_stage=20, 
             max_search_iter=100, 
             save_inner_history=True, 
@@ -80,11 +81,24 @@ class AdjustedSeqUDSearch(SeqUDSearch):
             t=0.25, 
             exp_step=0.18
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save_dir, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter)
         
         self.t = t
         self.exp_step = exp_step
         self.adjust_method = adjust_method
+
+        if save:
+            self._save = save
+            self.save_inner_history = save_inner_history
+            self._save_dir = self._create_save_dir()
+            self._init_save_paths()
+    
+    def _create_save_dir(self) -> str:
+        if self.adjust_method == 'linear':
+            info = dict(t=self.t)
+        elif self.adjust_method == 'exp':
+            info = dict(exp_step=self.exp_step)
+        return super()._create_save_dir(info)
     
     def _get_search_method_info(self) -> dict:
         info = super()._get_search_method_info()

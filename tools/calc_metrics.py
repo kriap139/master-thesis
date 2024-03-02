@@ -2,7 +2,7 @@ import os
 from Util import Dataset, Builtin, data_dir, Task
 from Util.io_util import load_json
 from benchmark import BaseSearch
-from typing import List, Dict, Tuple, Callable, Any
+from typing import List, Dict, Tuple, Callable, Any, Union
 import re
 from dataclasses import dataclass
 import pandas as pd
@@ -13,12 +13,19 @@ class ResultFolder:
     dataset: Builtin
     search_method: str
     version: int = 0
+    info: dict = None
 
-def select_version(current: ResultFolder, new_version: int, select_versions: Dict[str, Dict[str, int]] = None) -> bool:
-    versions = select_versions.get(current.dataset.name, None) if select_versions is not None else None
-    version = versions.get(current.search_method, None) if versions is not None else None
-    if versions is not None:
-        return new_version == version
+def select_version(current: ResultFolder, new_version: int, info: dict = None, select_versions: Dict[str, Dict[str, int]] = None) -> bool:
+    data = select_versions.get(current.dataset.name, None) if select_versions is not None else None
+    select = data.get(current.search_method, None) if data is not None else None
+
+    if select is not None:
+        if type(select) == int:
+            return select == version
+        elif isinstance(select, dict):
+            return select == info
+        else:
+            raise RuntimeError(f"Folder selection attribute for folder(dataset={current.dataset.name}, method={current.search_method}) is invalid, only version(int) or info(dict) is supported: {select}")
     return current.version < new_version
 
 def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], filter_fn: Callable[[ResultFolder], bool] = None, reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
@@ -46,7 +53,7 @@ def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[Resu
 
 def load_result_folders(
         ignore_datasets: List[Builtin] = None, 
-        select_versions: Dict[str, Dict[str, int]] = None, 
+        select_versions: Dict[str, Dict[str, Union[int, dict]]] = None, 
         print_results=True, 
         sort_fn: Callable[[ResultFolder], Any] = None, 
         filter_fn: Callable[[ResultFolder], bool] = None, 
@@ -64,8 +71,20 @@ def load_result_folders(
 
         array = test.split("[")
         method, remainder = array[0].strip(), array[1].strip()
+
         array = remainder.split("]")
-        dataset, remainder = array[0].strip().upper(), array[1].strip()
+        info, remainder = array[0].strip().upper(), array[1].strip()
+
+        if ';' in info:
+            info = info.split(';')
+            dataset, info = info[0].strip(), info[1].strip()
+            info = info.split(',')
+            info = [v.split('=') for v in info]
+            info = {tup[0]: tup[1] for tup in info}
+        else:
+            dataset = info.strip()
+            info = None
+
         version = re.findall(r'(\d+)', remainder)
         version = int(version[0]) if len(version) else 0
 
@@ -74,14 +93,15 @@ def load_result_folders(
         if dataset in ignore_datasets:
             continue
         elif dataset_results is None: 
-            results[dataset] = {method: ResultFolder(path, Builtin[dataset], method, version)}
+            results[dataset] = {method: ResultFolder(path, Builtin[dataset], method, version, info)}
         else:
             result = dataset_results.get(method, None)
             if result is None:
-                dataset_results[method] = ResultFolder(path, Builtin[dataset], method, version)
-            elif select_version(result, version, select_versions):
+                dataset_results[method] = ResultFolder(path, Builtin[dataset], method, version, info)
+            elif select_version(result, version, info, select_versions):
                 result.dir_path = path
                 result.version = version
+                info = info
     
     if sort_fn:
         results = sort_folders(results, fn=sort_fn, filter_fn=filter_fn, reverse=reverse)
