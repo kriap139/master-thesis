@@ -32,8 +32,8 @@ class DatasetInfo:
 
 class Builtin(Enum):
     HIGGS = DatasetInfo("HIGGS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
-    HEPMASS = DatasetInfo("HEPMASS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
-    AIRLINES = DatasetInfo("AIRLINES".lower(), "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
+    # HEPMASS = DatasetInfo("HEPMASS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
+    # AIRLINES = DatasetInfo("AIRLINES".lower(), "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
     FPS = DatasetInfo("FPS".lower(), "FPS", Task.REGRESSION, SizeGroup.MODERATE)
     ACSI = DatasetInfo("ACSI".lower(), "PINCP", Task.BINARY, SizeGroup.MODERATE)
     SGEMM_GKP = DatasetInfo("SGEMM_GKP".lower(), "Run1", Task.REGRESSION, SizeGroup.SMALL)
