@@ -10,5 +10,8 @@
 
 source venv/bin/activate                # activate venv
 
+# Batch 1: okcupid_stem,fps,acsi,
+# Batch 2: delays_zurich,wave_e,sgemm_gkp,accel
+# Single: higgs, RCV1, COMET_MC
 python3 ./tools/search.py --method SeqUDSearch --max-lgb-jobs 10 --n-repeats 10 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 
