@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -9,26 +9,15 @@ import argparse
 from sklearn.model_selection import ParameterGrid
 from sklearn.metrics import get_scorer_names
 from itertools import chain
+import gc
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
 
+REGRESSION_SCORES = (
+    "r2",
 
-OBJECTIVES = {
-        Task.BINARY: "binary",
-        Task.MULTICLASS: "softmax",
-        Task.REGRESSION: "l2"
-}
-
-METRICS = {
-    Task.BINARY: "binary_logloss",
-    Task.MULTICLASS: "multi_logloss",
-    Task.REGRESSION: "l2",
-}
-
-SCORING = {
-    Task.BINARY: "acc"
-}
+)
 
 def get_sklearn_model(dataset: Dataset, **params) -> Union[lgb.LGBMClassifier, lgb.LGBMRegressor]:
         if dataset.task in (Task.MULTICLASS, Task.BINARY):
@@ -74,7 +63,8 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     parser.add_argument("--inner-n-folds", type=int, default=5)
     parser.add_argument("--inner-shuffle", action='store_true')
     parser.add_argument("--inner-random-state", type=int, default=None)
-    
+    parser.add_argument("--refit_metric", type=str, default=None)
+
     parser.add_argument("--scoring", type=str, default=None, choices=get_scorer_names())
 
     args = parser.parse_args()
@@ -147,10 +137,22 @@ def search(args: argparse.Namespace):
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
         
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter)
+                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter, refit=args.refit_metric)
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
+
+def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
+    if args.dataset.info().task == Task.REGRESSION:
+        args.scoring = (
+            "r2",
+            "neg_mean_absolute_error",
+            "neg_root_mean_squared_error"
+        )
+        args.refit_metric = "r2"
+    elif override_current:
+        args.scoring = None
+        args.refit_metric = None
 
 if __name__ == "__main__":
     args = build_cli()
@@ -159,6 +161,9 @@ if __name__ == "__main__":
         datasets = args.dataset
         for dataset in datasets:
             args.dataset = dataset
+            check_scoring(args, override_current=True)
             search(args)
+            gc.collect()
     else:
+        check_scoring(args)
         search(args)
