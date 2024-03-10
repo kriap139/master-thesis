@@ -49,6 +49,8 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         required=test_method is None,
     )
     parser.add_argument("--dataset",
+        action='append',
+        nargs='+',
         choices=list(chain.from_iterable([("all", ), tuple(b.name.lower() for b in Builtin)])), 
         required=test_dataset is None
     )
@@ -78,13 +80,14 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     if test_dataset is not None:
         args.dataset = test_dataset
-    elif args.dataset.strip() == 'all':
-        args.dataset = Builtin
-    elif ',' in args.dataset:
-        datasets = args.dataset.strip().split(',')
+    elif isinstance(args.dataset, Iterable):
+        datasets = [a[0] for a in args.dataset]
         args.dataset = [Builtin[dt.strip().upper()] for dt in datasets]
-    else:
-        args.dataset = Builtin[args.dataset.upper()]
+    elif isinstance(args.dataset, str):
+        if args.dataset.strip() == 'all':
+            args.dataset = Builtin
+        else:
+            args.dataset = Builtin[args.dataset.strip().upper()]
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
