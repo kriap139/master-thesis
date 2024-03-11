@@ -51,7 +51,7 @@ class SeqUDSearch(BaseSearch):
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = SeqUD(search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, self.scoring, refit=self.refit, verbose=2)
-        search.fit(x_train, y_train, fixed_params)
+        search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
             self._update_inner_history(search_iter, search)
