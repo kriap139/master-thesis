@@ -96,6 +96,7 @@ class BaseSearch:
                 ),
                 space=search_space, 
                 fixed_params=fixed_params,
+                refit=self.refit,
                 dataset=self.train_data.name,
                 n_iter=self.n_iter,
                 n_jobs=self.n_jobs,
