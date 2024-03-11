@@ -13,7 +13,7 @@ from pysequd import AdjustedSequd
 class SeqUDSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
                  n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save=False, 
-                 n_runs_per_stage=20, max_search_iter=100, save_inner_history=False, max_outer_iter: int = None, refit=True):
+                 n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None, refit=True):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit=refit)
         self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
