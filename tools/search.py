@@ -14,10 +14,6 @@ import gc
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
 
-REGRESSION_SCORES = (
-    "r2",
-
-)
 
 def get_sklearn_model(dataset: Dataset, **params) -> Union[lgb.LGBMClassifier, lgb.LGBMRegressor]:
         if dataset.task in (Task.MULTICLASS, Task.BINARY):
@@ -135,7 +131,7 @@ def search(args: argparse.Namespace):
 
     tuner = getattr(benchmark, args.method)
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
-    refit = args.refit_metric if sergs.refit_metric is not None else True
+    refit = args.refit_metric if args.refit_metric is not None else True
     
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
