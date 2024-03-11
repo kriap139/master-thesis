@@ -11,4 +11,4 @@
 source venv/bin/activate                # activate venv
 
 # Single: okcupid_stem,fps,acsi,delays_zurich,wave_e,sgemm_gkp,accel, higgs, RCV1, COMET_MC
-python3 ./tools/search.py --method GridSearch --max-lgb-jobs 10 --n-repeats 10 --inner-n-folds 10 --inner-shuffle --inner-random-state 9 --dataset okcupid_stem
+python3 ./tools/search.py --method GridSearch --max-lgb-jobs 10 --n-repeats 5 --n-folds 5 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset okcupid_stem
