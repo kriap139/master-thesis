@@ -29,9 +29,9 @@ class SeqUDSearch(BaseSearch):
         params_ud = [f"{name}_UD" for name in search_space.keys()]
         # multipetric
         if isinstance(self.scoring, dict):
-            scoring = tuple(f"{metric}_score" for metric in self.scoring.keys())
+            scores = tuple(f"{metric}_score" for metric in self.scoring.keys())
         else:
-            scoring = ("score", )
+            scores = ("score", )
 
         head = list(chain.from_iterable([("outer_iter", "stage"), params, params_ud, ("fit_time", ), scores]))
         return head
