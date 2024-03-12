@@ -27,7 +27,13 @@ class SeqUDSearch(BaseSearch):
     def _get_inner_history_head(self, search_space: dict) -> list:
         params = [name for name in search_space.keys()]
         params_ud = [f"{name}_UD" for name in search_space.keys()]
-        head = list(chain.from_iterable([("outer_iter",), params, params_ud, ("score", "stage")]))
+        # multipetric
+        if isinstance(self.scoring, dict):
+            scoring = tuple(f"{metric}_score" for metric in self.scoring.keys())
+        else:
+            scoring = ("score", )
+
+        head = list(chain.from_iterable([("outer_iter", "stage"), params, params_ud, ("fit_time", ), scores]))
         return head
     
     def _update_inner_history(self, search_iter: int, clf: SeqUD):
