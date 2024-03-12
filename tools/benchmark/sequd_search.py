@@ -24,23 +24,11 @@ class SeqUDSearch(BaseSearch):
             max_search_iter=self.max_search_iter
         )
     
-    def _get_inner_history_head(self, search_space: dict) -> list:
-        params = [name for name in search_space.keys()]
-        params_ud = [f"{name}_UD" for name in search_space.keys()]
-        # multipetric
-        if isinstance(self.scoring, dict):
-            scores = tuple(f"{metric}_score" for metric in self.scoring.keys())
-        else:
-            scores = ("score", )
-
-        head = list(chain.from_iterable([("outer_iter", "stage"), params, params_ud, ("fit_time", ), scores]))
-        return head
-    
     def _update_inner_history(self, search_iter: int, clf: SeqUD):
+        clf.logs["outer_iter"] = search_iter
+        head = list(clf.logs.columns)
         rows = clf.logs.to_dict(orient="records")
-        for row in rows:
-            row["outer_iter"] = search_iter
-        save_csv(self._inner_history_fp, self.inner_history_head, rows)
+        save_csv(self._inner_history_fp, head, rows)
     
     def _encode_search_space(self, search_space: dict) -> dict:
         space = {}
@@ -113,13 +101,6 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         info["t"] = self.t
         info["exp_step"] = self.exp_step
         return info
-    
-    def _get_inner_history_head(self, search_space: dict) -> list:
-        params = [name for name in search_space.keys()]
-        params_ud = [f"{name}_UD" for name in search_space.keys()]
-        adjusted_ud = [f"{name}_UD_adjusted" for name in search_space.keys()]
-        head = list(chain.from_iterable([("outer_iter",), params, params_ud, adjusted_ud, ("max_prev_score", "score", "stage")]))
-        return head
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = AdjustedSequd(

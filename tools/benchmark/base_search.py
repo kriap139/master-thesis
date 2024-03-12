@@ -45,7 +45,6 @@ class BaseSearch:
         self._inner_history_fp = None
         self._models_dir = None
         self.history_head = None
-        self.inner_history_head = None
         self.save_inner_history = save_inner_history
         self._save_dir = self._create_save_dir() if save else None
 
@@ -117,13 +116,6 @@ class BaseSearch:
         self.history_head.extend([name for name, v in search_space.items()])
         self.history_head.extend(("train_score", "test_score", "time"))
         save_csv(self._history_fp, self.history_head)
-
-        if self.save_inner_history:
-            self.inner_history_head = self._get_inner_history_head(search_space)
-            save_csv(self._inner_history_fp, self.inner_history_head)
-    
-    def _get_inner_history_head(self, search_space: dict) -> list:
-        return []
     
     def _update_info(self, update_keys: dict):
          data = load_json(self._result_fp, default=dict(info={}))

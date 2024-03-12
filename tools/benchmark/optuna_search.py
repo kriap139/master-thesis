@@ -21,6 +21,8 @@ class OptunaSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
                  n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit)
+        self.inner_history_head = self._get_inner_history_head()
+
     
     def _get_inner_history_head(self, search_space: dict) -> list:
         head = ["outer_iter"]

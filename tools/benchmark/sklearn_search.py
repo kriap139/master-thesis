@@ -13,25 +13,11 @@ class SklearnSearch(BaseSearch):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit)
         self.verbose = verbose
     
-    def _get_inner_history_head(self, search_space: dict) -> list:
-        head = ["outer_iter"]
-        head.extend([name for name, v in search_space.items()])
-        head.append("score")
-        return head
-    
     def _update_inner_history(self, search_iter: int, clf: GridSearchCV):
-        params = clf.cv_results_["params"]
-        train_scores = clf.cv_results_["mean_test_score"]
-        assert len(params) == len(train_scores)
-
-        rows = []
-        for param, score in zip(params, train_scores):
-            row = param.copy()
-            row["score"] = score
-            row["outer_iter"] = search_iter
-            rows.append(row)
-
-        save_csv(self._inner_history_fp, self.inner_history_head, rows)
+        result = pd.DataFrame(clf.cv_results_)
+        result["outer_iter"] = search_iter
+        head = list(result.columns)
+        save_csv(self._inner_history_fp, head, rows)
 
 class RandomSearch(SklearnSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
