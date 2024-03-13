@@ -38,7 +38,6 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
-
     parser.add_argument("--method", 
         choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch"),
         type=str,
@@ -49,6 +48,10 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         nargs='+',
         choices=list(chain.from_iterable([("all", ), tuple(b.name.lower() for b in Builtin)])), 
         required=test_dataset is None
+    )
+    parser.add_argument("--params",
+        type=str,
+        default=None
     )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
@@ -87,6 +90,19 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
+    
+    if args.params is not None:
+        def convert_param(param: str):
+            try:
+                return int(param)
+            except ValueError:
+                try:
+                    return float(param)
+                except ValueError:
+                    return param
+
+        params = args.params.strip().split(",")
+        args.params = {tup[0].strip(): convert_param(tup[1].strip()) for tup in param.split("=") for param in params}
     
     return args
 
