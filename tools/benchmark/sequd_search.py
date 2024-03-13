@@ -107,7 +107,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
             self.scoring, refit=self.refit, verbose=2, adjust_method=self.adjust_method, t=self.t, exp_step=self.exp_step
         )
-        search.fit(x_train, y_train, fixed_params)
+        search.fit(x_train, y_train, **fixed_params)
 
         if self.save_inner_history:
             self._update_inner_history(search_iter, search)
