@@ -148,6 +148,8 @@ def load_result_folders(
                         print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
                 else:
                     print(f"{method}[{dataset}]: {folder.dir_path}")
+        print()
+    
     return results
 
 @dataclass
