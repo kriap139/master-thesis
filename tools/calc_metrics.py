@@ -307,7 +307,7 @@ def print_all_adjusted_sequd_results():
 
 
 if __name__ == "__main__":
-    ignore_datasets = (Builtin.AIRLINES.name, )
+    ignore_datasets = ()
     #metrics = calc_eval_metrics(ignore_datasets)
     print_all_adjusted_sequd_results()
     
