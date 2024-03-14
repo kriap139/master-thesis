@@ -300,19 +300,19 @@ def print_folder_results(load_all_unique_info_folders=True):
             info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + "]: "
         else:
             info_str = ""
-        return info_str + f"train={train_}, test={test_}, time={time_}"
+        return info_str + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
             strings = []
             for method, folder in methods.items():
                 if isinstance(folder, dict):
-                    sub_strings = '\n\t   ' + f'\n\t   '.join(info_str(f) for f in folder.values())
+                    sub_strings = '\n      ' + f'\n      '.join(info_str(f) for f in folder.values())
                     if sub_strings is not None:
-                        strings.append(f"\t{method}:{sub_strings}")
+                        strings.append(f"   {method}:{sub_strings}")
                 else:
                     string = info_str(folder)
                     if string is not None:
-                        strings.append(f"\t{method}:\n\t   {info_str(folder)}")
+                        strings.append(f"   {method}:\n      {info_str(folder)}")
 
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
