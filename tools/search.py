@@ -144,6 +144,7 @@ def search(args: argparse.Namespace):
         #metric=METRICS[dataset.get_builtin()]
         categorical_feature=dataset.cat_features,
     )
+    params = args.params if args.params is not None else {}
 
     tuner = getattr(benchmark, args.method)
     model = get_sklearn_model(dataset, verbose=-1, n_jobs=n_jobs)
@@ -151,9 +152,9 @@ def search(args: argparse.Namespace):
     
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
-        
+    
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, 
-                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter, refit=refit)
+                  n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter, refit=refit, **params)
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
