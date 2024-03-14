@@ -143,7 +143,6 @@ def load_result_folders(
     if print_results:
         for (dataset, methods) in results.items():
             strings = []
-            [f"\t{method}: {d.dir_path}" for method, d in methods.items()]
             for method, folder in methods.items():
                 if isinstance(folder, dict):
                     sub_strings = []
@@ -153,8 +152,8 @@ def load_result_folders(
                     strings.append(f"\t{method}: \t{sub_strings}")
                 else:
                     strings.append(f"\t{method}: {folder.dir_path}")
-
             print(f"{dataset}: \n" + "\n".join(strings))
+            strings.clear()
     
     return results
 
