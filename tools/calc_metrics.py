@@ -294,6 +294,10 @@ def print_folder_results(load_all_unique_info_folders=True):
 
     def info_str(folder: ResultFolder) -> str: 
         file_data = load_json(os.path.join(folder.dir_path, "result.json"))
+
+        if 'result' not in file_data:
+            return ""
+
         train_ = file_data["result"]["mean_train_acc"]
         test_ = file_data["result"]["mean_test_acc"]
         time_ = file_data["result"]["time"]
