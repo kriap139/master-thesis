@@ -294,7 +294,7 @@ def print_all_adjusted_sequd_results():
     for dataset, methods in data.items():
         if AdjustedSeqUDSearch.__name__ not in methods.keys():
             continue
-        for folders in methods[AdjustedSeqUDSearch.__name__]:
+        for folders in methods[AdjustedSeqUDSearch.__name__].values():
             folders_ = (folders, ) if isinstance(folders, ResultFolder) else folders
             for folder in folders_:
                 file_data = load_json(os.path.join(folder.dir_path, "result.json"))
