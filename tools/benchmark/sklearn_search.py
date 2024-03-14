@@ -17,7 +17,7 @@ class SklearnSearch(BaseSearch):
         result = pd.DataFrame(clf.cv_results_)
         result["outer_iter"] = search_iter
         head = list(result.columns)
-        save_csv(self._inner_history_fp, head, rows)
+        save_csv(self._inner_history_fp, head, result)
 
 class RandomSearch(SklearnSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
