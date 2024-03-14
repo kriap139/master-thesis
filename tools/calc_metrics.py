@@ -147,9 +147,9 @@ def load_result_folders(
                 if isinstance(folder, dict):
                     sub_strings = []
                     for sub_folders in folder.values():
-                        sub_strings.extend(f"\t [{k}={v}]" for k, v in sub_folders.info.items())
+                        sub_strings.extend(f"\t\t [{k}={v}]: " for k, v in sub_folders.info.items())
                     sub_strings = f'\n'.join(sub_strings)
-                    strings.append(f"\t{method}: \t{sub_strings}")
+                    strings.append(f"\t{method}: \n\t{sub_strings}")
                 else:
                     strings.append(f"\t{method}: {folder.dir_path}")
             print(f"{dataset}: \n" + "\n".join(strings))
@@ -292,9 +292,10 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
 def print_all_adjusted_sequd_results():
     data = load_result_folders(load_all_unique_info_folders=True)
     for dataset, methods in data.items():
+        if AdjustedSeqUDSearch.__name__ not in methods.keys():
+            continue
         for folders in methods[AdjustedSeqUDSearch.__name__]:
             folders_ = (folders, ) if isinstance(folders, ResultFolder) else folders
-        
             for folder in folders_:
                 file_data = load_json(os.path.join(folder.dir_path, "result.json"))
                 train_ = file_data["result"]["mean_train_acc"]
