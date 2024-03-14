@@ -311,13 +311,13 @@ def print_folder_results(load_all_unique_info_folders=True):
             strings = []
             for method, folder in methods.items():
                 if isinstance(folder, dict):
-                    sub_strings = f'\n\t\t'.join(info_str(f) for f in folder.values())
+                    sub_strings = '\n\t   ' + f'\n\t   '.join(info_str(f) for f in folder.values())
                     if sub_strings is not None:
-                        strings.append(f"\t{method}: \n\t\t{sub_strings}")
+                        strings.append(f"\t{method}:{sub_strings}")
                 else:
                     string = info_str(folder)
                     if string is not None:
-                        strings.append(f"\t{method}: \n\t{info_str(folder)}")
+                        strings.append(f"\t{method}:\n\t   {info_str(folder)}")
 
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
