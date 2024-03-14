@@ -296,7 +296,7 @@ def print_folder_results(load_all_unique_info_folders=True):
         file_data = load_json(os.path.join(folder.dir_path, "result.json"))
 
         if 'result' not in file_data:
-            return ""
+            return None
 
         train_ = file_data["result"]["mean_train_acc"]
         test_ = file_data["result"]["mean_test_acc"]
@@ -312,9 +312,13 @@ def print_folder_results(load_all_unique_info_folders=True):
             for method, folder in methods.items():
                 if isinstance(folder, dict):
                     sub_strings = f'\n\t\t'.join(info_str(f) for f in folder.values())
-                    strings.append(f"\t{method}: \n\t\t{sub_strings}")
+                    if sub_strings is not None:
+                        strings.append(f"\t{method}: \n\t\t{sub_strings}")
                 else:
-                    strings.append(f"\t{method}: {info_str(folder)}")
+                    string = info_str(folder)
+                    if string is not None:
+                        strings.append(f"\t{method}: \n\t{info_str(folder)}")
+
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
 
