@@ -10,6 +10,9 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.metrics import get_scorer_names
 from itertools import chain
 import gc
+import sys
+import os
+import shutil
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
@@ -109,6 +112,37 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     
     return args
 
+def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    job_name, job_id = os.environ("SLURM_JOB_ID"), os.environ("SLURM_JOB_NAME")
+    if job_name is not None and (job_id is not None):
+        out_name = f"R-{job_name}.{job_id}.out"
+        err_name = f"R-{job_name}.{job_id}.out"
+        out_fp = os.path.join(os.getcwd(), out_name)
+        err_fp = os.path.join(os.getcwd(), err_name)
+
+        if all(os.path.exists(fp) for fp in (out_fp, err_fp)):
+            if not os.path.exists(dist_dir):
+                print(f"Log destination dir doesn't exist: {dist_dir}")
+                return
+            if copy:
+                shutil.copy2(out_fp, os.path.join(dist_dir, "logs.out"))
+                shutil.copy2(err_fp, os.path.join(dist_dir, "logs.err"))
+                if clear:
+                    for fp in (out_fp, err_fp):
+                        with open(fp, mode='w') as f:
+                            f.truncate(0)
+            else:
+                shutil.move(out_fp, os.path.join(dist_dir, "logs.out"))
+                shutil.move(err_fp, os.path.join(dist_dir, "logs.err"))
+        else:
+            print(f"Log files dosen't exists: out={out_fp}, err={err_fp}")
+    else:
+        print(f"Unable to get job id and name from environment")
+            
+            
+
 def get_search_space(args: argparse.Namespace) -> dict:
     if args.method == "GridSearch":
         return dict(
@@ -128,7 +162,7 @@ def get_search_space(args: argparse.Namespace) -> dict:
             feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
         )
 
-def search(args: argparse.Namespace):
+def search(args: argparse.Namespace) -> BaseSearch:
     logging.getLogger().setLevel(logging.DEBUG)
 
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
@@ -161,6 +195,7 @@ def search(args: argparse.Namespace):
 
     print(f"Results saved to: {tuner._save_dir}")
     tuner.search(search_space, fixed_params)
+    return tuner
 
 def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
     if args.dataset.info().task == Task.REGRESSION:
@@ -182,8 +217,10 @@ if __name__ == "__main__":
         for dataset in datasets:
             args.dataset = dataset
             check_scoring(args, override_current=True)
-            search(args)
+            tuner = search(args)
             gc.collect()
+            copy_slurm_logs(tuner._save_dir, copy=True, clear_contents=True)
     else:
         check_scoring(args)
-        search(args)
+        tuner = search(args)
+        copy_slurm_logs(tuner._save_dir, copy=False)
