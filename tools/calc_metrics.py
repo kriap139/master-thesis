@@ -142,19 +142,12 @@ def load_result_folders(
     
     if print_results:
         for (dataset, methods) in results.items():
-            strings = []
             for method, folder in methods.items():
                 if isinstance(folder, dict):
-                    sub_strings = []
-                    for sub_folders in folder.values():
-                        sub_strings.extend(f"[{k}={v}]: {sub_folders.dir_path}" for k, v in sub_folders.info.items())
-                    sub_strings = f'\n\t\t'.join(sub_strings)
-                    strings.append(f"\t{method}: \n\t\t{sub_strings}")
+                    for sub_folder in folder.values():
+                        print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
                 else:
-                    strings.append(f"\t{method}: {folder.dir_path}")
-            print(f"{dataset}: \n" + "\n".join(strings) + '\n')
-            strings.clear()
-    
+                    print(f"{method}[{dataset}]: {folder.dir_path}")
     return results
 
 @dataclass
