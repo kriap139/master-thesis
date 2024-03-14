@@ -147,8 +147,8 @@ def load_result_folders(
                 if isinstance(folder, dict):
                     sub_strings = []
                     for sub_folders in folder.values():
-                        sub_strings.extend(f"\t\t [{k}={v}]: " for k, v in sub_folders.info.items())
-                    sub_strings = f'\n'.join(sub_strings)
+                        sub_strings.extend(f"[{k}={v}]: {sub_folders.dir_path}" for k, v in sub_folders.info.items())
+                    sub_strings = f'\n\t'.join(sub_strings)
                     strings.append(f"\t{method}: \n\t{sub_strings}")
                 else:
                     strings.append(f"\t{method}: {folder.dir_path}")
