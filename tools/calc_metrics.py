@@ -17,7 +17,7 @@ class ResultFolder:
     info: dict = None
 
     def info_hash(self) -> str:
-        js = json_to_str(self.info, indent=None, sort_keys=True)
+        js = json_to_str(self.info, indent=None, sort_keys=True).encode()
         dhash = hashlib.md5()
         dhash.update(js)
         return dhash.hexdigest()
