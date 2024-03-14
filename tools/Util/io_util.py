@@ -92,8 +92,8 @@ def save_json(fp: str, data: Union[dict, list], indent: int = 3, overwrite=False
     with open(fp, mode='w') as f:
         json.dump(data, f, indent=indent, default=json_serialize_unknown)
 
-def json_to_str(data: Union[dict, list], indent=3) -> str:
-    return json.dumps(data, default=json_serialize_unknown, indent=indent)
+def json_to_str(data: Union[dict, list], indent=3, sort_keys=False) -> str:
+    return json.dumps(data, default=json_serialize_unknown, sort_keys=sort_keys, indent=indent)
     
 
 def load_json(fp: str, default = None):

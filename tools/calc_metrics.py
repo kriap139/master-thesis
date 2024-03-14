@@ -1,11 +1,12 @@
 import os
 from Util import Dataset, Builtin, data_dir, Task
-from Util.io_util import load_json
-from benchmark import BaseSearch
+from Util.io_util import load_json, json_to_str
+from benchmark import BaseSearch, AdjustedSeqUDSearch
 from typing import List, Dict, Tuple, Callable, Any, Union
 import re
 from dataclasses import dataclass
 import pandas as pd
+import hashlib
 
 @dataclass
 class ResultFolder:
@@ -15,18 +16,35 @@ class ResultFolder:
     version: int = 0
     info: dict = None
 
-def select_version(current: ResultFolder, new_version: int, info: dict = None, select_versions: Dict[str, Dict[str, int]] = None) -> bool:
+    def info_hash(self) -> str:
+        js = json_to_str(self.info, indent=None, sort_keys=True)
+        dhash = hashlib.md5()
+        dhash.update(js)
+        return dhash.hexdigest()
+
+def select_new_version(current: ResultFolder, new: ResultFolder, select_versions: Dict[str, Dict[str, Union[int, dict]]] = None) -> bool:
     data = select_versions.get(current.dataset.name, None) if select_versions is not None else None
     select = data.get(current.search_method, None) if data is not None else None
 
     if select is not None:
         if type(select) == int:
-            return select == version
+            return select == new.version
         elif isinstance(select, dict):
-            return select == info
+            if 'version' in select.keys():
+                select = select.copy()
+                version = select.pop('version')
+            else:
+                version = None
+
+            test = ResultFolder(new.dir_path, new.dataset, new.search_method, new.version, select)
+            found = test.info_hash() == new.info_hash()
+            if found and (current.info_hash() == new.info_hash()):
+                return new == version if version is not None else current.version < new.version
+            return found
         else:
             raise RuntimeError(f"Folder selection attribute for folder(dataset={current.dataset.name}, method={current.search_method}) is invalid, only version(int) or info(dict) is supported: {select}")
-    return current.version < new_version
+    else:
+        return current.version < new.version
 
 def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], filter_fn: Callable[[ResultFolder], bool] = None, reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
     joined: List[ResultFolder] = []
@@ -57,7 +75,8 @@ def load_result_folders(
         print_results=True, 
         sort_fn: Callable[[ResultFolder], Any] = None, 
         filter_fn: Callable[[ResultFolder], bool] = None, 
-        reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
+        reverse=False,
+        load_all_unique_info_folders=False) -> Dict[str, Dict[str, ResultFolder]]:
 
     result_dir = data_dir(add="test_results")
     if select_versions is not None:
@@ -88,31 +107,54 @@ def load_result_folders(
         version = re.findall(r'(\d+)', remainder)
         version = int(version[0]) if len(version) else 0
 
+        new_folder = ResultFolder(path, Builtin[dataset], method, version, info)
         dataset_results = results.get(dataset, None)
 
         if dataset in ignore_datasets:
             continue
         elif dataset_results is None: 
-            results[dataset] = {method: ResultFolder(path, Builtin[dataset], method, version, info)}
+            results[dataset] = {method: new_folder}
         else:
             result = dataset_results.get(method, None)
             if result is None:
-                dataset_results[method] = ResultFolder(path, Builtin[dataset], method, version, info)
-            elif select_version(result, version, info, select_versions):
-                result.dir_path = path
-                result.version = version
-                info = info
-    
+                dataset_results[method] = new_folder
+            elif load_all_unique_info_folders and (info is not None or isinstance(result, dict)):
+                is_dict = isinstance(result, dict)
+                new_hash = new_folder.info_hash()
+
+                # The folder does not have identical parameters (info_hashes not equal)
+                if not is_dict and (new_hash != result.info_hash()):
+                    dataset_results[method] = {result.info_hash(): result, new_hash: new_folder}
+                elif not is_dict and (new_hash == result.info_hash()):
+                    dataset_results[method] = {result.info_hash(): result} if select_new_version(result, folder, select_versions) else {new_hash: new_folder}
+                # The folder with the current info does not already exists
+                elif not new_hash in result.keys():
+                    result[new_hash] = new_folder
+                # The folder with the current info does already exists, so pick the newest (or provided) version!
+                elif new_hash in result.keys() and select_new_version(result.get(new_hash), new_folder, select_versions):
+                    result[new_hash] = new_folder
+
+            elif select_new_version(result, new_folder, select_versions):
+                dataset_results[method] = new_folder
+
     if sort_fn:
         results = sort_folders(results, fn=sort_fn, filter_fn=filter_fn, reverse=reverse)
     
     if print_results:
-        #for method, result in results.items():
-        #    datasets = tuple(result.keys())
-        #    print(f"{method}: {datasets}, len={len(datasets)}")
         for (dataset, methods) in results.items():
-            string = f"{dataset}: \n" + "\n".join([f"\t{method}: {d.dir_path}" for method, d in methods.items()])
-            print(string)
+            strings = []
+            [f"\t{method}: {d.dir_path}" for method, d in methods.items()]
+            for method, folder in methods.items():
+                if isinstance(folder, dict):
+                    sub_strings = []
+                    for sub_folders in folder.values():
+                        sub_strings.extend(f"\t [{k}={v}]" for k, v in sub_folders.info.items())
+                    sub_strings = f'\n'.join(sub_strings)
+                    strings.append(f"\t{method}: \t{sub_strings}")
+                else:
+                    strings.append(f"\t{method}: {folder.dir_path}")
+
+            print(f"{dataset}: \n" + "\n".join(strings))
     
     return results
 
@@ -151,7 +193,8 @@ class EvalMetrics:
         return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
-def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
+def calc_eval_metrics(ignore_datasets: List[Builtin] = None) -> EvalMetrics:
+    data = load_result_folders(ignore_datasets)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
@@ -161,6 +204,9 @@ def calc_eval_metrics(data: Dict[str, Dict[str, ResultFolder]]) -> EvalMetrics:
     printed_newline = False
     for dataset, methods in data.items():
         for (method, folder) in methods.items():
+            if isinstance(folder, dict):
+                raise ValueError(f"Calculate eval metrics with multiple results ({folder})")
+
             file_data = load_json(os.path.join(folder.dir_path, "result.json"))
 
             if 'result' not in file_data.keys():
@@ -244,18 +290,26 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
+def print_all_adjusted_sequd_results():
+    data = load_result_folders(load_all_unique_info_folders=True)
+    for dataset, methods in data.items():
+        for folders in methods[AdjustedSeqUDSearch.__name__]:
+            folders_ = (folders, ) if isinstance(folders, ResultFolder) else folders
+        
+            for folder in folders_:
+                file_data = load_json(os.path.join(folder.dir_path, "result.json"))
+                train_ = file_data["result"]["mean_train_acc"]
+                test_ = file_data["result"]["mean_test_acc"]
+                time_ = file_data["result"]["time"]
+
+                info_str = "[" + f",".join(f"{k}={v}" for k, v in folder.info) + "]" if folder.info is not None else ""
+                print(f"{AdjustedSeqUDSearch.__name__}{info_str}: train={train_}, test={test_}, time={time_}")
+
 
 if __name__ == "__main__":
     ignore_datasets = (Builtin.AIRLINES.name, )
-    result_folders = load_result_folders(ignore_datasets)
-
-    for method, result in result_folders.items():
-        datasets = tuple(result.keys())
-        print(f"{method}: {datasets}, len={len(datasets)}")
-    
-    print()
-    
-    metrics = calc_eval_metrics(result_folders)
+    #metrics = calc_eval_metrics(ignore_datasets)
+    print_all_adjusted_sequd_results()
     
 
 
