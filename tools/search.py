@@ -101,8 +101,11 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
                 except ValueError:
                     return param
 
-        params = args.params.strip().split(",")
-        args.params = {tup[0].strip(): convert_param(tup[1].strip()) for tup in param.split("=") for param in params}
+        params = {} 
+        for param in args.params.strip().split(","):
+            name, value = param.split("=")
+            params[name.strip()] = convert_param(value.strip())
+        args.params = params
     
     return args
 
