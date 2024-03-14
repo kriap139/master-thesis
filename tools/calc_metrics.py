@@ -302,7 +302,7 @@ def print_all_adjusted_sequd_results():
                 test_ = file_data["result"]["mean_test_acc"]
                 time_ = file_data["result"]["time"]
 
-                info_str = "[" + f",".join(f"{k}={v}" for k, v in folder.info) + "]" if folder.info is not None else ""
+                info_str = "[" + f",".join(f"{k}={v}" for k, v in folder.info.items()) + "]" if folder.info is not None else ""
                 print(f"{AdjustedSeqUDSearch.__name__}{info_str}: train={train_}, test={test_}, time={time_}")
 
 
