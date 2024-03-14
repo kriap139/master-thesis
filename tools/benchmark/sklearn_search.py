@@ -16,8 +16,10 @@ class SklearnSearch(BaseSearch):
     def _update_inner_history(self, search_iter: int, clf: GridSearchCV):
         result = pd.DataFrame(clf.cv_results_)
         result["outer_iter"] = search_iter
+        rows = result.to_dict(orient="records")
         head = list(result.columns)
-        save_csv(self._inner_history_fp, head, result)
+        head.sort()
+        save_csv(self._inner_history_fp, head, rows)
 
 class RandomSearch(SklearnSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
