@@ -148,11 +148,11 @@ def load_result_folders(
                     sub_strings = []
                     for sub_folders in folder.values():
                         sub_strings.extend(f"[{k}={v}]: {sub_folders.dir_path}" for k, v in sub_folders.info.items())
-                    sub_strings = f'\n\t'.join(sub_strings)
-                    strings.append(f"\t{method}: \n\t{sub_strings}")
+                    sub_strings = f'\n\t\t'.join(sub_strings)
+                    strings.append(f"\t{method}: \n\t\t{sub_strings}")
                 else:
                     strings.append(f"\t{method}: {folder.dir_path}")
-            print(f"{dataset}: \n" + "\n".join(strings))
+            print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
     
     return results
@@ -289,27 +289,36 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_all_adjusted_sequd_results():
-    data = load_result_folders(load_all_unique_info_folders=True)
-    for dataset, methods in data.items():
-        if AdjustedSeqUDSearch.__name__ not in methods.keys():
-            continue
-        for folders in methods[AdjustedSeqUDSearch.__name__].values():
-            folders_ = (folders, ) if isinstance(folders, ResultFolder) else folders
-            for folder in folders_:
-                file_data = load_json(os.path.join(folder.dir_path, "result.json"))
-                train_ = file_data["result"]["mean_train_acc"]
-                test_ = file_data["result"]["mean_test_acc"]
-                time_ = file_data["result"]["time"]
+def print_folder_results(load_all_unique_info_folders=True):
+    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders)
 
-                info_str = "[" + f",".join(f"{k}={v}" for k, v in folder.info.items()) + "]" if folder.info is not None else ""
-                print(f"{AdjustedSeqUDSearch.__name__}{info_str}: train={train_}, test={test_}, time={time_}")
+    def info_str(folder: ResultFolder) -> str: 
+        file_data = load_json(os.path.join(folder.dir_path, "result.json"))
+        train_ = file_data["result"]["mean_train_acc"]
+        test_ = file_data["result"]["mean_test_acc"]
+        time_ = file_data["result"]["time"]
+        if folder.info is not None:
+            info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + "]: "
+        else:
+            info_str = ""
+        return info_str + f"train={train_}, test={test_}, time={time_}"
+
+    for (dataset, methods) in data.items():
+            strings = []
+            for method, folder in methods.items():
+                if isinstance(folder, dict):
+                    sub_strings = f'\n\t\t'.join(info_str(f) for f in folder.values())
+                    strings.append(f"\t{method}: \n\t\t{sub_strings}")
+                else:
+                    strings.append(f"\t{method}: {info_str(folder)}")
+            print(f"{dataset}: \n" + "\n".join(strings) + '\n')
+            strings.clear()
 
 
 if __name__ == "__main__":
     ignore_datasets = ()
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_all_adjusted_sequd_results()
+    print_folder_results(load_all_unique_info_folders=True)
     
 
 
