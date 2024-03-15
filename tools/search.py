@@ -124,7 +124,7 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
 
         if all(os.path.exists(fp) for fp in (out_fp, err_fp)):
             if not os.path.exists(dist_dir):
-                print(f"Log destination dir doesn't exist: {dist_dir}")
+                print(f"Log destination dir doesn't exist: {dist_dir}", flush=True)
                 return
             if copy:
                 shutil.copy2(out_fp, os.path.join(dist_dir, "logs.out"))
@@ -137,9 +137,9 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
                 shutil.move(out_fp, os.path.join(dist_dir, "logs.out"))
                 shutil.move(err_fp, os.path.join(dist_dir, "logs.err"))
         else:
-            print(f"Log files dosen't exists: out={out_fp}, err={err_fp}")
+            print(f"Log files dosen't exists: out={out_fp}, err={err_fp}", flush=True)
     else:
-        print(f"Unable to get job id and name from environment")
+        print(f"Unable to get job id and name from environment", flush=True)
             
             
 
