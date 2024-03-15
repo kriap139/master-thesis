@@ -115,7 +115,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
     sys.stdout.flush()
     sys.stderr.flush()
-    job_name, job_id = os.environ("SLURM_JOB_ID"), os.environ("SLURM_JOB_NAME")
+    job_name, job_id = os.environ["SLURM_JOB_ID"], os.environ["SLURM_JOB_NAME"]
     if job_name is not None and (job_id is not None):
         out_name = f"R-{job_name}.{job_id}.out"
         err_name = f"R-{job_name}.{job_id}.out"
