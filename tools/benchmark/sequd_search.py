@@ -8,7 +8,7 @@ import json
 from sequd import SeqUD
 import pandas as pd
 from itertools import chain
-from pysequd import AdjustedSequd
+from pysequd import JustSeqUD
 
 class SeqUDSearch(BaseSearch):
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
@@ -106,6 +106,62 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         search = AdjustedSequd(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
             self.scoring, refit=self.refit, verbose=2, adjust_method=self.adjust_method, t=self.t, exp_step=self.exp_step
+        )
+        search.fit(x_train, y_train, **fixed_params)
+
+        if self.save_inner_history:
+            self._update_inner_history(search_iter, search)
+
+        return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
+
+
+class JustSeqUDSearch(SeqUDSearch):
+
+    def __init__(
+            self, 
+            model, 
+            train_data: Dataset, 
+            test_data: Dataset = None,
+            n_iter=100, 
+            n_jobs=None, 
+            cv: TY_CV = None, 
+            inner_cv: TY_CV = None, 
+            scoring = None, 
+            save=False, 
+            n_runs_per_stage=20, 
+            max_search_iter=100, 
+            save_inner_history=True, 
+            max_outer_iter: int = None,
+            refit=True,
+            k=0,
+            just_params: Iterable  = None
+        ):
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit)
+        self.k = k
+        self.just_params = just_params
+
+        if save:
+            self._save = save
+            self.save_inner_history = save_inner_history
+            self._save_dir = self._create_save_dir()
+            self._init_save_paths()
+    
+    def _create_save_dir(self) -> str:
+        info = dict(k=self.k)
+        if self.just_params is not None:
+            info['n_params'] = len(self.just_params) 
+        return super()._create_save_dir(info)
+    
+    def _get_search_method_info(self) -> dict:
+        info = super()._get_search_method_info()
+        info["k"] = self.k
+        info["just_params"] = self.just_params
+        return info
+
+    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        search = JustSeqUD(
+            search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
+            self.scoring, refit=self.refit, verbose=2, k=self.k, just_params=self.just_params
         )
         search.fit(x_train, y_train, **fixed_params)
 

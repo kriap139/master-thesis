@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#SBATCH -N 1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
+#SBATCH -A master        # Replace with the desired account name
+#SBATCH -p normal        # Replace with the desired partition name
+#SBATCH --output=R-%x.%j.out
+#SBATCH --error=R-%x.%j.err
+
+source venv/bin/activate                # activate venv
+
+# Batch 1: --dataset={okcupid_stem,fps,acsi}
+# Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
+# Single: higgs, RCV1, COMET_MC
+python3 ./tools/search.py --method JustSequdSearch --max-lgb-jobs 10 --n-repeats 5 --n-folds 5 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel --params k=0,just_params=[n_estimators,learning_rate]
