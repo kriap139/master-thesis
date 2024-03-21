@@ -57,6 +57,11 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         type=str,
         default=None
     )
+    parser.add_argument("--search-space",
+        action='append',
+        nargs='+',
+        default=None
+    )
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
 
@@ -162,7 +167,7 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
 
 def get_search_space(args: argparse.Namespace) -> dict:
     if args.method == "GridSearch":
-        return dict(
+        space = dict(
             n_estimators=[50, 100, 200, 350, 500],
             learning_rate=[0.001, 0.01, 0.05, 0.1, 0.02],
             max_depth=[0, 5, 10, 20, 25],
@@ -170,7 +175,7 @@ def get_search_space(args: argparse.Namespace) -> dict:
         )
         print(f"GridSearch runs: {len(ParameterGrid(search_space))}")
     else:
-        return dict(
+        space = dict(
             n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
             learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
             max_depth=Integer(0, 30, name="max_depth"),
@@ -178,6 +183,14 @@ def get_search_space(args: argparse.Namespace) -> dict:
             min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf"),
             feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
         )
+    
+    if args.search_space is not None:
+        if isinstance(args.search_space, str):
+            space = {args.search_space: space[args.search_space]}
+        elif isinstance(args.search_space, Iterable):
+            space = {param: space[param] for param in args.search_space}
+            
+    return space
 
 def search(args: argparse.Namespace) -> BaseSearch:
     logging.getLogger().setLevel(logging.DEBUG)
