@@ -13,6 +13,7 @@ import gc
 import sys
 import os
 import shutil
+import re
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
@@ -107,16 +108,25 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         def convert_param(param: str):
             if param.startswith("["):
                 param = param[1:len(param) - 1].strip()
-                params = param.split(':')
+                params = param.split(',')
                 return [try_number(p) for p in params]
+            elif param.startswith("{"):
+                dct = {}
+                string = param[1:len(param) - 1].strip()
+                for param in string.split(','):
+                    k, v = param.split("=")
+                    dct[k.strip()] = try_number(v.strip())
+                return dct
             return try_number(param)
 
         params = {} 
-        for param in args.params.strip().split(","):
-            name, value = param.split("=")
+        comma_pattern = r',(?![^{]*})(?![^\[]*\])'
+        eq_pattern = r'=(?![^{]*})(?![^\[]*\])'
+
+        for param in re.split(comma_pattern, args.params):
+            name, value = re.split(eq_pattern, param)
             params[name.strip()] = convert_param(value.strip())
         args.params = params
-    
     return args
 
 def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
