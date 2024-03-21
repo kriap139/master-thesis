@@ -20,24 +20,37 @@ class JustSeqUD(SeqUD):
         super().__init__(para_space, n_runs_per_stage, max_runs, max_search_iter, n_jobs, estimator, cv, scoring, refit, random_state, verbose, error_score)
         self.k = k
         self.just_params = just_params
+        self.mapping_funcs = {}
 
         if self.just_params is None:
             self.just_params = [k for k, v in self.para_space.items() if v['Type'] != 'categorical']
         else:
-            for k, v in para_space.items():
-                if v['Type'] == 'categorical':
-                    raise ValueError(f"Categorical parameter ({k}) is not yet supported!")
-        
-        if self.k <= 0:
-            self.f = self.h
-        else:
-            self.f = self.g
+            for param in just_params:
+                if self.para_space[param]['Type'] == 'categorical':
+                    raise ValueError(f"Categorical parameter ({param}) is not yet supported!")
 
-    def h(self, x: float, y_l: Number, y_u: Number) -> Number:
-        return (1 - x) * (y_u / np.exp(abs(self.k) * x)) + y_l
+        if isinstance(k, Number):
+            self._k = {param: k for param in self.just_params}
+        elif isinstance(k, dict):
+            self._k = k
+        else:
+            self._k = {param: k[i] for i, param in enumerate(self.just_params)}
+        
+        assert len(self._k) == len(self.just_params)
+        
+        for i, param in enumerate(self.just_params):
+            f = self.h if self._k[param] else self.g
+            if self.para_space[param]["Type"] == "continuous":
+                self.mapping_funcs[param] = lambda x, param: f(x, self.para_space[param]["Range"][0], self.para_space[param]["Range"][1], self._k[param])
+            elif self.para_space[param]["Type"] == "integer":
+                self.mapping_funcs[param] = lambda x, param: f(x, self.para_space[param]["Mapping"][0], self.para_space[param]["Mapping"][-1], self._k[param])
+
+
+    def h(self, x: float, y_l: Number, y_u: Number, k: float) -> Number:
+        return (1 - x) * (y_u / np.exp(abs(k) * x)) + y_l
     
-    def g(self, x: float, y_l: Number, y_u: Number) -> Number:
-        return y_u - self.h((1 - x), y_u, y_l)
+    def g(self, x: float, y_l: Number, y_u: Number, k: float) -> Number:
+        return y_u - self.h((1 - x), y_u, y_l, k)
     
     def _passtrough_mapping(self):
         pass
@@ -46,11 +59,12 @@ class JustSeqUD(SeqUD):
         para_set = pd.DataFrame(np.zeros((para_set_ud.shape[0], self.factor_number)), columns=self.para_names)
 
         for item, values in self.para_space.items():
-            if item in self.just_params and (values['Type'] == 'continuous'):
-                para_set[item] = self.f(para_set_ud[item + '_UD'], values['Range'][0], values['Range'][1])
-            elif item in self.just_params and (values['Type'] == 'integer'):
-                para_set[item] = self.f(para_set_ud[item + '_UD'], values['Mapping'][0], values['Mapping'][-1])
-                para_set[item] = para_set[item].round().astype(int)
+            f = self.mapping_funcs.get(item, None)
+            if f is not None:
+                para_set[item] = f(para_set_ud[item + '_UD'], item)
+                if values['Type'] == 'integer':
+                    para_set[item] = para_set[item].round().astype(int)
+
             elif (values['Type'] == "continuous"):
                 para_set[item] = values['Wrapper'](
                     para_set_ud[item + "_UD"] * (values['Range'][1] - values['Range'][0]) + values['Range'][0])

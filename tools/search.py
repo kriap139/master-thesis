@@ -218,7 +218,7 @@ def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
 
 if __name__ == "__main__":
     args = build_cli()
-    
+
     if isinstance(args.dataset, Iterable):
         datasets = args.dataset
         for dataset in datasets:
