@@ -42,7 +42,7 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "JustSequdSearch"),
+        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "JustSeqUDSearch"),
         type=str,
         required=test_method is None,
     )
@@ -107,10 +107,10 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         def convert_param(param: str):
             if param.startswith("["):
                 param = param[1:len(param) - 1].strip()
-                params = param.split(',')
+                params = param.split(':')
                 return [try_number(p) for p in params]
             return try_number(param)
-            
+
         params = {} 
         for param in args.params.strip().split(","):
             name, value = param.split("=")
@@ -218,7 +218,7 @@ def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
 
 if __name__ == "__main__":
     args = build_cli()
-
+    
     if isinstance(args.dataset, Iterable):
         datasets = args.dataset
         for dataset in datasets:

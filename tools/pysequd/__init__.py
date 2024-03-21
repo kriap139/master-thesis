@@ -1,2 +1,2 @@
 from .adjusted_sequd import AdjustedSequd
-from .justSeqUD import JustSequd
+from .justSeqUD import JustSeqUD

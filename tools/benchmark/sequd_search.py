@@ -1,7 +1,7 @@
 from .base_search import BaseSearch, InnerResult
 from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv
 import lightgbm as lgb
-from typing import Callable
+from typing import Callable, Iterable
 import time
 import numpy as np
 import json

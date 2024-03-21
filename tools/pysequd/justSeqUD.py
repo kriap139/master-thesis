@@ -9,12 +9,12 @@ from typing import Iterable
 import math
 import pyunidoe as pydoe
 from itertools import chain
-from sequd import SeqUD, MappingData
+from sequd import SeqUD, MappingData, EPS
 from typing import Iterable
 from numbers import Number
 
 
-class JustSequd(SeqUD):
+class JustSeqUD(SeqUD):
     def __init__(self, para_space, n_runs_per_stage=20, max_runs=100, max_search_iter=100, n_jobs=None,
                  estimator=None, cv=None, scoring=None, refit=True, random_state=0, verbose=0, error_score='raise', k=0, just_params: Iterable =None):
         super().__init__(para_space, n_runs_per_stage, max_runs, max_search_iter, n_jobs, estimator, cv, scoring, refit, random_state, verbose, error_score)
@@ -49,7 +49,8 @@ class JustSequd(SeqUD):
             if item in self.just_params and (values['Type'] == 'continuous'):
                 para_set[item] = self.f(para_set_ud[item + '_UD'], values['Range'][0], values['Range'][1])
             elif item in self.just_params and (values['Type'] == 'integer'):
-                para_set[item] = round(self.f(para_set_ud[item + '_UD'], values['Range'][0], values['Range'][1]))
+                para_set[item] = self.f(para_set_ud[item + '_UD'], values['Mapping'][0], values['Mapping'][-1])
+                para_set[item] = para_set[item].round().astype(int)
             elif (values['Type'] == "continuous"):
                 para_set[item] = values['Wrapper'](
                     para_set_ud[item + "_UD"] * (values['Range'][1] - values['Range'][0]) + values['Range'][0])
@@ -59,7 +60,7 @@ class JustSequd(SeqUD):
                     para_set.loc[
                         (para_set_ud[item + "_UD"] >= (temp[j - 1] - EPS)) & (para_set_ud[item + "_UD"] < (temp[j] + EPS)), item
                     ] = values['Mapping'][j - 1]
-                    
+
                 para_set.loc[np.abs(para_set_ud[item + "_UD"] - 1) <= EPS, item] = values['Mapping'][-1]
                 para_set[item] = para_set[item].round().astype(int)
             elif (values['Type'] == "categorical"):
