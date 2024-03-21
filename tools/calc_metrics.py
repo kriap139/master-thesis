@@ -1,6 +1,6 @@
 import os
 from Util import Dataset, Builtin, data_dir, Task
-from Util.io_util import load_json, json_to_str
+from Util.io_util import load_json, json_to_str, load_csv
 from benchmark import BaseSearch, AdjustedSeqUDSearch
 from typing import List, Dict, Tuple, Callable, Any, Union
 import re
@@ -284,18 +284,28 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(load_all_unique_info_folders=True):
+def print_folder_results(load_all_unique_info_folders=True, use_history=False):
     data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders)
 
+    def load_data(folder: ResultFolder):
+        if use_history:
+            df = load_csv(os.path.join(folder.dir_path, "history.json"))
+            train_ = df["train_score"].mean()
+            test_ = df["test_score"].mean()
+            time_ = df["time"].mean()
+        else:
+            file_data = load_json(os.path.join(folder.dir_path, "result.json"))
+            if 'result' not in file_data:
+                return None
+
+            train_ = file_data["result"]["mean_train_acc"]
+            test_ = file_data["result"]["mean_test_acc"]
+            time_ = file_data["result"]["time"]
+        
+        return train_, test_, time_
+
     def info_str(folder: ResultFolder) -> str: 
-        file_data = load_json(os.path.join(folder.dir_path, "result.json"))
-
-        if 'result' not in file_data:
-            return None
-
-        train_ = file_data["result"]["mean_train_acc"]
-        test_ = file_data["result"]["mean_test_acc"]
-        time_ = file_data["result"]["time"]
+        train_, test_, time_ = load_data(folder)
         if folder.info is not None:
             info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + "]: "
         else:
@@ -317,11 +327,10 @@ def print_folder_results(load_all_unique_info_folders=True):
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
 
-
 if __name__ == "__main__":
     ignore_datasets = ()
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results(load_all_unique_info_folders=True)
+    print_folder_results(load_all_unique_info_folders=True, use_history=True)
     
 
 
