@@ -43,7 +43,7 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "JustSeqUDSearch"),
+        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch"),
         type=str,
         required=test_method is None,
     )
@@ -189,7 +189,7 @@ def get_search_space(args: argparse.Namespace) -> dict:
             space = {args.search_space: space[args.search_space]}
         elif isinstance(args.search_space, Iterable):
             space = {param: space[param] for param in args.search_space}
-            
+
     return space
 
 def search(args: argparse.Namespace) -> BaseSearch:

@@ -13,7 +13,7 @@ from sequd import SeqUD, MappingData, EPS
 from typing import Iterable, Union
 from numbers import Number
 
-class JustSeqUD(SeqUD):
+class KSpaceSeqUD(SeqUD):
     def __init__(self, para_space, n_runs_per_stage=20, max_runs=100, max_search_iter=100, n_jobs=None,
                  estimator=None, cv=None, scoring=None, refit=True, random_state=0, verbose=0, error_score='raise', k:  Union[Number, dict] =None):
         super().__init__(para_space, n_runs_per_stage, max_runs, max_search_iter, n_jobs, estimator, cv, scoring, refit, random_state, verbose, error_score)

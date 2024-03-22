@@ -1,2 +1,2 @@
 from .adjusted_sequd import AdjustedSequd
-from .justSeqUD import JustSeqUD
+from .k_space_sequd import KSpaceSeqUD

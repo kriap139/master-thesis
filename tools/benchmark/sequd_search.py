@@ -8,7 +8,7 @@ import json
 from sequd import SeqUD
 import pandas as pd
 from itertools import chain
-from pysequd import JustSeqUD
+from pysequd import KSpaceSeqUD
 from numbers import Number
 
 class SeqUDSearch(BaseSearch):
@@ -116,7 +116,7 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
 
 
-class JustSeqUDSearch(SeqUDSearch):
+class KSpaceSeqUDSearch(SeqUDSearch):
 
     def __init__(
             self, 
@@ -164,7 +164,7 @@ class JustSeqUDSearch(SeqUDSearch):
         return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        search = JustSeqUD(
+        search = KSpaceSeqUD(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
             self.scoring, refit=self.refit, verbose=2, k=self.k
         )
