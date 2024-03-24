@@ -17,6 +17,7 @@ import time
 from scipy.stats import mode
 import sys
 from scipy.sparse import coo_matrix
+import shutil
 
 class InnerResult:
     def __init__(self, best_index: int, best_params: dict, best_score: float, best_model):
@@ -39,44 +40,68 @@ class BaseSearch:
         self._model = model
         self.refit = refit
 
+        self.history_head = None
+        self.init_save_inner_history = save_inner_history
+        self.save_inner_history = self.init_save_inner_history
         self._save = save
         self._result_fp = None
         self._history_fp = None
         self._inner_history_fp = None
         self._models_dir = None
-        self.history_head = None
-        self.save_inner_history = save_inner_history
-        self._save_dir = self._create_save_dir() if save else None
+        self._save_dir = None
+        self._pre_init_save()
+
+        self.result = None
 
         if self.max_outer_iter is None:
             self.max_outer_iter = sys.maxsize
-
-        if self._save_dir is not None:
-            self._init_save_paths()
-        else:
-            self.save_inner_history = False
-
-        self.result = None
     
     def _create_save_dir(self, info: dict = None) -> str:
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
             return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]")
         return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]") 
-
+    
     def _init_save_paths(self):
-        if os.path.exists(self._save_dir):
-            old_dir = self._save_dir
-            self._save_dir = find_dir_ver(self._save_dir)
-            logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")
+        if self._save_dir is None:
+            self._history_fp = None
+            self._inner_history_fp = None
+            self._result_fp = None
+            self._models_dir = None
+        else:
+            self._history_fp = os.path.join(self._save_dir, "history.csv")
+            self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
+            self._result_fp = os.path.join(self._save_dir, "result.json")
+            self._models_dir = os.path.join(self._save_dir, "models")
+    
+    def _pre_init_save(self, save=None, force_recheck=True):
+        if save is not None:
+            self._save = save
+        
+        save = self._save
+        is_save_dir = self._save_dir is  not None
 
-        self._history_fp = os.path.join(self._save_dir, "history.csv")
-        self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
-        self._result_fp = os.path.join(self._save_dir, "result.json")
-        self._models_dir = os.path.join(self._save_dir, "models")
+        if (save and is_save_dir) and not force_recheck:
+            return
+        elif save and is_save_dir and force_recheck:
+            new_dir = self._create_save_dir()
+            if new_dir != self._save_dir:
+                self._save_dir = None
+                self._pre_init_save()
+        elif save and self._save_dir is None:
+            self._save_dir =  self._create_save_dir()
+            self.save_inner_history = self.init_save_inner_history
+            if os.path.exists(self._save_dir):
+                old_dir = self._save_dir
+                self._save_dir = find_dir_ver(self._save_dir)
+                logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")            
+        elif not save and (self._save_dir is not None):
+            self._save_dir = None
+            self.save_inner_history = False
+            self._init_save_paths()
     
     def init_save(self, search_space: dict, fixed_params: dict):
-        # os.makedirs(self._save_dir, exist_ok=True)
+        os.makedirs(self._save_dir, exist_ok=True)
         os.makedirs(self._models_dir, exist_ok=True)
         data = load_json(self._result_fp, default={})
 

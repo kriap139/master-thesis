@@ -132,7 +132,7 @@ def get_n_csv_columns(fp: str) -> int:
         f.seek(0)    
         return ncol
 
-def data_dir(add: str = None) -> str:
+def data_dir(add: str = None, make_add_dirs=True) -> str:
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(data_dir):
         raise RuntimeError(f"data directory dosen't exist: {data_dir}")
@@ -143,11 +143,9 @@ def data_dir(add: str = None) -> str:
             path = os.path.join(data_dir, os.path.dirname(add))
         else:
             path = os.path.join(data_dir, add)
-        os.makedirs(path, exist_ok=True)
+        if make_add_dirs:
+            os.makedirs(path, exist_ok=True)
         path = os.path.join(data_dir, add)
-    else:
-        path = data_dir
-        os.makedirs(path, exist_ok=True)
         
     return path
 

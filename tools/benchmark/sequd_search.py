@@ -78,16 +78,10 @@ class AdjustedSeqUDSearch(SeqUDSearch):
             exp_step=0.18
         ):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit)
-        
         self.t = t
         self.exp_step = exp_step
         self.adjust_method = adjust_method
-
-        if save:
-            self._save = save
-            self.save_inner_history = save_inner_history
-            self._save_dir = self._create_save_dir()
-            self._init_save_paths()
+        self._pre_init_save(save)
     
     def _create_save_dir(self) -> str:
         if self.adjust_method == 'linear':
@@ -134,28 +128,25 @@ class KSpaceSeqUDSearch(SeqUDSearch):
             save_inner_history=True, 
             max_outer_iter: int = None,
             refit=True,
-            k=0
+            k=0,
+            passtrough: Iterable[str] = None
         ):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit)
         self.k = k
-
-        if save:
-            self._save = save
-            self.save_inner_history = save_inner_history
-            self._save_dir = self._create_save_dir()
-            self._init_save_paths()
+        self.passtrough = passtrough
+        self._pre_init_save(save=save)
     
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
             k_mask = self.k
-            n_params = None
+            k_params = None
         elif isinstance(self.k, dict):
             k_mask = sum(self.k.values())
-            n_params = len(self.k.keys())
+            k_params = len(self.k.keys())
 
         info = dict(kmask=k_mask)
-        if n_params is not None:
-            info['n_params'] = n_params
+        if k_params is not None:
+            info['kparams'] = k_params
         return super()._create_save_dir(info)
     
     def _get_search_method_info(self) -> dict:
