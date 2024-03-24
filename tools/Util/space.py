@@ -204,6 +204,9 @@ class Dimension(object):
             self._name = value
         else:
             raise ValueError("Dimension's name must be either string or None.")
+    
+    def is_type(self, ty) -> bool:
+        return isinstance(self, ty)
 
 
 def _uniform_inclusive(loc=0.0, scale=1.0):
