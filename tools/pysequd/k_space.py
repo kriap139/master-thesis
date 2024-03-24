@@ -10,11 +10,10 @@ TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
 
 class KSpace:
-    def __init__(self, k_space: Dict[TY_DIM], k:  Union[Number, dict] = None, passtrough: Iterable[str] = None, x_in_search_space=False):
+    def __init__(self, k_space: Dict[TY_DIM], k:  Union[Number, dict] = None, x_in_search_space=False):
         self.k_space = k_space
         self.k = k
         self.mapping_funcs = {}
-        self.passtrough = tuple() if passtrough is None else passtrough 
         self.x_in_search_space = x_in_search_space
 
         if isinstance(k, dict):
@@ -24,10 +23,8 @@ class KSpace:
                     raise ValueError(f"Categorical parameter ({param}) is not yet supported!")
                 elif not isinstance(_k, Number):
                     raise ValueError(f"passed k value for {param} is not a number: {_k}")
-                elif param in self.passtrough:
-                    raise ValueError(f"paramter {param} is in passtrough group!")
         elif isinstance(k, Number):
-            self._kmap =  {param: k for param, space in self.k_space.items() if (not space.is_type(Categorical)) and (param not in passtrough)}
+            self._kmap =  {param: k for param, space in self.k_space.items() if not space.is_type(Categorical)}
         else:
             raise ValueError(f"k argument is not of supported types ('int', 'float', 'dict'): {type(k)}")
         

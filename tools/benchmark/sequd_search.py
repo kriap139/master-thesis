@@ -128,12 +128,10 @@ class KSpaceSeqUDSearch(SeqUDSearch):
             save_inner_history=True, 
             max_outer_iter: int = None,
             refit=True,
-            k=0,
-            passtrough: Iterable[str] = None
+            k=0
         ):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit)
         self.k = k
-        self.passtrough = passtrough
         self._pre_init_save(save=save)
     
     def _create_save_dir(self) -> str:
