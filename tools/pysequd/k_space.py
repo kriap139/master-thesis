@@ -50,17 +50,20 @@ class KSpace:
             elif self.k_space[param].is_type(Categorical):
                 pass
     
-    def h(self, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+    @classmethod
+    def h(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         return (1 - x) * (y_u / np.exp(abs(k) * x)) + y_l
     
-    def g(self, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
-        return y_u - self.h((1 - x), y_u, y_l, k)
+    @classmethod
+    def g(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+        return y_u - cls.h((1 - x), y_u, y_l, k)
     
-    def f(self, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+    @classmethod
+    def f(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         if k <= 0:
-            return self.h(x, y_l, y_u, k)
+            return cls.h(x, y_l, y_u, k)
         else:
-            return self.g(x, y_l, y_u)
+            return cls.g(x, y_l, y_u)
     
     @classmethod
     def _int_wrapper(cls, x: TY_X) -> TY_RETURN:
@@ -74,9 +77,6 @@ class KSpace:
         y_u, y_l = self.k_space[param].high, self.k_space[param].low
         x = (y - y_l) / (y_u - y_l)
         return self.f(x, y_l, y_u, self._kmap[param])
-
-    def f_cat(self, param: str, x: TY_CAT) -> TY_RETURN:
-        NotImplemented
 
     def kmap(self, param: str, x: TY_X, default=None) -> TY_RETURN:
         f = self.mapping_funcs.get(param, None)
