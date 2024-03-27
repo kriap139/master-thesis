@@ -17,17 +17,17 @@ from .k_space import KSpace, Integer, Real, Categorical
 class KSpaceSeqUD(SeqUD):
     def __init__(self, para_space, n_runs_per_stage=20, max_runs=100, max_search_iter=100, n_jobs=None,
                  estimator=None, cv=None, scoring=None, refit=True, random_state=0, verbose=0, error_score='raise', k:  Union[Number, dict] = None):
-        super(SeqUD, self).__init__(para_space, n_runs_per_stage, max_runs, max_search_iter, n_jobs, estimator, cv, scoring, refit, random_state, verbose, error_score)
+        super().__init__(para_space, n_runs_per_stage, max_runs, max_search_iter, n_jobs, estimator, cv, scoring, refit, random_state, verbose, error_score)
         self.kspace = KSpace(self._create_k_space(para_space), k)
     
     def _create_k_space(self, para_space: dict) -> dict:
         space = {}
-        for k, v in search_space.items():
+        for k, v in para_space.items():
             if v['Type'] == 'continuous':
-                space[k] = Real(v["Range"][0], v["Range"][0], name=k)
-            elif isinstance(v, Integer):
+                space[k] = Real(v["Range"][0], v["Range"][1], name=k)
+            elif v['Type'] == 'integer':
                 space[k] = Integer(v["Mapping"][0], v["Mapping"][-1], name=k)
-            elif isinstance(v, Categorical):
+            elif v['Type'] == 'categorical':
                 space[k] = Categorical(v["Mapping"], name=k)
             else:
                 raise ValueError(f"search space contains unsupported type for '{k}': {type(v)}")
@@ -56,10 +56,14 @@ class KSpaceSeqUD(SeqUD):
 
     def _para_mapping(self, para_set_ud, log_append=True):
         para_set = pd.DataFrame(np.zeros((para_set_ud.shape[0], self.factor_number)), columns=self.para_names)
+        x_logs = pd.DataFrame(np.zeros((para_set_ud.shape[0], self.factor_number)), columns=[p + "_kx" for p in self.para_names])
+
         for param, info in self.para_space.items():
-            value = self.kspace.kmap(param, x=para_set_ud[param + '_UD'])
+            x = para_set_ud[param + '_UD']
+            value = self.kspace.kmap(param, x=x)
             if value is not None:
                 para_set[param] = value
+                x_logs[param + "_kx"] = x
             else:
                 self._passtrough_mapping(para_set, para_set_ud, param, info)
-        return MappingData(para_set, logs_append=None)
+        return MappingData(para_set, logs_append=x_logs)

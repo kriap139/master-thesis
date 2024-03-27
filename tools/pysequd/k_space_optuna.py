@@ -9,13 +9,13 @@ from optuna.integration import OptunaSearchCV
 from optuna import samplers, storages, pruners, distributions
 from optuna.storages._heartbeat import is_heartbeat_enabled
 from optuna.distributions import BaseDistribution, IntDistribution, FloatDistribution, CategoricalDistribution
-from typing import Sequence, Union, Dict
+from typing import Sequence, Union, Dict, Any, Optional
 from numbers import Number
 from .k_space import KSpace
 from Util import Integer, Real, Categorical
 
 
-_logger = logging.get_logger(__name__)
+_logger = logging.getLogger(__name__)
 
 class KSpaceTrial(Trial):
     def __init__(self, study: "optuna.study.Study", trial_id: int, kspace: KSpace) -> None:
@@ -34,25 +34,32 @@ class KSpaceTrial(Trial):
         else:
             if self._is_fixed_param(name, distribution):
                 param_value = self._fixed_params[name]
+                k_param_value = param_value
+                self.set_user_attr(name + "_kx", None)
             elif distribution.single():
                 param_value = distributions._get_single_value(distribution)
-                param_value = self.kspace.kmap(name, param_value)
+                k_param_value = self.kspace.kmap(name, param_value)
+                self.set_user_attr(name + "_kx", param_value)
             elif self._is_relative_param(name, distribution):
                 param_value = self.relative_params[name]
+                k_param_value = param_value
+                self.set_user_attr(name + "_kx", None)
             else:
                 study = pruners._filter_study(self.study, trial)
                 param_value = self.study.sampler.sample_independent(
                     study, trial, name, distribution
                 )
-                param_value = self.kspace.kmap(name, param_value)
+                k_param_value = self.kspace.kmap(name, param_value)
+                self.set_user_attr(name + "_kx", param_value)
 
             # `param_value` is validated here (invalid value like `np.nan` raises ValueError).
-            param_value_in_internal_repr = distribution.to_internal_repr(param_value)
+            # print(f"!!!!!!!!!!!!11: param={name}, x={param_value}, kmapped={k_param_value}")
+            param_value_in_internal_repr = distribution.to_internal_repr(k_param_value if k_param_value is not None else param_value)
             storage.set_trial_param(trial_id, name, param_value_in_internal_repr, distribution)
 
             self._cached_frozen_trial.distributions[name] = distribution
-            self._cached_frozen_trial.params[name] = param_value
-        return param_value
+            self._cached_frozen_trial.params[name] = k_param_value
+        return k_param_value
 
 class KSpaceStudy(Study):
     def __init__(
@@ -60,7 +67,7 @@ class KSpaceStudy(Study):
         study_name: str,
         storage: str | storages.BaseStorage,
         search_space: Dict[str, distributions.BaseDistribution],
-        sampler: "samplers.BaseSampler" | None = None,
+        sampler: Optional[samplers.BaseSampler] = None,
         pruner: pruners.BasePruner | None = None,
         k: Union[Number, dict] = None,
     ) -> None:
@@ -168,14 +175,15 @@ class KSpaceStudy(Study):
     @classmethod
     def create_study(
         cls,
+        search_space: dict,
+        k:  Union[Number, dict] = None,
         storage: str | storages.BaseStorage | None = None,
-        sampler: "samplers.BaseSampler" | None = None,
+        sampler: Optional[samplers.BaseSampler] = None,
         pruner: pruners.BasePruner | None = None,
         study_name: str | None = None,
         direction: str | StudyDirection | None = None,
         load_if_exists: bool = False,
         directions: Sequence[str | StudyDirection] | None = None,
-        k:  Union[Number, dict] = None
     ) -> 'KSpaceStudy':
         """Create a new :class:`~optuna.study.Study`.
 
@@ -253,52 +261,52 @@ class KSpaceStudy(Study):
 
         """
 
-    if direction is None and directions is None:
-        directions = ["minimize"]
-    elif direction is not None and directions is not None:
-        raise ValueError("Specify only one of `direction` and `directions`.")
-    elif direction is not None:
-        directions = [direction]
-    elif directions is not None:
-        directions = list(directions)
-    else:
-        assert False
-
-    if len(directions) < 1:
-        raise ValueError("The number of objectives must be greater than 0.")
-    elif any(
-        d not in ["minimize", "maximize", StudyDirection.MINIMIZE, StudyDirection.MAXIMIZE]
-        for d in directions
-    ):
-        raise ValueError(
-            "Please set either 'minimize' or 'maximize' to direction. You can also set the "
-            "corresponding `StudyDirection` member."
-        )
-
-    direction_objects = [
-        d if isinstance(d, StudyDirection) else StudyDirection[d.upper()] for d in directions
-    ]
-
-    storage = storages.get_storage(storage)
-    try:
-        study_id = storage.create_new_study(direction_objects, study_name)
-    except exceptions.DuplicatedStudyError:
-        if load_if_exists:
-            assert study_name is not None
-
-            _logger.info(
-                "Using an existing study with name '{}' instead of "
-                "creating a new one.".format(study_name)
-            )
-            study_id = storage.get_study_id_from_name(study_name)
+        if direction is None and directions is None:
+            directions = ["maximize"]
+        elif direction is not None and directions is not None:
+            raise ValueError("Specify only one of `direction` and `directions`.")
+        elif direction is not None:
+            directions = [direction]
+        elif directions is not None:
+            directions = list(directions)
         else:
-            raise
+            assert False
 
-    if sampler is None and len(direction_objects) > 1:
-        sampler = samplers.NSGAIISampler()
+        if len(directions) < 1:
+            raise ValueError("The number of objectives must be greater than 0.")
+        elif any(
+            d not in ["minimize", "maximize", StudyDirection.MINIMIZE, StudyDirection.MAXIMIZE]
+            for d in directions
+        ):
+            raise ValueError(
+                "Please set either 'minimize' or 'maximize' to direction. You can also set the "
+                "corresponding `StudyDirection` member."
+            )
 
-    study_name = storage.get_study_name_from_id(study_id)
-    study = KSpaceStudy(study_name=study_name, storage=storage, sampler=sampler, pruner=pruner)
+        direction_objects = [
+            d if isinstance(d, StudyDirection) else StudyDirection[d.upper()] for d in directions
+        ]
 
-    return study
+        storage = storages.get_storage(storage)
+        try:
+            study_id = storage.create_new_study(direction_objects, study_name)
+        except exceptions.DuplicatedStudyError:
+            if load_if_exists:
+                assert study_name is not None
+
+                _logger.info(
+                    "Using an existing study with name '{}' instead of "
+                    "creating a new one.".format(study_name)
+                )
+                study_id = storage.get_study_id_from_name(study_name)
+            else:
+                raise
+
+        if sampler is None and len(direction_objects) > 1:
+            sampler = samplers.NSGAIISampler()
+
+        study_name = storage.get_study_name_from_id(study_id)
+        study = KSpaceStudy(study_name=study_name, storage=storage, sampler=sampler, pruner=pruner, search_space=search_space, k=k)
+
+        return study
 

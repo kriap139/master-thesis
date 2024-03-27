@@ -3,14 +3,14 @@ import pandas as pd
 from typing import Iterable, Union, Dict, Optional
 from numbers import Number
 from abc import ABC, abstractclassmethod
-from ..Util import Integer, Categorical, Real
+from Util import Integer, Categorical, Real
 
 TY_DIM = Union[Integer, Real, Categorical]
 TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
 
 class KSpace:
-    def __init__(self, k_space: Dict[TY_DIM], k:  Union[Number, dict] = None, x_in_search_space=False):
+    def __init__(self, k_space: Dict[str, TY_DIM], k:  Union[Number, dict] = None, x_in_search_space=False):
         self.k_space = k_space
         self.k = k
         self.mapping_funcs = {}
@@ -29,22 +29,22 @@ class KSpace:
             raise ValueError(f"k argument is not of supported types ('int', 'float', 'dict'): {type(k)}")
         
         for param, _ in self._kmap.items():
-            if self.k_space[param].is_type(Real):
+            if self.k_space[param].is_type(Real) and x_in_search_space:
+                self.mapping_funcs[param] = self._rescale_wrapper
+            elif self.k_space[param].is_type(Real):
                 self.mapping_funcs[param] = lambda param, x: (
                     self.f(x, self.k_space[param].low, self.k_space[param].high, self._kmap[param])
-                )
-            elif self.k_space[param].is_type(Real) and x_in_search_space:
-                self.mapping_funcs[param] = self._rescale_wrapper
-            elif self.k_space[param].is_type(Integer):
-                self.mapping_funcs[param] = lambda param, x: (
-                    self._int_wrapper(
-                        self.f(x, self.k_space[param].low, self.k_space[param].high, self._kmap[param])
-                    )
                 )
             elif self.k_space[param].is_type(Integer) and x_in_search_space:
                 self.mapping_funcs[param] = lambda param, x: (
                     self._int_wrapper(
                         self._rescale_wrapper(param, x)
+                    )
+                )
+            elif self.k_space[param].is_type(Integer):
+                self.mapping_funcs[param] = lambda param, x: (
+                    self._int_wrapper(
+                        self.f(x, self.k_space[param].low, self.k_space[param].high, self._kmap[param])
                     )
                 )
             elif self.k_space[param].is_type(Categorical):
@@ -56,14 +56,14 @@ class KSpace:
     
     @classmethod
     def g(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
-        return y_u - cls.h((1 - x), y_u, y_l, k)
+        return y_u - cls.h((1 - x), y_l, y_u, k)
     
     @classmethod
     def f(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         if k <= 0:
             return cls.h(x, y_l, y_u, k)
         else:
-            return cls.g(x, y_l, y_u)
+            return cls.g(x, y_l, y_u, k)
     
     @classmethod
     def _int_wrapper(cls, x: TY_X) -> TY_RETURN:
@@ -75,8 +75,11 @@ class KSpace:
     
     def _rescale_wrapper(self, param: str, y: TY_X) -> TY_RETURN:
         y_u, y_l = self.k_space[param].high, self.k_space[param].low
-        x = (y - y_l) / (y_u - y_l)
-        return self.f(x, y_l, y_u, self._kmap[param])
+        slope = 1 / (y_u - y_l)
+        x = slope * (y - y_l)
+        ky = self.f(x, y_l, y_u, self._kmap[param])
+        print(f"param={param}, x_inn={y}, x={x}, y={ky}")
+        return ky
 
     def kmap(self, param: str, x: TY_X, default=None) -> TY_RETURN:
         f = self.mapping_funcs.get(param, None)

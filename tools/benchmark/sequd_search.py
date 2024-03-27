@@ -150,6 +150,7 @@ class KSpaceSeqUDSearch(SeqUDSearch):
     def _get_search_method_info(self) -> dict:
         info = super()._get_search_method_info()
         info["k"] = self.k
+        info["x_in_search_space"] = False
         return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:

@@ -1,7 +1,7 @@
 from .base_search import BaseSearch, InnerResult
 from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv
 import lightgbm as lgb
-from typing import Callable, Iterable, Dict
+from typing import Callable, Iterable, Dict, Union
 from numbers import Number
 import time
 import numpy as np
@@ -39,8 +39,8 @@ class OptunaSearch(BaseSearch):
     
     def __update_inner_history(self, search_iter: int, clf: OptunaSearchCV):
         df = clf.trials_dataframe()
-        head = list(df.columns)
         df["outer_iter"] = search_iter
+        head = list(df.columns)
         save_csv(self._inner_history_fp, head, df.to_dict(orient="records"))
     
     def _encode_search_space(self, search_space: dict) -> dict:
@@ -48,9 +48,9 @@ class OptunaSearch(BaseSearch):
         for k in space.keys():
             v = space[k]
             if isinstance(v, Integer):
-                space[k] = IntDistribution(v.low, v.high, log=(v.prior == "log-uniform"))
+                space[k] = IntDistribution(v.low, v.high) # log=(v.prior == "log-uniform")
             elif isinstance(v, Real):
-                space[k] = FloatDistribution(v.low, v.high, log=(v.prior == "log-uniform"))
+                space[k] = FloatDistribution(v.low, v.high) # log=(v.prior == "log-uniform")
             elif isinstance(v, Categorical):
                 space[k] = CategoricalDistribution(list(v.categories))
             else:
@@ -69,7 +69,7 @@ class OptunaSearch(BaseSearch):
             self.__update_inner_history(search_iter, search)
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)
 
-class KSpaceOptunaSearch(BaseSearch):
+class KSpaceOptunaSearch(OptunaSearch):
     def __init__(
             self, 
             model, 
@@ -86,10 +86,11 @@ class KSpaceOptunaSearch(BaseSearch):
             refit=True, 
             k:  Union[Number, dict] = None
         ):
-        study = KSpaceStudy.create_study()
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, study)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, study=None)
         self.k = k
+        self.x_in_search_space = True
         self._pre_init_save(save)
+        self.__inner_func = self.__init_study
 
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
@@ -107,7 +108,14 @@ class KSpaceOptunaSearch(BaseSearch):
     def _get_search_method_info(self) -> dict:
         info = super()._get_search_method_info()
         info["k"] = self.k
+        info["x_in_search_space"] = self.x_in_search_space
         return info
     
+    def __init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        self._study = KSpaceStudy.create_study(search_space, self.k)
+        self.__inner_func = super()._inner_search
+        return super()._inner_search(search_iter, x_train, y_train, search_space, fixed_params)
 
+    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        return self.__inner_func(search_iter, x_train, y_train, search_space, fixed_params)
     
