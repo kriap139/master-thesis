@@ -9,7 +9,7 @@ from optuna.integration import OptunaSearchCV
 from optuna import samplers, storages, pruners, distributions
 from optuna.storages._heartbeat import is_heartbeat_enabled
 from optuna.distributions import BaseDistribution, IntDistribution, FloatDistribution, CategoricalDistribution
-from typing import Sequence, Union, Dict, Any, Optional
+from typing import Sequence, Union, Dict, Any, Optional, Tuple
 from numbers import Number
 from .k_space import KSpace
 from Util import Integer, Real, Categorical
@@ -183,7 +183,7 @@ class KSpaceStudy(Study):
         study_name: Optional[str] = None,
         direction: Union[str, StudyDirection, None] = None,
         load_if_exists: bool = False,
-        directions: Optional[Sequence[str, StudyDirection]] = None,
+        directions: Optional[Sequence[Tuple[str, StudyDirection]]] = None,
     ) -> 'KSpaceStudy':
         """Create a new :class:`~optuna.study.Study`.
 
