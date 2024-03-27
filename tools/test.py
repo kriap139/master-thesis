@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn import svm
+import sklearn
 from sklearn.datasets import load_iris, load_breast_cancer
 from sklearn.model_selection import RandomizedSearchCV, cross_val_score, train_test_split
 from scipy.stats import uniform
@@ -14,8 +15,11 @@ from scipy.sparse import coo_matrix
 from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union, List
 
-from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files
+from benchmark import (
+    BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch,
+    KSpaceSeqUDSearch, KSpaceOptunaSearch
+)
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files, load_csv
 import lightgbm as lgb
 from search import get_sklearn_model, get_cv, build_cli, search, calc_n_lgb_jobs, get_search_space, MAX_SEARCH_JOBS, CPU_CORES
 import logging
@@ -28,6 +32,8 @@ import gc
 import random
 import re
 import time
+from pysequd import KSpace
+import Util
 
 @dataclass
 class TestResult:
@@ -229,11 +235,55 @@ def print_basic_test_results(descriptions: dict):
         print(f"# {descriptions[name]}\n\t{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
 
 
+def kspace_discrepancy(search: Union[BaseSearch, str]):
+    if isinstance(search, BaseSearch):
+        assert search._inner_history_fp is not None and os.path.exists(search._inner_history_fp)
+
+        inner_history = load_csv(search._inner_history_fp)
+        info = load_json(search._result_fp)["info"]
+        space = info["space"]
+    else:
+        assert os.path.exists(search)
+        print(f"results dir: {search}")
+
+        inner_history = load_csv(os.path.join(search, "inner_history.csv"))
+        info = load_json(os.path.join(search, "result.json"))["info"]
+        space = info["space"]
+
+    para_names = space.keys()
+    first_iter = inner_history[inner_history["outer_iter"] == 0]
+    
+    cols = list(first_iter.columns)
+    for i in range(len(cols)):
+        checks = tuple(cols[i].startswith(prefix) for prefix in ("params_", "user_attrs_"))
+        if any(checks):
+            splits = 2 if checks[1] else 1
+            cols[i] = cols[i].split("_", maxsplit=splits)[splits]
+
+    rename = {old: _new for old, _new in zip(first_iter.columns, cols)}
+    first_iter = first_iter.rename(columns=rename)
+    print(first_iter.columns)
+
+    params = first_iter[para_names]
+    param = "learning_rate"
+
+    print(first_iter)
+    print(params)
+
+    k_space = {k: getattr(Util, d.pop('cls'))(**d) for k, d in space.items()}
+    lr = params[param]
+    kspace = KSpace(k_space, k=info["method_params"]["k"])
+    x = np.linspace(0, 1, 60_000)
+
+    plt.plot(x, kspace.kmap(param, x), color='green')
+    plt.plot(first_iter[param + "_kx"].to_numpy(), lr.to_numpy(), color='red')
+    plt.legend()
+    plt.show()
 
 # python tools/test.py --max-lgb-jobs 1 --n-jobs 3 --n-repeats 3 --n-folds 5 --random-state 9 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 if "__main__" == __name__:
     # Args method is not Used in this script!
-    args = cli(RandomSearch.__name__)
+    args = cli()
     datasets = [args.dataset] if not isinstance(args.dataset, Iterable) else args.dataset
 
     tests = [
@@ -253,7 +303,12 @@ if "__main__" == __name__:
     }
 
     #run_basic_tests(tests, datasets, args, save=True)
-    print_basic_test_results(descriptions)
+    #print_basic_test_results(descriptions)
+
+    tuner = search(args)
+    #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
+    kspace_discrepancy(tuner)
+
 
 
 

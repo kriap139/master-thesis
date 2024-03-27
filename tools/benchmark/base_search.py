@@ -59,7 +59,7 @@ class BaseSearch:
     def _create_save_dir(self, info: dict = None) -> str:
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
-            return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]")
+            return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]", make_add_dirs=False)
         return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]") 
     
     def _init_save_paths(self):
@@ -89,12 +89,13 @@ class BaseSearch:
                 self._save_dir = None
                 self._pre_init_save()
         elif save and self._save_dir is None:
-            self._save_dir =  self._create_save_dir()
+            self._save_dir = self._create_save_dir()
             self.save_inner_history = self.init_save_inner_history
             if os.path.exists(self._save_dir):
                 old_dir = self._save_dir
                 self._save_dir = find_dir_ver(self._save_dir)
-                logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")            
+                logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")   
+            self._init_save_paths()         
         elif not save and (self._save_dir is not None):
             self._save_dir = None
             self.save_inner_history = False

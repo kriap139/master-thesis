@@ -4,7 +4,7 @@ import os
 import json
 import dataclasses
 import numpy as np
-from typing import Union, Iterable, List, Any, Tuple
+from typing import Union, Iterable, List, Any, Tuple, Optional
 import csv
 import re
 from .space import Integer, Real, Categorical
@@ -21,16 +21,16 @@ def json_serialize_unknown(o):
         return o.tolist()
     elif isinstance(o, Integer):
          return dict(
-                high=o.high, low=o.low, base=o.base, prior=o.prior, 
-                transform=o.transform_
+                cls=o.__class__.__name__, name=o.name, high=o.high, low=o.low, base=o.base, 
+                prior=o.prior, transform=o.transform_
             )
     elif isinstance(o, Real):
         return dict(
-            high=o.high, low=o.low, base=o.base, prior=o.prior, 
-            transform=o.transform_
+            cls=o.__class__.__name__, name=o.name, high=o.high, low=o.low, base=o.base, 
+            prior=o.prior, transform=o.transform_
         )
     elif isinstance(o, Categorical):
-        return dict(categories=o.categories, prior=o.prior, transform=o.transform_)
+        return dict(cls=o.__class__.__name__, name=o.name, categories=o.categories, prior=o.prior, transform=o.transform_)
     else:
         raise TypeError(f"Object of class {type(o)} is not JSON serializable: {o}")
 
@@ -132,17 +132,21 @@ def get_n_csv_columns(fp: str) -> int:
         f.seek(0)    
         return ncol
 
-def data_dir(add: str = None, make_add_dirs=True) -> str:
+def data_dir(add: str = None, make_add_dirs=True, force_add_is_fn=False, force_add_is_not_fn=False) -> str:
     data_dir = os.path.join(os.getcwd(), "data")
     if not os.path.exists(data_dir):
         raise RuntimeError(f"data directory dosen't exist: {data_dir}")
 
-    
     if add is not None:
-        if len(os.path.basename(add)):
-            path = os.path.join(data_dir, os.path.dirname(add))
+        add.strip()
+        add = add[1:] if add.startswith(os.path.sep) else add
+        head, tail = os.path.split(add)
+
+        if (tail.__contains__('.') and not force_add_is_not_fn) or force_add_is_fn:
+            path = os.path.join(data_dir, head)
         else:
             path = os.path.join(data_dir, add)
+
         if make_add_dirs:
             os.makedirs(path, exist_ok=True)
         path = os.path.join(data_dir, add)
