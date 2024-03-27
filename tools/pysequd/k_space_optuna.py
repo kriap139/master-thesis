@@ -89,7 +89,7 @@ class KSpaceStudy(Study):
         return space
 
     def ask(
-        self, fixed_distributions: Optional[dict[str, BaseDistribution]] = None
+        self, fixed_distributions: Optional[Dict[str, BaseDistribution]] = None
     ) -> KSpaceTrial:
         """Create a new trial from which hyperparameters can be suggested.
 
