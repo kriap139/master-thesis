@@ -65,10 +65,10 @@ class KSpaceStudy(Study):
     def __init__(
         self,
         study_name: str,
-        storage: str | storages.BaseStorage,
+        storage: Union[str, storages.BaseStorage],
         search_space: Dict[str, distributions.BaseDistribution],
         sampler: Optional[samplers.BaseSampler] = None,
-        pruner: pruners.BasePruner | None = None,
+        pruner: Optional[pruners.BasePruner] = None,
         k: Union[Number, dict] = None,
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
@@ -89,7 +89,7 @@ class KSpaceStudy(Study):
         return space
 
     def ask(
-        self, fixed_distributions: dict[str, BaseDistribution] | None = None
+        self, fixed_distributions: Optional[dict[str, BaseDistribution]] = None
     ) -> KSpaceTrial:
         """Create a new trial from which hyperparameters can be suggested.
 
@@ -177,13 +177,13 @@ class KSpaceStudy(Study):
         cls,
         search_space: dict,
         k:  Union[Number, dict] = None,
-        storage: str | storages.BaseStorage | None = None,
+        storage: Union[str, storages.BaseStorage, None] = None,
         sampler: Optional[samplers.BaseSampler] = None,
-        pruner: pruners.BasePruner | None = None,
-        study_name: str | None = None,
-        direction: str | StudyDirection | None = None,
+        pruner: Optional[pruners.BasePruner] = None,
+        study_name: Optional[str] = None,
+        direction: Union[str, StudyDirection, None] = None,
         load_if_exists: bool = False,
-        directions: Sequence[str | StudyDirection] | None = None,
+        directions: Optional[Sequence[str, StudyDirection]] = None,
     ) -> 'KSpaceStudy':
         """Create a new :class:`~optuna.study.Study`.
 
