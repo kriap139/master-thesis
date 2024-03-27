@@ -11,11 +11,12 @@ import logging
 from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, KFold, train_test_split
 from numbers import Integral
 import numpy as np
+from Util.compat import removeprefix
 
 TY_CV = Union[KFold, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold]
 
 SK_DATASETS = [
-    "sk." + func.removeprefix("load_").removeprefix("fetch_") 
+    "sk." + removeprefix(func, ("load_", "fetch_")) 
     for func in sk_datasets.__all__
     if (func.startswith("fetch") or func.startswith("load")) and 
         all(not func.__contains__(s) for s in ('file', 'image', 'openml', 'olivetti', 'lfw', '20newsgroups'))
