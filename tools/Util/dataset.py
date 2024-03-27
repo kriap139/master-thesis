@@ -1,5 +1,6 @@
-from enum import Enum, Flag, auto
+from enum import Enum, Flag, auto, EnumMeta
 from typing import Tuple, Union, Optional
+import sklearn.datasets as sk_datasets
 import pandas as pd
 import os
 import subprocess
@@ -13,6 +14,13 @@ import numpy as np
 
 TY_CV = Union[KFold, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold]
 
+SK_DATASETS = [
+    "sk." + func.removeprefix("load_").removeprefix("fetch_") 
+    for func in sk_datasets.__all__
+    if (func.startswith("fetch") or func.startswith("load")) and 
+        all(not func.__contains__(s) for s in ('file', 'image', 'openml', 'olivetti', 'lfw', '20newsgroups'))
+]
+
 class SizeGroup(Enum):
     SMALL = 0,
     MODERATE = 1,
@@ -24,13 +32,22 @@ class Task(Flag):
     REGRESSION = auto()
 
 class DatasetInfo:
-    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup):
+    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup, mod=None):
         self.name = name
         self.label_column = label_column
         self.task = task
         self.size_group = size_group
+        self.mod = mod
 
-class Builtin(Enum):
+class MetaEnum(EnumMeta):
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        return True  
+
+class Builtin(Enum, metaclass=MetaEnum):
     HIGGS = DatasetInfo("HIGGS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
     # HEPMASS = DatasetInfo("HEPMASS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
     # AIRLINES = DatasetInfo("AIRLINES".lower(), "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
@@ -136,8 +153,16 @@ class CVInfo(dict):
         return {k:v for k, v in self.items()}
 
 class Dataset(DatasetInfo):
-    def __init__(self, bn: Builtin, is_test=False):
-        super().__init__(bn.info().name, bn.info().label_column, bn.info().task, bn.info().size_group)
+    def __init__(self, d: Union[Builtin, DatasetInfo, str], is_test=False):
+        if isinstance(d, Builtin):
+            super().__init__(d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod)
+        elif isinstance(d, DatasetInfo):
+            super().__init__(d.name, d.label_column, d.task, d.size_group, d.mod)
+        elif isinstance(d, str) and d.__contains__("."):
+            super().__init__(d, None, None, None, mod=True)
+        else:
+            raise RuntimeError(f"Dataset info is of invalid type ({type(d)}): {d}")
+        
         self.x = None
         self.y = None
         self.cat_features: list = []
@@ -146,8 +171,13 @@ class Dataset(DatasetInfo):
         self.test_path = None
         self.train_path = None
         self.saved_folds_path = None
+
+        # Need to load module datasets to find task.
+        if self.mod:
+            self.load()
+
         self.__set_dataset_paths()
-    
+
     @classmethod
     def try_from(cls, bn: Builtin, log=True, load=True) -> Optional['Dataset']:
         try:
@@ -161,15 +191,17 @@ class Dataset(DatasetInfo):
         return Builtin[self.name.upper()]
 
     def get_dir(self) -> str:
-        path = data_dir(f"datasets/{self.name}")
+        path = data_dir(f"datasets/{self.name}", make_add_dirs=self.mod)
         if not os.path.exists(path):
             raise RuntimeError(f"Dataset path dosen't exist: {path}")
         return path
     
     def __set_dataset_paths(self):
         path = self.get_dir()
-        fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
+        if self.mod is not None:
+            return
 
+        fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
         try:
             idx = fns.index(f"{self.name}_train")
             self.test_path = os.path.join(path, f"{fns[idx]}{exts[idx]}")
@@ -233,8 +265,43 @@ class Dataset(DatasetInfo):
             )
         save_json(path, data=dict(info=info.to_dict(), folds=folds), indent=None)
     
+    def __load_from_module(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        mod, name = self.name.split('.', maxsplit=1)
+        func = None
+        for prefix in ("load_", "fetch_"):
+            func = getattr(sk_datasets, f"{prefix}{name}", None)
+            if func is not None:
+                break
+        if func is None:
+            raise ValueError(f"Sklearn dataset {name} not found!")
+
+        x, y =  func(as_frame=True, return_X_y=True)
+        size = x.shape[0]
+
+        self.name = name
+        self.mod = mod
+
+        if size < 100_000:
+            self.size = SizeGroup.SMALL
+        elif size < 500_000:
+            self.size = SizeGroup.MODERATE
+        else:
+            self.size = SizeGroup.LARGE
+        
+        if isinstance(y.dtype, (object, int)):
+            if y.nunique() < 2:
+                self.task = Task.BINARY
+            else:
+                self.task = Task.MULTICLASS
+        else:
+            self.task = Task.REGRESSION
+        
+        return (x, y)
+    
     def __load(self, load_labels_only=False, force_load_test=False) -> pd.DataFrame:
-        if (self.is_test or force_load_test) and (self.test_path is None):
+        if self.mod is not None:
+            return self.__load_from_module() if (self.x is None) else None
+        elif (self.is_test or force_load_test) and (self.test_path is None):
             raise RuntimeError(f"Test path for {self.name} dataset not found")
         else:
             path = self.test_path if self.is_test else self.train_path
@@ -258,11 +325,16 @@ class Dataset(DatasetInfo):
     
     def load(self) -> 'Dataset':
         data = self.__load()
-        shape = data.shape
+        if data is None:
+            return self
+        elif isinstance(data, tuple):
+            self.x, self.y = data
+            shape = (self.x.shape[0], self.x.shape[1] + 1)
+        else:
+            shape = data.shape
+            self.x, self.y = extract_labels(data, label_column=self.label_column)
 
-        self.x, self.y = extract_labels(data, label_column=self.label_column)
         self.cat_features = self.x.select_dtypes('object').columns.tolist()
-        
         self.y = self.y.to_numpy()
         self.y.shape = (-1,)
 

@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -43,14 +43,14 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch"),
+        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch", "KSpaceOptunaSearch"),
         type=str,
         required=test_method is None,
     )
     parser.add_argument("--dataset",
         action='append',
         nargs='+',
-        choices=list(chain.from_iterable([("all", ), tuple(b.name.lower() for b in Builtin)])), 
+        choices=list(chain.from_iterable([("all", ), tuple(b.name.lower() for b in Builtin), SK_DATASETS])), 
         required=test_dataset is None
     )
     parser.add_argument("--params",
@@ -90,12 +90,13 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         args.dataset = test_dataset
     elif isinstance(args.dataset, Iterable):
         datasets = [a[0] for a in args.dataset]
-        args.dataset = [Builtin[dt.strip().upper()] for dt in datasets]
-    elif isinstance(args.dataset, str):
-        if args.dataset.strip() == 'all':
-            args.dataset = Builtin
-        else:
-            args.dataset = Builtin[args.dataset.strip().upper()]
+        for i in range(len(datasets)):
+            name = datasets[i].strip().upper()
+            if name in Builtin._member_names_:
+                datasets[i] = Builtin[name]
+        args.dataset = datasets if len(datasets) > 1 else datasets[0]
+    else:
+        raise ValueError(f"--dataset argument is an invalid type({type(args.dataset)})")
 
     if args.scoring is not None and (args.scoring not in get_scorer_names()):
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
@@ -137,7 +138,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
     sys.stdout.flush()
     sys.stderr.flush()
-    job_name, job_id = os.environ["SLURM_JOB_ID"], os.environ["SLURM_JOB_NAME"]
+    job_name, job_id = os.environ.get("SLURM_JOB_ID", None), os.environ.get("SLURM_JOB_NAME", None)
     if job_name is not None and (job_id is not None):
         out_name = f"R-{job_name}.{job_id}.out"
         err_name = f"R-{job_name}.{job_id}.out"
@@ -192,7 +193,7 @@ def get_search_space(args: argparse.Namespace) -> dict:
 
     return space
 
-def search(args: argparse.Namespace) -> BaseSearch:
+def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSearch:
     logging.getLogger().setLevel(logging.DEBUG)
 
     search_n_jobs = min(args.n_jobs, MAX_SEARCH_JOBS)
@@ -201,6 +202,7 @@ def search(args: argparse.Namespace) -> BaseSearch:
 
     search_space = get_search_space(args)
     dataset = Dataset(args.dataset).load()
+    check_scoring(args, dataset.task, override_current=True)
     #print(dataset.x.info())
     print(f"args: {args}")
     print(f"column names: {list(dataset.x.columns)}")
@@ -227,8 +229,8 @@ def search(args: argparse.Namespace) -> BaseSearch:
     tuner.search(search_space, fixed_params)
     return tuner
 
-def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
-    if args.dataset.info().task == Task.REGRESSION:
+def check_scoring(args: argparse.Namespace, task: Task, override_current=False) -> tuple:
+    if task == Task.REGRESSION:
         args.scoring = (
             "r2",
             "neg_mean_absolute_error",
@@ -242,15 +244,13 @@ def check_scoring(args: argparse.Namespace, override_current=False) -> tuple:
 if __name__ == "__main__":
     args = build_cli()
 
-    if isinstance(args.dataset, Iterable):
+    if isinstance(args.dataset, (str, Builtin)):
+        tuner = search(args)
+        copy_slurm_logs(tuner._save_dir, copy=False)
+    elif isinstance(args.dataset, Iterable):
         datasets = args.dataset
         for dataset in datasets:
             args.dataset = dataset
-            check_scoring(args, override_current=True)
-            tuner = search(args)
+            tuner = search(args, override_current_scoring=True)
             gc.collect()
             copy_slurm_logs(tuner._save_dir, copy=True, clear_contents=True)
-    else:
-        check_scoring(args)
-        tuner = search(args)
-        copy_slurm_logs(tuner._save_dir, copy=False)

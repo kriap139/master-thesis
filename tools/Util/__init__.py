@@ -1,5 +1,5 @@
 from .dataset import (
-    Dataset, extract_labels, Builtin, Task, SizeGroup, TY_CV, CVInfo
+    Dataset, extract_labels, Builtin, Task, SizeGroup, TY_CV, CVInfo, SK_DATASETS
 ) 
 
 from .io_util import (
