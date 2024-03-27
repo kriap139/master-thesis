@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -124,15 +124,19 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
                     dct[k.strip()] = try_number(v.strip())
                 return dct
             return try_number(param)
+        
+        if os.path.exists(args.params):
+            args.params = load_json(args.params_file, default={})
+        else:
+            params = {} 
+            comma_pattern = r',(?![^{]*})(?![^\[]*\])'
+            eq_pattern = r'=(?![^{]*})(?![^\[]*\])'
 
-        params = {} 
-        comma_pattern = r',(?![^{]*})(?![^\[]*\])'
-        eq_pattern = r'=(?![^{]*})(?![^\[]*\])'
+            for param in re.split(comma_pattern, args.params):
+                name, value = re.split(eq_pattern, param)
+                params[name.strip()] = convert_param(value.strip())
+            args.params = params
 
-        for param in re.split(comma_pattern, args.params):
-            name, value = re.split(eq_pattern, param)
-            params[name.strip()] = convert_param(value.strip())
-        args.params = params
     return args
 
 def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
@@ -141,7 +145,7 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
     job_name, job_id = os.environ.get("SLURM_JOB_ID", None), os.environ.get("SLURM_JOB_NAME", None)
     if job_name is not None and (job_id is not None):
         out_name = f"R-{job_name}.{job_id}.out"
-        err_name = f"R-{job_name}.{job_id}.out"
+        err_name = f"R-{job_name}.{job_id}.err"
         out_fp = os.path.join(os.getcwd(), out_name)
         err_fp = os.path.join(os.getcwd(), err_name)
 
