@@ -184,7 +184,7 @@ def load_result_folders(
         for (dataset, methods) in results.items():
             for method, folder in methods.items():
                 if isinstance(folder, list):
-                    for sub_folder in folder.values():
+                    for sub_folder in folder:
                         print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
                 else:
                     print(f"{method}[{dataset}]: {folder.dir_path}")
