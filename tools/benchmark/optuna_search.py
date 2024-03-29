@@ -94,15 +94,9 @@ class KSpaceOptunaSearch(OptunaSearch):
 
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
-            k_mask = self.k
-            k_params = None
+            info = None
         elif isinstance(self.k, dict):
-            k_mask = sum(self.k.values())
-            k_params = len(self.k.keys())
-
-        info = dict(kmask=k_mask)
-        if k_params is not None:
-            info['kparams'] = k_params
+            info = dict(kparams=len(self.k.keys()))
         return super()._create_save_dir(info)
     
     def _get_search_method_info(self) -> dict:
