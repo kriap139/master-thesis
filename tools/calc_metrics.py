@@ -362,14 +362,14 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
             info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
         else:
             info_k = ""
-            
+
         if folder.info is not None:
             info_str = "[" + dict_str(folder.info, include_bracets=False) + info_k
             info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
         else:
             info_str = ""
 
-        return info_str + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}{info_k}"
+        return info_str + f"\n         train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
             strings = []
@@ -379,9 +379,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
                     if sub_strings is not None:
                         strings.append(f"   {method}:{sub_strings}")
                 else:
-                    string = info_str(folder)
-                    if string is not None:
-                        strings.append(f"   {method}:\n      {info_str(folder)}")
+                    strings.append(f"   {method}:\n      {info_str(folder)}")
 
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
