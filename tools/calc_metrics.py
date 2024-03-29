@@ -377,7 +377,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
 if __name__ == "__main__":
     ignore_datasets = ()
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results(load_all_unique_info_folders=True)
+    print_folder_results()
     
 
 
