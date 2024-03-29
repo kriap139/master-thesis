@@ -78,7 +78,7 @@ class KSpace:
         slope = 1 / (y_u - y_l)
         x = slope * (y - y_l)
         ky = self.f(x, y_l, y_u, self._kmap[param])
-        print(f"param={param}, x_inn={y}, x={x}, y={ky}")
+        #print(f"param={param}, x_inn={y}, x={x}, y={ky}")
         return ky
 
     def kmap(self, param: str, x: TY_X, default=None) -> TY_RETURN:
