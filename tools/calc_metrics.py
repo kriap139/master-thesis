@@ -2,7 +2,7 @@ import os
 from Util import Dataset, Builtin, data_dir, Task
 from Util.io_util import load_json, json_to_str, load_csv
 from benchmark import BaseSearch, AdjustedSeqUDSearch
-from typing import List, Dict, Tuple, Callable, Any, Union
+from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 import re
 from dataclasses import dataclass
 import pandas as pd
@@ -15,46 +15,71 @@ class ResultFolder:
     search_method: str
     version: int = 0
     info: dict = None
-
+    
     def info_hash(self) -> str:
         js = json_to_str(self.info, indent=None, sort_keys=True).encode()
         dhash = hashlib.md5()
         dhash.update(js)
         return dhash.hexdigest()
 
-def select_new_version(current: ResultFolder, new: ResultFolder, select_versions: Dict[str, Dict[str, Union[int, dict]]] = None) -> bool:
+def select_version(current: ResultFolder, new: Optional[ResultFolder], select_versions: Dict[str, Dict[str, Union[int, dict]]] = None, return_current_as_default=True) -> Optional[ResultFolder]:
     data = select_versions.get(current.dataset.name, None) if select_versions is not None else None
     select = data.get(current.search_method, None) if data is not None else None
 
     if select is not None:
         if type(select) == int:
-            return select == new.version
+            if new is None and select == current.version:
+                return current
+            elif select == current.version:
+                return current
+            elif select == new.version:
+                return new
+            return
         elif isinstance(select, dict):
-            if 'version' in select.keys():
-                select = select.copy()
-                version = select.pop('version')
-            else:
-                version = None
+            select = select.copy()
+            version = select.pop("version", None)
+            select = select if len(select) > 0 else None
+            test = ResultFolder(current.dir_path, current.dataset, current.search_method, version, select)
 
-            test = ResultFolder(new.dir_path, new.dataset, new.search_method, new.version, select)
-            found = test.info_hash() == new.info_hash()
-            if found and (current.info_hash() == new.info_hash()):
-                return new == version if version is not None else current.version < new.version
-            return found
+            curr_hash = current.info_hash()
+            new_hash = new.info_hash()
+
+            if new is None:
+                if test.info_hash() == curr_hash and (version is None or version == current.version):
+                    return current
+            elif curr_hash == new_hash:
+                if version is None:
+                    return new if current.version < new.version else current
+                else:
+                    if new.version == version:
+                        return new
+                    elif current.version == version:
+                        return current
+            elif test.info_hash() == current.info_hash() and (version is None or version == current.version):
+                return current
+            elif test.info_hash() == new.info_hash() and (version is None or version == current.version):
+                return new
+            return None
         else:
             raise RuntimeError(f"Folder selection attribute for folder(dataset={current.dataset.name}, method={current.search_method}) is invalid, only version(int) or info(dict) is supported: {select}")
-    else:
-        return current.version < new.version
+    
+    if (new is not None) and current.version < new.version:
+        return new
+    elif return_current_as_default:
+        return current
 
 def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], filter_fn: Callable[[ResultFolder], bool] = None, reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
     joined: List[ResultFolder] = []
     for (dataset, methods) in folders.items():
-        joined.extend(methods.values())
+        for folders in methods.items():
+            if isinstance(folders, list):
+                joined.extend(folders)
+            else:
+                joined.append(folders)
     
     if filter_fn is not None:
         joined = list(filter(filter_fn, joined))
         
-    
     joined.sort(key=fn, reverse=reverse)
     folders.clear()
 
@@ -63,11 +88,14 @@ def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[Resu
         if methods is None:
             folders[folder.dataset.name] = {folder.search_method: folder}
         else:
-            methods[folder.search_method] = folder
-    
+            dirs = methods.get(folder.search_method, None)
+            if dirs is None:
+                methods[folder.search_method] = folder
+            elif isinstance(dirs, ResultFolder):
+                methods[folder.search_method] = [methods[folder.search_method], folder]
+            else:
+                dirs.append(folder)
     return folders
-
-    
 
 def load_result_folders(
         ignore_datasets: List[Builtin] = None, 
@@ -76,14 +104,15 @@ def load_result_folders(
         sort_fn: Callable[[ResultFolder], Any] = None, 
         filter_fn: Callable[[ResultFolder], bool] = None, 
         reverse=False,
-        load_all_unique_info_folders=False) -> Dict[str, Dict[str, ResultFolder]]:
+        load_all_unique_info_folders=False,
+        load_all_folder_versions=False) -> Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]:
 
     result_dir = data_dir(add="test_results")
     if select_versions is not None:
         select_versions = {key.upper(): v for key, v in select_versions.items()}
 
     ignore_datasets = tuple() if ignore_datasets is None else tuple(map(lambda s: s.upper(), ignore_datasets))
-    results: Dict[str, Dict[str, ResultFolder]] = {}
+    results: Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]] = {}
 
     for test in os.listdir(result_dir):
         path = os.path.join(result_dir, test)
@@ -113,37 +142,48 @@ def load_result_folders(
         if dataset in ignore_datasets:
             continue
         elif dataset_results is None: 
-            results[dataset] = {method: new_folder}
+            folder = select_version(new_folder, select_versions=select_versions)
+            if folder is not None:
+                results[dataset] = {method: [folder]}
+            continue
+
+        result = dataset_results.get(method, None)
+
+        if result is None:
+            folder = select_version(new_folder, select_versions=select_versions)
+            if folder is not None:
+                dataset_results[method] = [folder]
+        elif load_all_unique_info_folders or load_all_folder_versions:
+            if load_all_folder_versions:
+                result.append(new_folder)
+            elif load_all_unique_info_folders:
+                dupes = tuple(filter(lambda d: d.info_hash() == new_folder.info_hash(), result))
+                if len(dupes) == 1:
+                    folder = select_version(dupes[0], new_folder, return_current_as_default=False)
+                    if (folder is not None) and (folder != dupes[0]):
+                        result.append(folder)
+                elif len(dupes) > 1:
+                    raise RuntimeError(f"To many non-unique info({new_folder.info}) folders: [{dupes}]")
+                else:
+                    result.append(new_folder)
         else:
-            result = dataset_results.get(method, None)
-            if result is None:
+            folder = select_version(result, new_folder, select_versions)
+            if folder is not None:
                 dataset_results[method] = new_folder
-            elif load_all_unique_info_folders and (info is not None or isinstance(result, dict)):
-                is_dict = isinstance(result, dict)
-                new_hash = new_folder.info_hash()
-
-                # The folder does not have identical parameters (info_hashes not equal)
-                if not is_dict and (new_hash != result.info_hash()):
-                    dataset_results[method] = {result.info_hash(): result, new_hash: new_folder}
-                elif not is_dict and (new_hash == result.info_hash()):
-                    dataset_results[method] = {result.info_hash(): result} if select_new_version(result, folder, select_versions) else {new_hash: new_folder}
-                # The folder with the current info does not already exists
-                elif not new_hash in result.keys():
-                    result[new_hash] = new_folder
-                # The folder with the current info does already exists, so pick the newest (or provided) version!
-                elif new_hash in result.keys() and select_new_version(result.get(new_hash), new_folder, select_versions):
-                    result[new_hash] = new_folder
-
-            elif select_new_version(result, new_folder, select_versions):
-                dataset_results[method] = new_folder
-
+    
+    for (dataset, methods) in results.items():
+        for key in methods.keys():
+            folders = methods[key]
+            if len(folders) == 1:
+                methods[key] = methods[key][0]
+    
     if sort_fn:
         results = sort_folders(results, fn=sort_fn, filter_fn=filter_fn, reverse=reverse)
     
     if print_results:
         for (dataset, methods) in results.items():
             for method, folder in methods.items():
-                if isinstance(folder, dict):
+                if isinstance(folder, list):
                     for sub_folder in folder.values():
                         print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
                 else:
@@ -198,8 +238,8 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None) -> EvalMetrics:
     printed_newline = False
     for dataset, methods in data.items():
         for (method, folder) in methods.items():
-            if isinstance(folder, dict):
-                raise ValueError(f"Calculate eval metrics with multiple results ({folder})")
+            if isinstance(folder, list):
+                raise ValueError(f"Calculate eval metrics with multiple results folders ({folder})")
 
             file_data = load_json(os.path.join(folder.dir_path, "result.json"))
 
@@ -284,8 +324,8 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(load_all_unique_info_folders=True, use_history=False):
-    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders)
+def print_folder_results(load_all_unique_info_folders=True, load_all_folder_versions=True, use_history=False):
+    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions)
 
     def load_data(folder: ResultFolder):
         if use_history:
@@ -315,8 +355,8 @@ def print_folder_results(load_all_unique_info_folders=True, use_history=False):
     for (dataset, methods) in data.items():
             strings = []
             for method, folder in methods.items():
-                if isinstance(folder, dict):
-                    sub_strings = '\n      ' + f'\n      '.join(info_str(f) for f in folder.values())
+                if isinstance(folder, list):
+                    sub_strings = '\n      ' + f'\n      '.join(info_str(f) for f in folder)
                     if sub_strings is not None:
                         strings.append(f"   {method}:{sub_strings}")
                 else:
