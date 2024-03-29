@@ -325,7 +325,13 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     return frame.map(BaseSearch.time_to_str)
 
 def print_folder_results(load_all_unique_info_folders=True, load_all_folder_versions=True):
-    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions)
+    folder_sorter = lambda folder: ( 
+        folder.search_method,
+        folder.dataset.name,
+        folder.version
+    )
+
+    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions, sort_fn=folder_sorter)
 
     def load_data(folder: ResultFolder):
         path = os.path.join(folder.dir_path, "history.csv")
