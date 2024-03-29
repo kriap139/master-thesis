@@ -377,7 +377,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
             strings = []
             for method, folder in methods.items():
                 if isinstance(folder, list):
-                    sub_strings = '\n      ' + f'\n      '.join(info_str(f) for f in folder)
+                    sub_strings = '\n      ' + f'\n      '.join(info_str(f, is_sub_folder=True) for f in folder)
                     if sub_strings is not None:
                         strings.append(f"   {method}:{sub_strings}")
                 else:
