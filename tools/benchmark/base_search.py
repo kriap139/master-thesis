@@ -18,6 +18,7 @@ from scipy.stats import mode
 import sys
 from scipy.sparse import coo_matrix
 import shutil
+from itertools import chain
 
 class InnerResult:
     def __init__(self, best_index: int, best_params: dict, best_score: float, best_model):
@@ -142,14 +143,14 @@ class BaseSearch:
         )
 
         if callable(self.scoring):
-            data["scoring"] = self.scoring.__name__
+            data["info"]["scoring"] = self.scoring.__name__
         else:
-            data["scoring"] = self.scoring
+            data["info"]["scoring"] = self.scoring
         save_json(self._result_fp, data)
 
-        self.history_head = ["inner_index"]
-        self.history_head.extend([name for name, v in search_space.items()])
-        self.history_head.extend(("train_score", "test_score", "time"))
+        self.history_head = chain.from_iterable([
+            ("inner_index", ), [name for name, v in search_space.items()], ("train_score", "test_score", "time")
+        ])
         save_csv(self._history_fp, self.history_head)
     
     def _update_info(self, update_keys: dict):

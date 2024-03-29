@@ -334,30 +334,42 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
     data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions, sort_fn=folder_sorter)
 
     def load_data(folder: ResultFolder):
-        path = os.path.join(folder.dir_path, "history.csv")
-        if not os.path.exists(path):
+        results_path = os.path.join(folder.dir_path, "result.json")
+        history_path = os.path.join(folder.dir_path, "history.csv")
+
+        file_data = load_json(results_path) 
+
+        if 'result' not in file_data:
             df = load_csv(path)
             train_ = df["train_score"].mean()
             test_ = df["test_score"].mean()
             time_ = df["time"].mean()
         else:
-            file_data = load_json(os.path.join(folder.dir_path, "result.json"))
-            if 'result' not in file_data:
-                return None
-
             train_ = file_data["result"]["mean_train_acc"]
             test_ = file_data["result"]["mean_test_acc"]
             time_ = file_data["result"]["time"]
-        
-        return train_, test_, time_
+            
+        return train_, test_, time_, file_data["info"] 
+    
+    def dict_str(dct: dict, include_bracets=True) -> str:
+        dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
+        return f"{{dct_str}}" if include_bracets else dct_str
 
     def info_str(folder: ResultFolder) -> str: 
-        train_, test_, time_ = load_data(folder)
+        train_, test_, time_, info = load_data(folder)
+
+        if 'k' in info["method_params"]:
+            info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
+        else:
+            info_k = ""
+            
         if folder.info is not None:
-            info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + f"] ({folder.version}): "
+            info_str = "[" + dict_str(folder.info, include_bracets=False) + info_k
+            info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
         else:
             info_str = ""
-        return info_str + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
+
+        return info_str + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}{info_k}"
 
     for (dataset, methods) in data.items():
             strings = []
