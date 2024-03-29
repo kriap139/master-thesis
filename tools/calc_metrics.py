@@ -71,11 +71,11 @@ def select_version(current: ResultFolder, new: Optional[ResultFolder] = None, se
 def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[ResultFolder], Any], filter_fn: Callable[[ResultFolder], bool] = None, reverse=False) -> Dict[str, Dict[str, ResultFolder]]:
     joined: List[ResultFolder] = []
     for (dataset, methods) in folders.items():
-        for folders in methods.items():
-            if isinstance(folders, list):
-                joined.extend(folders)
+        for method, dirs in methods.items():
+            if isinstance(dirs, list):
+                joined.extend(dirs)
             else:
-                joined.append(folders)
+                joined.append(dirs)
     
     if filter_fn is not None:
         joined = list(filter(filter_fn, joined))
