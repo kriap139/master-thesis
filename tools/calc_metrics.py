@@ -355,7 +355,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
         dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
         return f"{{dct_str}}" if include_bracets else dct_str
 
-    def info_str(folder: ResultFolder) -> str: 
+    def info_str(folder: ResultFolder, is_sub_folder=False) -> str: 
         train_, test_, time_, info = load_data(folder)
 
         if 'k' in info["method_params"]:
@@ -368,8 +368,10 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
             info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
         else:
             info_str = ""
+        
+        prefix = "\n         " if is_sub_folder else ""
 
-        return info_str + f"\n         train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
+        return info_str + prefix + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
             strings = []
