@@ -22,7 +22,7 @@ class ResultFolder:
         dhash.update(js)
         return dhash.hexdigest()
 
-def select_version(current: ResultFolder, new: Optional[ResultFolder], select_versions: Dict[str, Dict[str, Union[int, dict]]] = None, return_current_as_default=True) -> Optional[ResultFolder]:
+def select_version(current: ResultFolder, new: Optional[ResultFolder] = None, select_versions: Dict[str, Dict[str, Union[int, dict]]] = None, return_current_as_default=True) -> Optional[ResultFolder]:
     data = select_versions.get(current.dataset.name, None) if select_versions is not None else None
     select = data.get(current.search_method, None) if data is not None else None
 
