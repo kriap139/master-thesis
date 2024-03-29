@@ -324,12 +324,13 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(load_all_unique_info_folders=True, load_all_folder_versions=True, use_history=False):
+def print_folder_results(load_all_unique_info_folders=True, load_all_folder_versions=True):
     data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions)
 
     def load_data(folder: ResultFolder):
-        if use_history:
-            df = load_csv(os.path.join(folder.dir_path, "history.json"))
+        path = os.path.join(folder.dir_path, "history.csv")
+        if not os.path.exists(path):
+            df = load_csv(path)
             train_ = df["train_score"].mean()
             test_ = df["test_score"].mean()
             time_ = df["time"].mean()
@@ -370,7 +371,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
 if __name__ == "__main__":
     ignore_datasets = ()
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results(load_all_unique_info_folders=True, use_history=True)
+    print_folder_results(load_all_unique_info_folders=True)
     
 
 
