@@ -28,7 +28,7 @@ class InnerResult:
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True):
+                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, add_save_dir_info: dict = None):
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
@@ -39,6 +39,7 @@ class BaseSearch:
         self.scoring = scoring
         self._model = model
         self.refit = refit
+        self.add_save_dir_info = add_save_dir_info
 
         self.history_head = None
         self.init_save_inner_history = save_inner_history
@@ -57,6 +58,14 @@ class BaseSearch:
             self.max_outer_iter = sys.maxsize
     
     def _create_save_dir(self, info: dict = None) -> str:
+        if self.add_save_dir_info is not None:
+            if info is None:
+                info = self.add_save_dir_info
+            else:
+                _info = self.add_save_dir_info.copy()
+                _info.update(info)
+                info = _info
+            
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
             return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]", make_add_dirs=False)

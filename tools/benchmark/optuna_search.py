@@ -33,8 +33,9 @@ class OptunaSearch(BaseSearch):
         save_inner_history=True, 
         max_outer_iter: int = None, 
         refit=True, 
+        add_save_dir_info: dict = None,
         study=None):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self._study = study
     
     def __update_inner_history(self, search_iter: int, clf: OptunaSearchCV):
@@ -84,9 +85,10 @@ class KSpaceOptunaSearch(OptunaSearch):
             save_inner_history=True, 
             max_outer_iter: int = None, 
             refit=True, 
+            add_save_dir_info: dict = None,
             k:  Union[Number, dict] = None
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, study=None)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, add_save_dir_info, study=None)
         self.k = k
         self.x_in_search_space = True
         self._pre_init_save(save)
