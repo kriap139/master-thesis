@@ -354,7 +354,7 @@ def print_folder_results(load_all_unique_info_folders=True, load_all_folder_vers
     def info_str(folder: ResultFolder) -> str: 
         train_, test_, time_ = load_data(folder)
         if folder.info is not None:
-            info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + "]: "
+            info_str = "[" + ",".join(f"{k}={v}" for k, v in folder.info.items()) + f"] ({folder.version}): "
         else:
             info_str = ""
         return info_str + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
