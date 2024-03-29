@@ -150,6 +150,8 @@ def data_dir(add: str = None, make_add_dirs=True, force_add_is_fn=False, force_a
         if make_add_dirs:
             os.makedirs(path, exist_ok=True)
         path = os.path.join(data_dir, add)
+    else:
+        path = data_dir
         
     return path
 
