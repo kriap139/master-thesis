@@ -60,7 +60,7 @@ class BaseSearch:
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
             return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]", make_add_dirs=False)
-        return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]") 
+        return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]", make_add_dirs=False) 
     
     def _init_save_paths(self):
         if self._save_dir is None:
