@@ -148,9 +148,9 @@ class BaseSearch:
             data["info"]["scoring"] = self.scoring
         save_json(self._result_fp, data)
 
-        self.history_head = chain.from_iterable([
+        self.history_head = list(chain.from_iterable([
             ("inner_index", ), [name for name, v in search_space.items()], ("train_score", "test_score", "time")
-        ])
+        ]))
         save_csv(self._history_fp, self.history_head)
     
     def _update_info(self, update_keys: dict):
