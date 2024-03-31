@@ -91,5 +91,7 @@ class KSpace:
             return default()
         return default
 
-
-
+class KSpaceV2(KSpace):
+    @classmethod
+    def h(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+        return x * (y_u / np.exp(abs(k) * (1 - x))) + y_l

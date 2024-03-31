@@ -11,7 +11,7 @@ from optuna.storages._heartbeat import is_heartbeat_enabled
 from optuna.distributions import BaseDistribution, IntDistribution, FloatDistribution, CategoricalDistribution
 from typing import Sequence, Union, Dict, Any, Optional, Tuple
 from numbers import Number
-from .k_space import KSpace
+from . import k_space
 from Util import Integer, Real, Categorical
 
 
@@ -70,10 +70,20 @@ class KSpaceStudy(Study):
         sampler: Optional[samplers.BaseSampler] = None,
         pruner: Optional[pruners.BasePruner] = None,
         k: Union[Number, dict] = None,
+        k_space_ver: int = 1
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
         self.k = k
-        self.kspace = KSpace(self._encode_k_search_space(search_space), k, x_in_search_space=True)
+        cls: k_space.KSpace = None
+
+        if k_space_ver == 1:
+            cls = k_space.KSpace
+        else:
+            cls = getattr(k_space, "KSpaceV" + str(k_space_ver), None)
+            if cls is None:
+                raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
+
+        self.kspace = cls(self._encode_k_search_space(search_space), k, x_in_search_space=True)
     
     def _encode_k_search_space(self, search_space: Dict[str, distributions.BaseDistribution]) -> dict:
         space = {}
@@ -184,6 +194,7 @@ class KSpaceStudy(Study):
         direction: Union[str, StudyDirection, None] = None,
         load_if_exists: bool = False,
         directions: Optional[Sequence[Tuple[str, StudyDirection]]] = None,
+        k_space_ver: int = 1
     ) -> 'KSpaceStudy':
         """Create a new :class:`~optuna.study.Study`.
 
@@ -306,7 +317,7 @@ class KSpaceStudy(Study):
             sampler = samplers.NSGAIISampler()
 
         study_name = storage.get_study_name_from_id(study_id)
-        study = KSpaceStudy(study_name=study_name, storage=storage, sampler=sampler, pruner=pruner, search_space=search_space, k=k)
+        study = KSpaceStudy(study_name=study_name, storage=storage, sampler=sampler, pruner=pruner, search_space=search_space, k=k, k_space_ver=k_space_ver)
 
         return study
 

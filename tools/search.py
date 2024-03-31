@@ -43,7 +43,11 @@ def calc_n_lgb_jobs(n_search_jobs: int, max_lgb_jobs: int) -> int:
 def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lgb_jobs=None, test_n_jobs=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
-        choices=("RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch", "KSpaceOptunaSearch"),
+        choices=(
+            "RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", 
+            "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch", "KSpaceOptunaSearch",
+            "KSpaceOptunaSearchV2"
+        ),
         type=str,
         required=test_method is None,
     )

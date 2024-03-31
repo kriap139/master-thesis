@@ -92,7 +92,7 @@ class KSpaceOptunaSearch(OptunaSearch):
         self.k = k
         self.x_in_search_space = True
         self._pre_init_save(save)
-        self.__inner_func = self.__init_study
+        self._inner_func = self._init_study
 
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
@@ -107,11 +107,14 @@ class KSpaceOptunaSearch(OptunaSearch):
         info["x_in_search_space"] = self.x_in_search_space
         return info
     
-    def __init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        self._study = KSpaceStudy.create_study(search_space, self.k)
-        self.__inner_func = super()._inner_search
+    def _init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict, k_space_ver: int = 1) -> InnerResult:
+        self._study = KSpaceStudy.create_study(search_space, self.k, k_space_ver=k_space_ver)
+        self._inner_func = super()._inner_search
         return super()._inner_search(search_iter, x_train, y_train, search_space, fixed_params)
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         return self.__inner_func(search_iter, x_train, y_train, search_space, fixed_params)
-    
+
+class KSpaceOptunaSearchV2(KSpaceOptunaSearch):
+    def _init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict, k_space_ver: int = 1) -> InnerResult:
+        return super()._init_study(search_iter, x_train, y_train, search_space, fixed_params, k_space_ver=2)
