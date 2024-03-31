@@ -113,7 +113,7 @@ class KSpaceOptunaSearch(OptunaSearch):
         return super()._inner_search(search_iter, x_train, y_train, search_space, fixed_params)
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        return self.__inner_func(search_iter, x_train, y_train, search_space, fixed_params)
+        return self._inner_func(search_iter, x_train, y_train, search_space, fixed_params)
 
 class KSpaceOptunaSearchV2(KSpaceOptunaSearch):
     def _init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict, k_space_ver: int = 1) -> InnerResult:
