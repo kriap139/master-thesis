@@ -12,6 +12,7 @@ from optuna.distributions import BaseDistribution, IntDistribution, FloatDistrib
 from typing import Sequence, Union, Dict, Any, Optional, Tuple
 from numbers import Number
 from . import k_space
+from .k_space import KSpace
 from Util import Integer, Real, Categorical
 
 
@@ -74,10 +75,10 @@ class KSpaceStudy(Study):
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
         self.k = k
-        cls: k_space.KSpace = None
 
+        cls: KSpace = None
         if k_space_ver == 1:
-            cls = k_space.KSpace
+            cls = KSpace
         else:
             cls = getattr(k_space, "KSpaceV" + str(k_space_ver), None)
             if cls is None:
