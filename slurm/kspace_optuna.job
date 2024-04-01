@@ -10,7 +10,9 @@
 
 source venv/bin/activate                # activate venv
 
+params="$(python3 ./tools/params_file_to_cmd.py 'data/kspace_lr_ns_values.json' 0)"
+
 # Batch 1: --dataset={okcupid_stem,fps,acsi}
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
-python3 ./tools/search.py --method KSpaceOptunaSearch --max-lgb-jobs 10 --n-repeats 3 --n-folds 5 --inner-n-folds 3 --inner-shuffle --inner-random-state 9 --dataset accel --params "k={n_estimators=0,learning_rate=0}"
+python3 ./tools/search.py --method KSpaceOptunaSearch --max-lgb-jobs 10 --n-repeats 3 --n-folds 5 --inner-n-folds 3 --inner-shuffle --inner-random-state 9 --dataset accel --params "$params"

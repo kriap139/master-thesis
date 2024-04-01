@@ -252,13 +252,19 @@ def check_scoring(args: argparse.Namespace, task: Task, override_current=False) 
 if __name__ == "__main__":
     args = build_cli()
 
-    if isinstance(args.dataset, (str, Builtin)):
-        tuner = search(args)
-        copy_slurm_logs(tuner._save_dir, copy=False)
-    elif isinstance(args.dataset, Iterable):
-        datasets = args.dataset
-        for dataset in datasets:
-            args.dataset = dataset
-            tuner = search(args, override_current_scoring=True)
-            gc.collect()
-            copy_slurm_logs(tuner._save_dir, copy=True, clear_contents=True)
+    params = args.params
+    if isinstance(params, dict) or (args.params is None):
+        params = (params, )
+
+    for param in params:
+        args.params = param
+        if isinstance(args.dataset, (str, Builtin)):
+            tuner = search(args)
+            copy_slurm_logs(tuner._save_dir, copy=False)
+        elif isinstance(args.dataset, Iterable):
+            datasets = args.dataset
+            for dataset in datasets:
+                args.dataset = dataset
+                tuner = search(args, override_current_scoring=True)
+                gc.collect()
+                copy_slurm_logs(tuner._save_dir, copy=True, clear_contents=True)
