@@ -54,6 +54,6 @@ def parse_cmd_params(s: str) -> Union[dict, list]:
         if s.startswith("["):
             return parse_list(s)
         else:
-            if s.startswith("{"):
+            if not s.startswith("{"):
                 s = '{' + s.strip() + '}'
             return parse_dict(s)
