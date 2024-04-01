@@ -42,7 +42,7 @@ def find_dir_ver(folder: str) -> str:
         return folder
     
     head, tail = os.path.split(folder)
-    new_dir = os.path.join(head, f"{tail} (2)")
+    new_dir = os.path.join(head, f"{tail} (1)")
 
     if not os.path.exists(new_dir):
         return new_dir
