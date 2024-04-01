@@ -33,6 +33,7 @@ import random
 import re
 import time
 from pysequd import KSpace
+import pysequd
 import Util
 
 @dataclass
@@ -242,11 +243,13 @@ def kspace_discrepancy(search: Union[BaseSearch, str]):
         inner_history = load_csv(search._inner_history_fp)
         info = load_json(search._result_fp)["info"]
         space = info["space"]
+        outer_dir = os.path.split(search._save_dir)[1]
     else:
         assert os.path.exists(search)
         print(f"results dir: {search}")
 
         inner_history = load_csv(os.path.join(search, "inner_history.csv"))
+        outer_dir = os.path.split(search)[1]
         info = load_json(os.path.join(search, "result.json"))["info"]
         space = info["space"]
 
@@ -272,7 +275,13 @@ def kspace_discrepancy(search: Union[BaseSearch, str]):
 
     k_space = {k: getattr(Util, d.pop('cls'))(**d) for k, d in space.items()}
     lr = params[param]
-    kspace = KSpace(k_space, k=info["method_params"]["k"])
+
+    if info["method_params"].get("x_in_search_space", None) is not None:
+        x_in_search_space = info["method_params"]["x_in_search_space"]
+    else:
+        x_in_search_space = False
+
+    kspace = KSpace(k_space, k=info["method_params"]["k"], x_in_search_space=x_in_search_space)
     x = np.linspace(0, 1, 60_000)
 
     plt.plot(x, kspace.kmap(param, x), color='green')
