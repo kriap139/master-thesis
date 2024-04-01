@@ -43,14 +43,19 @@ def find_dir_ver(folder: str) -> str:
     
     head, tail = os.path.split(folder)
     new_dir = os.path.join(head, f"{tail} (1)")
-
     if not os.path.exists(new_dir):
         return new_dir
 
-    dirs = [tup[0] for tup in os.walk(head) if tail in tup[0]]
     nums = []
+    regex = r'\((\d+)\)$'
+    (root, dirs, _) = next(os.walk(head))
+
     for d in dirs:
-        nums.extend(re.findall(r'(\d+)', d))
+        name = d[:len(tail)]
+        if name == tail:
+            versions = re.findall(regex, d)
+            # print(d, f" found={versions}")
+            nums.extend(versions)
     
     if len(nums):
         nums.sort(reverse=True)

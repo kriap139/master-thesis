@@ -1,9 +1,12 @@
 import unittest
 from pysequd import KSpaceV2, KSpace
 from Util import Integer, Real
+import os
+import re
+from Util import find_dir_ver, data_dir
 
 class Tests(unittest.TestCase):
-    def test_kspace_v2(self):
+    def kspace_v2(self):
         low, high, step = 0, 500, 10
         k = 0
 
