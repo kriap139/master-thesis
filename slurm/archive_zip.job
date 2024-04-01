@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#SBATCH -N 1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
+#SBATCH -A master        # Replace with the desired account name
+#SBATCH -p normal        # Replace with the desired partition name
+#SBATCH --output=R-%x.%j.out
+#SBATCH --error=R-%x.%j.err
+
+./scripts/archive_results.sh
+./scripts/zip_archives.sh
