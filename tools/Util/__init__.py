@@ -10,3 +10,5 @@ from .io_util import (
 from .space import (
     Integer, Real, Categorical
 )
+
+from .parse_params_cmd import parse_cmd_params

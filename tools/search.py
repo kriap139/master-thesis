@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -106,40 +106,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         raise RuntimeError(f"Unnsupported scoring {args.scoring}")
     
     if args.params is not None:
-        def try_number(param: str):
-            try:
-                return int(param)
-            except ValueError:
-                try:
-                    return float(param)
-                except ValueError:
-                    return param
-
-        def convert_param(param: str):
-            if param.startswith("["):
-                param = param[1:len(param) - 1].strip()
-                params = param.split(',')
-                return [try_number(p) for p in params]
-            elif param.startswith("{"):
-                dct = {}
-                string = param[1:len(param) - 1].strip()
-                for param in string.split(','):
-                    k, v = param.split("=")
-                    dct[k.strip()] = try_number(v.strip())
-                return dct
-            return try_number(param)
-        
-        if os.path.exists(args.params):
-            args.params = load_json(args.params_file, default={})
-        else:
-            params = {} 
-            comma_pattern = r',(?![^{]*})(?![^\[]*\])'
-            eq_pattern = r'=(?![^{]*})(?![^\[]*\])'
-
-            for param in re.split(comma_pattern, args.params):
-                name, value = re.split(eq_pattern, param)
-                params[name.strip()] = convert_param(value.strip())
-            args.params = params
+        args.params = parse_cmd_params(args.params)
 
     return args
 
