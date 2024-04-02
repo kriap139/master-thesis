@@ -127,7 +127,7 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
             if copy:
                 shutil.copy2(out_fp, os.path.join(dist_dir, "logs.out"))
                 shutil.copy2(err_fp, os.path.join(dist_dir, "logs.err"))
-                if clear:
+                if clear_contents:
                     for fp in (out_fp, err_fp):
                         with open(fp, mode='w') as f:
                             f.truncate(0)
@@ -216,22 +216,28 @@ def check_scoring(args: argparse.Namespace, task: Task, override_current=False) 
         args.scoring = None
         args.refit_metric = None
 
-if __name__ == "__main__":
-    args = build_cli()
-
+def main(args: argparse.Namespace):
     params = args.params
     if isinstance(params, dict) or (args.params is None):
         params = (params, )
 
-    for param in params:
+    last_idx = len(params) - 1
+    for idx, param in enumerate(params):
         args.params = param
+        copy = len(params) > 1 or (last_idx != idx)
+
         if isinstance(args.dataset, (str, Builtin)):
             tuner = search(args)
-            copy_slurm_logs(tuner._save_dir, copy=False)
+            copy_slurm_logs(tuner._save_dir, copy=copy, clear_contents=copy)
         elif isinstance(args.dataset, Iterable):
             datasets = args.dataset
-            for dataset in datasets:
+            for dataset_idx, dataset in enumerate(datasets):
                 args.dataset = dataset
                 tuner = search(args, override_current_scoring=True)
                 gc.collect()
-                copy_slurm_logs(tuner._save_dir, copy=True, clear_contents=True)
+                copy2 = (copy or (len(datasets) > 1)) and (dataset_idx != len(datasets) - 1)
+                copy_slurm_logs(tuner._save_dir, copy=copy2, clear_contents=copy2)
+
+if __name__ == "__main__":
+    args = build_cli()
+    main(args)
