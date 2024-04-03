@@ -21,21 +21,7 @@ inner_n_folds=5
 param_indexes=(1 4 5 6 7 8)
 
 run_search() {
-   params="$1"
-
-   if [ -z "$2" ]
-    then
-        python3 ./tools/search.py                   \
-            --method KSpaceOptunaSearchV2           \
-            --max-lgb-jobs $max_lgb_jobs            \
-            --n-repeats $n_repeats                  \
-            --n-folds $n_folds                      \
-            --inner-n-folds $inner_n_folds          \
-            --inner-shuffle                         \
-            --inner-random-state 9                  \
-            --dataset "$dataset"                    \
-            --params "$params"                      
-    elif [ "$2" == "move" ]
+    if [ "$2" == "move" ]
     then
         python3 ./tools/search.py                   \
             --move-slurm-logs                       \
@@ -47,7 +33,7 @@ run_search() {
             --inner-shuffle                         \
             --inner-random-state 9                  \
             --dataset $dataset                      \
-            --params "$params"    
+            --params "$1"    
     else
         python3 ./tools/search.py                   \
             --copy-new-slurm-log-lines              \
@@ -59,7 +45,7 @@ run_search() {
             --inner-shuffle                         \
             --inner-random-state 9                  \
             --dataset "$dataset"                    \
-            --params "$params"
+            --params "$1"
     fi
 }
 
@@ -73,13 +59,8 @@ do
     then
         run_search "$params" "move"
     
-    # first params index
-    elif [ $index -eq 0 ]
-    then 
-        run_search "$params"
-    
-    # params index inbetween
+    # params index not the last inde, so copy logs
     else
-        run_search "$params" "copy-logs"
+        run_search "$params" "copy"
     fi
 done
