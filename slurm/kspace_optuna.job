@@ -8,11 +8,78 @@
 #SBATCH --output=R-%x.%j.out
 #SBATCH --error=R-%x.%j.err
 
-source venv/bin/activate                # activate venv
-
-params="$(python3 tools/Util/params_file_to_cmd.py 'data/kspace_lr_ns_values.json' 0)"
+source venv/bin/activate # activate venv
 
 # Batch 1: --dataset={okcupid_stem,fps,acsi}
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
-python3 ./tools/search.py --method KSpaceOptunaSearchV2 --max-lgb-jobs 10 --n-repeats 3 --n-folds 5 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel --params "$params"
+dataset="acsi"
+max_lgb_jobs=10
+n_repeats=3
+n_folds=5
+inner_n_folds=5
+param_indexes=(1 4 5 6 7 8)
+
+run_search() {
+   params="$1"
+
+   if [ -z "$2" ]
+    then
+        python3 ./tools/search.py                   \
+            --method KSpaceOptunaSearchV2           \
+            --max-lgb-jobs $max_lgb_jobs            \
+            --n-repeats $n_repeats                  \
+            --n-folds $n_folds                      \
+            --inner-n-folds $inner_n_folds          \
+            --inner-shuffle                         \
+            --inner-random-state 9                  \
+            --dataset "$dataset"                    \
+            --params "$params"                      
+    elif [ "$2" == "move" ]
+    then
+        python3 ./tools/search.py                   \
+            --move-slurm-logs                       \
+            --method KSpaceOptunaSearchV2           \
+            --max-lgb-jobs $max_lgb_jobs            \
+            --n-repeats $n_repeats                  \
+            --n-folds $n_folds                      \
+            --inner-n-folds $inner_n_folds          \
+            --inner-shuffle                         \
+            --inner-random-state 9                  \
+            --dataset $dataset                      \
+            --params "$params"    
+    else
+        python3 ./tools/search.py                   \
+            --copy-new-slurm-log-lines              \
+            --method KSpaceOptunaSearchV2           \
+            --max-lgb-jobs $max_lgb_jobs            \
+            --n-repeats $n_repeats                  \
+            --n-folds $n_folds                      \
+            --inner-n-folds $inner_n_folds          \
+            --inner-shuffle                         \
+            --inner-random-state 9                  \
+            --dataset "$dataset"                    \
+            --params "$params"
+    fi
+}
+
+for i in "${!param_indexes[@]}"
+do
+    index=${param_indexes[$i]}
+    params="$(python3 tools/Util/params_file_to_cmd.py 'data/kspace_lr_ns_values.json' "$index")"
+    
+    # last params index
+    if [ $index -eq $((${#param_indexes[@]}-1)) ]
+    then
+        run_search "$params" "move"
+    
+    # first params index
+    elif [ $index -eq 0 ]
+    then 
+        run_search "$params"
+    
+    # params index inbetween
+    else
+        run_search "$params" "copy-logs"
+    fi
+done

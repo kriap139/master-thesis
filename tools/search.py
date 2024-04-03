@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params, remove_lines_up_to, count_lines
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -66,6 +66,8 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         nargs='+',
         default=None
     )
+    parser.add_argument("--move-slurm-logs", action='store_true')
+    parser.add_argument("--copy-new-slurm-log-lines", type=int, default=None)
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
 
@@ -110,7 +112,23 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     return args
 
-def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
+def get_current_slurm_logs_count() -> Tuble[int, int]:
+    job_name, job_id = os.environ.get("SLURM_JOB_NAME", None), os.environ.get("SLURM_JOB_ID", None)
+    out_name = f"R-{job_name}.{job_id}.out"
+    err_name = f"R-{job_name}.{job_id}.err"
+
+    if job_name is not None and (job_id is not None):
+        out_fp = os.path.join(os.getcwd(), out_name)
+        err_fp = os.path.join(os.getcwd(), err_name)
+        return (count_lines(err_fp), count_lines(out_fp))
+    else:
+        return (None, None)
+
+def copy_slurm_logs(dist_dir: str, copy=True, copy_err_from_line: int = None, copy_out_from_line: int = None):
+    def save_data(fp: str, data: list):
+        with open(fp, mode='w') as f:
+            f.writelines(data)
+
     sys.stdout.flush()
     sys.stderr.flush()
     job_name, job_id = os.environ.get("SLURM_JOB_NAME", None), os.environ.get("SLURM_JOB_ID", None)
@@ -121,19 +139,29 @@ def copy_slurm_logs(dist_dir: str, copy=True, clear_contents=False):
         err_fp = os.path.join(os.getcwd(), err_name)
 
         if all(os.path.exists(fp) for fp in (out_fp, err_fp)):
+            dest_err = os.path.join(dist_dir, "logs.err")
+            dest_out = os.path.join(dist_dir, "logs.out")
+
             if not os.path.exists(dist_dir):
                 print(f"Log destination dir doesn't exist: {dist_dir}", flush=True)
                 return
             if copy:
-                shutil.copy2(out_fp, os.path.join(dist_dir, "logs.out"))
-                shutil.copy2(err_fp, os.path.join(dist_dir, "logs.err"))
-                if clear_contents:
-                    for fp in (out_fp, err_fp):
-                        with open(fp, mode='w') as f:
-                            f.truncate(0)
+                if copy_err_from_line is None:
+                    shutil.copy2(out_fp, dest_err)
+                else:
+                    data = remove_lines_up_to(err_fp, copy_err_from_line)
+                    print(f"copying err logs from line {copy_err_from_line}", flush=True)
+                    save_data(dest_err, data)
+
+                if copy_out_from_line is None:
+                    shutil.copy2(out_fp, dest_out)
+                else:
+                    data = remove_lines_up_to(out_fp, copy_out_from_line)
+                    print(f"copying out logs from line {copy_out_from_line}", flush=True)
+                    save_data(dest_out, data)
             else:
-                shutil.move(out_fp, os.path.join(dist_dir, "logs.out"))
-                shutil.move(err_fp, os.path.join(dist_dir, "logs.err"))
+                shutil.move(out_fp, dest_out)
+                shutil.move(err_fp, dest_err)
         else:
             print(f"Log files dosen't exists: out={out_fp}, err={err_fp}", flush=True)
     else:
@@ -216,28 +244,21 @@ def check_scoring(args: argparse.Namespace, task: Task, override_current=False) 
         args.scoring = None
         args.refit_metric = None
 
-def main(args: argparse.Namespace):
-    params = args.params
-    if isinstance(params, dict) or (args.params is None):
-        params = (params, )
+def main(args: argparse.Namespace = None):
+    if args is None:
+        args = build_cli()
+    if args.params is not None and (not isinstance(args.params, dict)):
+        raise ValueError(f"Array of parameters is not supported!: {args.params}")
+    elif isinstance(args.dataset, list) or issubclass(args.dataset, Enum):
+        raise ValueError(f"Dataset argument can't be an iterable of dataset types!: {args.dataset}")
 
-    last_idx = len(params) - 1
-    for idx, param in enumerate(params):
-        args.params = param
-        copy = len(params) > 1 or (last_idx != idx)
+    if args.copy_new_slurm_log_lines:
+        (curr_err_line, curr_out_line) = get_current_slurm_logs_count()
+    else:
+        (curr_err_line, curr_out_line) = None, None
 
-        if isinstance(args.dataset, (str, Builtin)):
-            tuner = search(args)
-            copy_slurm_logs(tuner._save_dir, copy=copy, clear_contents=copy)
-        elif isinstance(args.dataset, Iterable):
-            datasets = args.dataset
-            for dataset_idx, dataset in enumerate(datasets):
-                args.dataset = dataset
-                tuner = search(args, override_current_scoring=True)
-                gc.collect()
-                copy2 = (copy or (len(datasets) > 1)) and (dataset_idx != len(datasets) - 1)
-                copy_slurm_logs(tuner._save_dir, copy=copy2, clear_contents=copy2)
-
+    tuner = search(args)
+    copy_slurm_logs(tuner._save_dir, not args.move_slurm_logs, curr_err_line, curr_out_line)
+        
 if __name__ == "__main__":
-    args = build_cli()
-    main(args)
+    main()

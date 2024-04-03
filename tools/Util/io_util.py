@@ -184,6 +184,19 @@ def arff_to_csv(path: str):
     print(f"Saving converted arff file: {fn}")
     data.to_csv(os.path.join(os.path.dirname(path), fn),index=False)
 
+def remove_lines_up_to(fp: str, last_line: int) -> List[str]:
+    with open(fp, mode='r') as f:
+        lines = f.readlines()
+        if len(lines) <= last_line:
+            return []
+        else:
+            return lines[last_line:]
+
+def count_lines(fp: str) -> int:
+    with open(fp, mode='r') as f:
+        return sum(1 for line in f)
+
+
 if __name__ == "__main__":
     path = data_dir(add="datasets/rcv1/php7t4FlC.arff")
     print(path)
