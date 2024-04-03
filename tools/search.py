@@ -14,6 +14,7 @@ import sys
 import os
 import shutil
 import re
+from enum import Enum
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
