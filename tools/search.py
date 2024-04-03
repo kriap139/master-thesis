@@ -14,7 +14,7 @@ import sys
 import os
 import shutil
 import re
-from enum import Enum
+import inspect
 
 MAX_SEARCH_JOBS = 4
 CPU_CORES = psutil.cpu_count(logical=False)
@@ -250,7 +250,7 @@ def main(args: argparse.Namespace = None):
         args = build_cli()
     if args.params is not None and (not isinstance(args.params, dict)):
         raise ValueError(f"Array of parameters is not supported!: {args.params}")
-    elif isinstance(args.dataset, list) or issubclass(args.dataset, Enum):
+    elif isinstance(args.dataset, list) or inspect.isclass(args.dataset):
         raise ValueError(f"Dataset argument can't be an iterable of dataset types!: {args.dataset}")
 
     if args.copy_new_slurm_log_lines:
