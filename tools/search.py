@@ -2,7 +2,7 @@ from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, S
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
-from typing import Union, Iterable
+from typing import Union, Iterable, Tuple
 import benchmark
 import psutil
 import argparse
@@ -112,7 +112,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     return args
 
-def get_current_slurm_logs_count() -> Tuble[int, int]:
+def get_current_slurm_logs_count() -> Tuple[int, int]:
     job_name, job_id = os.environ.get("SLURM_JOB_NAME", None), os.environ.get("SLURM_JOB_ID", None)
     out_name = f"R-{job_name}.{job_id}.out"
     err_name = f"R-{job_name}.{job_id}.err"
