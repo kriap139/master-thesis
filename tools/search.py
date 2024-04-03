@@ -67,7 +67,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         default=None
     )
     parser.add_argument("--move-slurm-logs", action='store_true')
-    parser.add_argument("--copy-new-slurm-log-lines", type=int, default=None)
+    parser.add_argument("--copy-new-slurm-log-lines", action='store_true')
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
     parser.add_argument("--max-lgb-jobs", type=int, default=CPU_CORES)
 
