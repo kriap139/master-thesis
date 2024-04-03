@@ -228,7 +228,7 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, add_save_dir_info=dict(nparams=len(search_space)),
                   n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter, refit=refit, **params)
 
-    print(f"Results saved to: {tuner._save_dir}")
+    print(f"Results saved to: {tuner._save_dir}", flush=True)
     tuner.search(search_space, fixed_params)
     return tuner
 
