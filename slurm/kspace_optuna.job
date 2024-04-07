@@ -14,53 +14,7 @@ source venv/bin/activate # activate venv
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
 dataset="acsi"
-max_lgb_jobs=10
-n_repeats=3
-n_folds=5
-inner_n_folds=5
-param_indexes=(1 4 5 6 7 8)
+params_file='data/kspace_lr_ns_values.json'
+param_indexes="1 4 5 6 7 8"
 
-run_search() {
-    if [ "$2" == "move" ]
-    then
-        python3 ./tools/search.py                   \
-            --move-slurm-logs                       \
-            --method KSpaceOptunaSearchV2           \
-            --max-lgb-jobs $max_lgb_jobs            \
-            --n-repeats $n_repeats                  \
-            --n-folds $n_folds                      \
-            --inner-n-folds $inner_n_folds          \
-            --inner-shuffle                         \
-            --inner-random-state 9                  \
-            --dataset $dataset                      \
-            --params "$1"    
-    else
-        python3 ./tools/search.py                   \
-            --copy-new-slurm-log-lines              \
-            --method KSpaceOptunaSearchV2           \
-            --max-lgb-jobs $max_lgb_jobs            \
-            --n-repeats $n_repeats                  \
-            --n-folds $n_folds                      \
-            --inner-n-folds $inner_n_folds          \
-            --inner-shuffle                         \
-            --inner-random-state 9                  \
-            --dataset "$dataset"                    \
-            --params "$1"
-    fi
-}
-
-for i in "${!param_indexes[@]}"
-do
-    index=${param_indexes[$i]}
-    params="$(python3 tools/Util/params_file_to_cmd.py 'data/kspace_lr_ns_values.json' "$index")"
-    
-    # last params index
-    if [ $index -eq $((${#param_indexes[@]}-1)) ]
-    then
-        run_search "$params" "move"
-    
-    # params index not the last inde, so copy logs
-    else
-        run_search "$params" "copy"
-    fi
-done
+./scripts/slurm_job_tmpl.sh KSpaceOptunaSearchV2 "$dataset" "$params_file" "$param_indexes"
