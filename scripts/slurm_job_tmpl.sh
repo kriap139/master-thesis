@@ -90,7 +90,7 @@ do
         echo "Running search no params"
         run_search_no_params
     else
-        echo "Running search with no params"
+        echo "Running search with params"
         run_search_with_params
     fi
 done
