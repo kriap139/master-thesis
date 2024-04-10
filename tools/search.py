@@ -123,7 +123,7 @@ def get_current_slurm_logs_count() -> Tuple[int, int]:
         err_fp = os.path.join(os.getcwd(), err_name)
         return (count_lines(err_fp), count_lines(out_fp))
     else:
-        return (None, None)
+        return (0, 0)
 
 def copy_slurm_logs(dist_dir: str, copy=True, copy_err_from_line: int = None, copy_out_from_line: int = None):
     def save_data(fp: str, data: list):
@@ -254,6 +254,7 @@ def main(args: argparse.Namespace = None):
         raise ValueError(f"Dataset argument can't be an iterable of dataset types!: {args.dataset}")
 
     if args.copy_new_slurm_log_lines:
+        print("Counting current log file lines", flush=True)
         (curr_err_line, curr_out_line) = get_current_slurm_logs_count()
     else:
         (curr_err_line, curr_out_line) = None, None
