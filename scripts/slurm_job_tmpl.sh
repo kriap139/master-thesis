@@ -34,9 +34,9 @@ set_move() {
 }
 
 run_search() {
-    #echo "method: $method, dataset: $dataset, inner_shuffle: ${inner_shuffle:+--inner-shuffle}, params: ${params:+--params "$params"}"
-    #echo "move: ${move:+--move-slurm-logs}, copy_logs: ${copy_logs:+--copy-new-slurm-log-lines}"
-    #exit 0
+    echo "method: $method, dataset: $dataset, inner_shuffle: ${inner_shuffle:+--inner-shuffle}, params: ${params:+--params "$params"}"
+    echo "move: ${move:+--move-slurm-logs}, copy_logs: ${copy_logs:+--copy-new-slurm-log-lines}"
+    exit 0
     python3 ./tools/search.py                   \
     ${move:+--move-slurm-logs}                  \
     ${copy_logs:+--copy-new-slurm-log-lines}    \
@@ -54,11 +54,11 @@ run_search() {
 run_search_with_params() {
     for i in "${!param_indexes[@]}"
     do
-        index=${param_indexes[$i]}
-        params="$(python3 tools/Util/params_file_to_cmd.py "$params_file" "$index")"
+        params_idx=${param_indexes[$i]}
+        params="$(python3 tools/Util/params_file_to_cmd.py "$params_file" "$params_idx")"
         
         # last params index
-        if [ $index -eq $((${#param_indexes[@]}-1)) ] && [[ "$dataset" == "$last_dataset" ]]
+        if [ $i -eq $((${#param_indexes[@]}-1)) ] && [[ "$dataset" == "$last_dataset" ]]
         then
             set_move
         # params index not the last inde, so copy logs
