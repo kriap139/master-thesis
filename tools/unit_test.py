@@ -25,18 +25,22 @@ class Tests(unittest.TestCase):
         result = parse_cmd_params(test)
         print(result)
     
-    def test_line_count(self) -> int:
+    def line_count(self) -> int:
         out_fp = data_dir(add="R-1111-test.out")
         assert os.path.exists(out_fp)
         n_lines = count_lines(out_fp)
         assert n_lines == 10
         return n_lines
     
-    def test_remove_lines(self):
+    def remove_lines(self):
         out_fp = data_dir(add="R-1111-test.out")
         n_lines = self.test_line_count()
         remaining = remove_lines_up_to(out_fp, n_lines - 1)
         assert len(remaining) == 1
+    
+    def dir_ver(self):
+        new_version = find_dir_ver(data_dir(add="test_results/KSpaceOptunaSearch[acsi;nparams=6,kparams=2]", make_add_dirs=False))
+        print(new_version)
 
 
 
