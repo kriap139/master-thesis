@@ -52,5 +52,29 @@
             "n_estimators": 0,
             "learning_rate": 0
         }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -15
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 25,
+            "learning_rate": -20
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 15,
+            "learning_rate": -20
+        }
     }
 ]
