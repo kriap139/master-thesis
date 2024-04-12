@@ -99,6 +99,7 @@ def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[Resu
 
 def load_result_folders(
         ignore_datasets: List[Builtin] = None, 
+        ignore_methods: List[str] = None,
         select_versions: Dict[str, Dict[str, Union[int, dict]]] = None, 
         print_results=True, 
         sort_fn: Callable[[ResultFolder], Any] = None, 
@@ -110,7 +111,8 @@ def load_result_folders(
     result_dir = data_dir(add="test_results")
     if select_versions is not None:
         select_versions = {key.upper(): v for key, v in select_versions.items()}
-
+    if ignore_methods is None:
+        ignore_methods = tuple()
     ignore_datasets = tuple() if ignore_datasets is None else tuple(map(lambda s: s.upper(), ignore_datasets))
     results: Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]] = {}
 
@@ -139,7 +141,7 @@ def load_result_folders(
         new_folder = ResultFolder(path, Builtin[dataset], method, version, info)
         dataset_results = results.get(dataset, None)
 
-        if dataset in ignore_datasets:
+        if (dataset in ignore_datasets) or (method in ignore_methods):
             continue
         elif dataset_results is None: 
             folder = select_version(new_folder, select_versions=select_versions)
@@ -227,8 +229,8 @@ class EvalMetrics:
         return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
-def calc_eval_metrics(ignore_datasets: List[Builtin] = None) -> EvalMetrics:
-    data = load_result_folders(ignore_datasets)
+def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: List[str] = None) -> EvalMetrics:
+    data = load_result_folders(ignore_datasets, ignore_methods)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
@@ -324,14 +326,20 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(load_all_unique_info_folders=True, load_all_folder_versions=True):
+def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
     folder_sorter = lambda folder: ( 
         folder.search_method,
         folder.dataset.name,
         folder.version
     )
 
-    data = load_result_folders(load_all_unique_info_folders=load_all_unique_info_folders, load_all_folder_versions=load_all_folder_versions, sort_fn=folder_sorter)
+    data = load_result_folders(
+        ignore_datasets=ignore_datasets,
+        ignore_methods=ignore_methods,
+        load_all_unique_info_folders=load_all_unique_info_folders, 
+        load_all_folder_versions=load_all_folder_versions, 
+        sort_fn=folder_sorter
+    )
 
     def load_data(folder: ResultFolder):
         results_path = os.path.join(folder.dir_path, "result.json")
