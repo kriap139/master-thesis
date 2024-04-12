@@ -150,15 +150,15 @@ def copy_slurm_logs(dist_dir: str, copy=True, copy_err_from_line: int = None, co
                 if copy_err_from_line is None:
                     shutil.copy2(out_fp, dest_err)
                 else:
-                    data = remove_lines_up_to(err_fp, copy_err_from_line)
-                    print(f"copying err logs from line {copy_err_from_line}", flush=True)
+                    data = remove_lines_up_to(err_fp, copy_err_from_line - 1)
+                    print(f"copying err logs from line {copy_err_from_line - 1}", flush=True)
                     save_data(dest_err, data)
 
                 if copy_out_from_line is None:
                     shutil.copy2(out_fp, dest_out)
                 else:
-                    data = remove_lines_up_to(out_fp, copy_out_from_line)
-                    print(f"copying out logs from line {copy_out_from_line}", flush=True)
+                    data = remove_lines_up_to(out_fp, copy_out_from_line - 1)
+                    print(f"copying out logs from line {copy_out_from_line - 1}", flush=True)
                     save_data(dest_out, data)
             else:
                 shutil.move(out_fp, dest_out)
