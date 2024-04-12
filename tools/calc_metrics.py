@@ -345,10 +345,10 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
         results_path = os.path.join(folder.dir_path, "result.json")
         history_path = os.path.join(folder.dir_path, "history.csv")
 
-        file_data = load_json(results_path) 
+        file_data = load_json(results_path, default={}) 
 
         if 'result' not in file_data:
-            df = load_csv(path)
+            df = load_csv(history_path)
             train_ = df["train_score"].mean()
             test_ = df["test_score"].mean()
             time_ = df["time"].mean()
