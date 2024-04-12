@@ -54,12 +54,13 @@ def find_dir_ver(folder: str) -> str:
         name = d[:len(tail)]
         if name == tail:
             versions = re.findall(regex, d)
-            # print(d, f" found={versions}")
+            #print(d, f" found={versions}")
             nums.extend(versions)
     
     if len(nums):
+        nums = [int(num) for num in nums]
         nums.sort(reverse=True)
-        num = int(nums[0]) + 1
+        num = nums[0] + 1
         new_dir = os.path.join(head, f"{tail} ({num})")  
     else:
         raise RuntimeError(f"Failed to find new directory version for directory: {tail}")
