@@ -396,8 +396,9 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
 
 if __name__ == "__main__":
     ignore_datasets = ()
+    ignore_methods = ("KSpaceOptunaSearch", )
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results()
+    print_folder_results(ignore_datasets, ignore_methods)
     
 
 
