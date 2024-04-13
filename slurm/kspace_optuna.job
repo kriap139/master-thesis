@@ -13,8 +13,8 @@ source venv/bin/activate # activate venv
 # Batch 1: --dataset={okcupid_stem,fps,acsi}
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
-dataset="acsi"
-params_file='data/kspace_lr_ns_values.json'
-param_indexes="1 4 5 6 7 8"
+dataset="accel"
+params_file="data/kspace_values_$dataset.json"
+param_indexes="9 10 11 12"
 
 ./scripts/slurm_job_tmpl.sh KSpaceOptunaSearchV2 "$dataset" "$params_file" "$param_indexes"

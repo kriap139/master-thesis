@@ -1,0 +1,80 @@
+[
+    {
+        "k": {
+            "n_estimators": 50,
+            "learning_rate": -50
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -20
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 6,
+            "learning_rate": -6
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -5
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 4,
+            "learning_rate": -4
+        }
+    },
+    {
+        "k":  {
+            "n_estimators": 3,
+            "learning_rate": -3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 2,
+            "learning_rate": -2
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": -1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -10
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": 0
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 10,
+            "learning_rate": -5
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": -5
+        }
+    }
+]
