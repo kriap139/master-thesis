@@ -76,5 +76,11 @@
             "n_estimators": 15,
             "learning_rate": -20
         }
+    },
+    {
+        "k": {
+            "n_estimators": 15,
+            "learning_rate": -30
+        }
     }
 ]
