@@ -3,20 +3,31 @@ from pysequd import KSpaceV2, KSpace
 from Util import Integer, Real
 import os
 import re
+import numpy as np
 from Util import find_dir_ver, data_dir, parse_cmd_params, count_lines, remove_lines_up_to
 
 class Tests(unittest.TestCase):
-    def kspace_v2(self):
-        low, high, step = 0, 500, 10
+    def test_kspace_v2(self):
         k = 0
 
-        space = dict(c=Real(low, high, name='c'))
-        to_scale = not (high > 0 and (high <= 1))
-        ks = KSpaceV2(space, k, x_in_search_space=to_scale)
+        space = dict(
+            c=Real(0.0, 1.0, name='c'),
+            d=Integer(0, 500, name='d')
+        )
 
-        print(f"x in search space = {to_scale}")
-        for i in range(low, high, step):
-            print(f"x = {i}: {ks.kmap('c', i)}")
+        ks = KSpaceV2(space, k, x_in_search_space=True)
+        
+        low, high = space['c'].low, space['c'].high
+        for i in np.arange(low, high, 0.001):
+            i_mapped = ks.kmap('c', i)
+            if i_mapped != i:
+                print(f"Real: x = {i}: y={i_mapped}")
+        
+        low, high = space['d'].low, space['d'].high
+        for i in range(low, high):
+            i_mapped = ks.kmap('d', i)
+            if i_mapped != i:
+                print(f"Integer: x = {i}: y={i_mapped}")
     
     def params_parsing(self):
         from Util.params_file_to_cmd import main as test_cmd
