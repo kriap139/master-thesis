@@ -209,7 +209,12 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     check_scoring(args, dataset.task, override_current=True)
     #print(dataset.x.info())
     print(f"args: {args}")
-    print(f"column names: {list(dataset.x.columns)}")
+
+    if len(dataset.x.columns) > 199:
+        print(f"n columns: {len(dataset.x.columns)}")
+    else:
+        print(f"column names: {list(dataset.x.columns)}")
+
     print(f"cat_features: {dataset.cat_features}")
     
     fixed_params = dict(

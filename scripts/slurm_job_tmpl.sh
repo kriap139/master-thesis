@@ -6,6 +6,7 @@ n_folds=5
 inner_n_folds=5
 inner_shuffle=1
 inner_random_state=9
+large_datasets=('higgs' 'rcv1')
 
 method="$1"
 datasets=()
@@ -85,6 +86,13 @@ run_search_no_params() {
 
 for dataset in "${datasets[@]}"
 do  
+    _repeats=$n_repeats
+
+    if [[ ${large_datasets[*]} =~ $dataset ]]
+    then
+        n_repeats=0
+    fi
+    
     if [ ${#param_indexes[@]} -eq 0 ]; 
     then
         echo "Running search no params"
@@ -93,4 +101,5 @@ do
         echo "Running search with params"
         run_search_with_params
     fi
+    n_repeats=$_repeats
 done
