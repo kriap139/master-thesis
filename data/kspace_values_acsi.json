@@ -88,5 +88,42 @@
             "n_estimators": 20,
             "learning_rate": -30
         }
+    },
+
+
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": -20
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": -3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": 0
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": 3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": 20
+        }
     }
 ]
