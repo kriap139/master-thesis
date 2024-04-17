@@ -125,5 +125,19 @@
             "learning_rate": -25,
             "max_depth": 20
         }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": 6
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 20,
+            "learning_rate": -25,
+            "max_depth": 9
+        }
     }
 ]

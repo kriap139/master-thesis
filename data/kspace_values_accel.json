@@ -76,5 +76,55 @@
             "n_estimators": 0,
             "learning_rate": -5
         }
+    },
+
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -6
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -4
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 6,
+            "learning_rate": -5
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 4,
+            "learning_rate": -5
+        }
+    },
+
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -7
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 7,
+            "learning_rate": -5
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 3,
+            "learning_rate": -5
+        }
     }
 ]
