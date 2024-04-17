@@ -14,7 +14,8 @@ source venv/bin/activate # activate venv
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
 dataset="accel"
+search_space="all"
+param_indexes="9"
 params_file="data/kspace_values_$dataset.json"
-param_indexes="9 10 11 12"
 
-./scripts/slurm_job_tmpl.sh KSpaceOptunaSearchV2 "$dataset" "$params_file" "$param_indexes"
+./scripts/slurm_job_tmpl.sh KSpaceOptunaSearchV2 "$search_space" "$dataset" "$params_file" "$param_indexes"

@@ -62,11 +62,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         type=str,
         default=None
     )
-    parser.add_argument("--search-space",
-        action='append',
-        nargs='+',
-        default=None
-    )
+    parser.add_argument("--search-space", type=str, default=None)
     parser.add_argument("--move-slurm-logs", action='store_true')
     parser.add_argument("--copy-new-slurm-log-lines", action='store_true')
     parser.add_argument("--n-jobs", type=int, default=MAX_SEARCH_JOBS)
@@ -110,6 +106,9 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     
     if args.params is not None:
         args.params = parse_cmd_params(args.params)
+    
+    if args.search_space is not None:
+        args.search_space = [param.strip() for param in args.search_space.split(',')]
 
     return args
 
@@ -250,9 +249,8 @@ def check_scoring(args: argparse.Namespace, task: Task, override_current=False) 
         args.scoring = None
         args.refit_metric = None
 
-def main(args: argparse.Namespace = None):
-    if args is None:
-        args = build_cli()
+def main():
+    args = build_cli()
     if args.params is not None and (not isinstance(args.params, dict)):
         raise ValueError(f"Array of parameters is not supported!: {args.params}")
     elif isinstance(args.dataset, list) or inspect.isclass(args.dataset):

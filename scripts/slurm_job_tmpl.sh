@@ -10,11 +10,21 @@ large_datasets=('higgs' 'rcv1')
 
 method="$1"
 datasets=()
-params_file="$3"
+params_file="$4"
 param_indexes=()
 
-for i in $2; do datasets+=("$i") ; done
-for i in $4; do param_indexes+=("$i") ; done
+search_space="$2"
+if [ "$2" == "all" ]
+then
+    echo "search space unretricted!"
+    unset search_space
+else
+    echo "restricting search space to: [$2]"
+fi
+
+for i in $3; do datasets+=("$i") ; done
+for i in $5; do param_indexes+=("$i") ; done
+
 last_dataset=${datasets[$(( ${#datasets[*]} - 1 ))]}
 echo "datasets=[${datasets[*]}], last_dataset=${last_dataset[*]}, params_file=$params_file, param_indexes=[${param_indexes[*]}]"
 
@@ -49,7 +59,8 @@ run_search() {
     ${inner_shuffle:+--inner-shuffle}           \
     --inner-random-state $inner_random_state    \
     --dataset "$dataset"                        \
-    ${params:+--params "$params"}               
+    ${params:+--params "$params"}               \
+    ${search_space:+--search-space "$search_space"}              
 }
 
 run_search_with_params() {
