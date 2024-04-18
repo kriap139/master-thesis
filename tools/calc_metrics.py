@@ -127,7 +127,7 @@ def load_result_folders(
 
         if ';' in info:
             info = info.split(';')
-            dataset, info = info[0].strip(), info[1].strip()
+            dataset, info = info[0].strip().upper(), info[1].strip()
             info = info.split(',')
             info = [v.split('=') for v in info]
             info = {tup[0]: tup[1] for tup in info}
