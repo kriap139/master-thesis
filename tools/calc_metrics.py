@@ -123,7 +123,7 @@ def load_result_folders(
         method, remainder = array[0].strip(), array[1].strip()
 
         array = remainder.split("]")
-        info, remainder = array[0].strip().upper(), array[1].strip()
+        info, remainder = array[0].strip(), array[1].strip()
 
         if ';' in info:
             info = info.split(';')
