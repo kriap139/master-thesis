@@ -330,7 +330,9 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
     folder_sorter = lambda folder: ( 
         folder.search_method,
         folder.dataset.name,
-        folder.version
+        folder.info is not None,
+        folder.info.get("nparams", ""),
+        folder.version,
     )
 
     data = load_result_folders(
