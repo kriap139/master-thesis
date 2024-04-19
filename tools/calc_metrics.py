@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 import pandas as pd
 import hashlib
+from itertools import chain
 
 @dataclass
 class ResultFolder:
@@ -327,12 +328,11 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     return frame.map(BaseSearch.time_to_str)
 
 def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
-    folder_sorter = lambda folder: ( 
-        folder.search_method,
-        folder.dataset.name,
-        folder.info is not None,
-        folder.info.get("nparams", ""),
-        folder.version,
+    folder_sorter = lambda folder: chain.from_iterable(
+        [
+            (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
+            folder.info.get('k', {}).values()
+        ]
     )
 
     data = load_result_folders(
