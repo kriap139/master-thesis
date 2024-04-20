@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import pandas as pd
 import hashlib
 from itertools import chain
+from numbers import Number
 
 @dataclass
 class ResultFolder:
@@ -107,7 +108,8 @@ def load_result_folders(
         filter_fn: Callable[[ResultFolder], bool] = None, 
         reverse=False,
         load_all_unique_info_folders=False,
-        load_all_folder_versions=False) -> Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]:
+        load_all_folder_versions=False,
+        ignore_with_info_filter: Callable[[dict], bool] = None) -> Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]:
 
     result_dir = data_dir(add="test_results")
     if select_versions is not None:
@@ -143,6 +145,8 @@ def load_result_folders(
         dataset_results = results.get(dataset, None)
 
         if (dataset in ignore_datasets) or (method in ignore_methods):
+            continue
+        elif ignore_with_info_filter is not None and ignore_with_info_filter(info):
             continue
         elif dataset_results is None: 
             folder = select_version(new_folder, select_versions=select_versions)
@@ -327,7 +331,7 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
+def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, ignore_with_info_filter: Callable[[dict], bool] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
     folder_sorter = lambda folder: chain.from_iterable(
         [
             (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
@@ -399,6 +403,10 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
 if __name__ == "__main__":
     ignore_datasets = ()
     ignore_methods = ("KSpaceOptunaSearch", )
+    ignore_info_filter = lambda info: ( 
+        info['nparams'] != info['kparams'] if 'kparams' in info else False
+    )
+    ignore_with_info = dict(nparams=6, kparams=2)
     #metrics = calc_eval_metrics(ignore_datasets)
     print_folder_results(ignore_datasets, ignore_methods)
     
