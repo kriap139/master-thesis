@@ -332,12 +332,12 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     return frame.map(BaseSearch.time_to_str)
 
 def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, ignore_with_info_filter: Callable[[dict], bool] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
-    folder_sorter = lambda folder: chain.from_iterable(
+    folder_sorter = lambda folder: tuple(chain.from_iterable(
         [
             (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
             folder.info.get('k', {}).values()
         ]
-    )
+    ))
 
     data = load_result_folders(
         ignore_datasets=ignore_datasets,
