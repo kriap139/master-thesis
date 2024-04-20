@@ -344,7 +344,8 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
         ignore_methods=ignore_methods,
         load_all_unique_info_folders=load_all_unique_info_folders, 
         load_all_folder_versions=load_all_folder_versions, 
-        sort_fn=folder_sorter
+        sort_fn=folder_sorter,
+        ignore_with_info_filter=ignore_with_info_filter
     )
 
     def load_data(folder: ResultFolder):
