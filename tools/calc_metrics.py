@@ -407,9 +407,8 @@ if __name__ == "__main__":
     ignore_info_filter = lambda info: ( 
         info['nparams'] != info['kparams'] if 'kparams' in info else False
     )
-    ignore_with_info = dict(nparams=6, kparams=2)
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results(ignore_datasets, ignore_methods)
+    print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
     
 
 
