@@ -153,5 +153,30 @@
             "n_estimators": 2,
             "learning_rate": -3
         }
+    },
+
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -2
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 5,
+            "learning_rate": -4
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 4,
+            "learning_rate": -3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 6,
+            "learning_rate": -3
+        }
     }
 ]
