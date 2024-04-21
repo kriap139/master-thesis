@@ -331,7 +331,7 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, ignore_with_info_filter: Callable[[dict], bool] = None, load_all_unique_info_folders=True, load_all_folder_versions=True):
+def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, ignore_with_info_filter: Callable[[dict], bool] = None, skip_unfinished=True, load_all_unique_info_folders=True, load_all_folder_versions=True):
     folder_sorter = lambda folder: tuple(chain.from_iterable(
         [
             (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
@@ -351,19 +351,19 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
     def load_data(folder: ResultFolder):
         results_path = os.path.join(folder.dir_path, "result.json")
         history_path = os.path.join(folder.dir_path, "history.csv")
-
         file_data = load_json(results_path, default={}) 
 
-        if 'result' not in file_data:
+        if ('result' not in file_data) and not skip_unfinished:
             df = load_csv(history_path)
             train_ = df["train_score"].mean()
             test_ = df["test_score"].mean()
             time_ = df["time"].mean()
-        else:
+        elif 'result' in file_data:
             train_ = file_data["result"]["mean_train_acc"]
             test_ = file_data["result"]["mean_test_acc"]
             time_ = file_data["result"]["time"]
-            
+        else:
+            return None, None, None, file_data["info"]
         return train_, test_, time_, file_data["info"] 
     
     def dict_str(dct: dict, include_bracets=True) -> str:
@@ -386,6 +386,9 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
         
         prefix = "\n         " if is_sub_folder else ""
 
+        if any(v is None for v in (train_, test_, time_)):
+            return info_str + prefix + f"unfinished"
+            
         return info_str + prefix + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
