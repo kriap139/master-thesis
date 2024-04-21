@@ -32,8 +32,7 @@ import gc
 import random
 import re
 import time
-from pysequd import KSpace
-import pysequd
+from kspace import KSpace
 import Util
 
 @dataclass

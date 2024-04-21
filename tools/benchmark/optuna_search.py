@@ -16,7 +16,7 @@ from optuna.study import Study, create_study
 from optuna.trial import Trial
 from optuna.distributions import FloatDistribution, IntDistribution, CategoricalDistribution
 from optuna.samplers import TPESampler
-from pysequd import KSpaceStudy
+from kspace import KSpaceStudy
         
 class OptunaSearch(BaseSearch):
     def __init__(

@@ -1,5 +1,5 @@
 import unittest
-from pysequd import KSpaceV2, KSpace
+from kspace import KSpaceV2, KSpace
 from Util import Integer, Real
 import os
 import re

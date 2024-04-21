@@ -8,7 +8,7 @@ import json
 from sequd import SeqUD
 import pandas as pd
 from itertools import chain
-from pysequd import KSpaceSeqUD
+from kspace import KSpaceSeqUD
 from numbers import Number
 
 class SeqUDSearch(BaseSearch):
