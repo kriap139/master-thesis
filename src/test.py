@@ -288,7 +288,6 @@ def kspace_discrepancy(search: Union[BaseSearch, str]):
     plt.legend()
     plt.show()
 
-# python tools/test.py --max-lgb-jobs 1 --n-jobs 3 --n-repeats 3 --n-folds 5 --random-state 9 --inner-n-folds 5 --inner-shuffle --inner-random-state 9 --dataset accel
 if "__main__" == __name__:
     # Args method is not Used in this script!
     args = cli()

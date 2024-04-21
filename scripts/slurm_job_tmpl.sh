@@ -48,7 +48,7 @@ run_search() {
     #echo "method: $method, dataset: $dataset, inner_shuffle: ${inner_shuffle:+--inner-shuffle}, params: ${params:+--params "$params"}"
     #echo "move: ${move:+--move-slurm-logs}, copy_logs: ${copy_logs:+--copy-new-slurm-log-lines}"
     #exit 0
-    python3 ./tools/search.py                   \
+    python3 ./src/search.py                   \
     ${move:+--move-slurm-logs}                  \
     ${copy_logs:+--copy-new-slurm-log-lines}    \
     --method "$method"                          \
@@ -67,7 +67,7 @@ run_search_with_params() {
     for i in "${!param_indexes[@]}"
     do
         params_idx=${param_indexes[$i]}
-        params="$(python3 tools/Util/params_file_to_cmd.py "$params_file" "$params_idx")"
+        params="$(python3 src/Util/params_file_to_cmd.py "$params_file" "$params_idx")"
         
         # last params index
         if [ $i -eq $((${#param_indexes[@]}-1)) ] && [[ "$dataset" == "$last_dataset" ]]

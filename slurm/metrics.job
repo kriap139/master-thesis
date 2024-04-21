@@ -11,4 +11,4 @@
 
 source venv/bin/activate                # activate venv
 
-python3 ./tools/calc_metrics.py
+python3 ./src/calc_metrics.py
