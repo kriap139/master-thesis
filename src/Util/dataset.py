@@ -49,19 +49,18 @@ class MetaEnum(EnumMeta):
         return True  
 
 class Builtin(Enum, metaclass=MetaEnum):
-    HIGGS = DatasetInfo("HIGGS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
-    # HEPMASS = DatasetInfo("HEPMASS".lower(), 0, Task.BINARY, SizeGroup.LARGE)
-    # AIRLINES = DatasetInfo("AIRLINES".lower(), "DepDelay", Task.REGRESSION, SizeGroup.LARGE)
-    FPS = DatasetInfo("FPS".lower(), "FPS", Task.REGRESSION, SizeGroup.MODERATE)
-    ACSI = DatasetInfo("ACSI".lower(), "PINCP", Task.BINARY, SizeGroup.MODERATE)
-    SGEMM_GKP = DatasetInfo("SGEMM_GKP".lower(), "Run1", Task.REGRESSION, SizeGroup.SMALL)
-    PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
-    WAVE_E = DatasetInfo("WAVE_E".lower(), "energy_total", Task.REGRESSION, SizeGroup.SMALL)
-    OKCUPID_STEM = DatasetInfo("OKCUPID_STEM".lower(), "job", Task.MULTICLASS, SizeGroup.SMALL)
-    ACCEL = DatasetInfo("ACCEL".lower(), "wconfid", Task.MULTICLASS, SizeGroup.SMALL)
-    RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE)
-    DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)
-    COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)
+    HIGGS = DatasetInfo("HIGGS".lower(), 0, Task.BINARY, SizeGroup.LARGE)                                  #
+    FPS = DatasetInfo("FPS".lower(), "FPS", Task.REGRESSION, SizeGroup.MODERATE)                           #
+    ACSI = DatasetInfo("ACSI".lower(), "PINCP", Task.BINARY, SizeGroup.MODERATE)                           #
+    WAVE_E = DatasetInfo("WAVE_E".lower(), "energy_total", Task.REGRESSION, SizeGroup.SMALL)               # 
+    OKCUPID_STEM = DatasetInfo("OKCUPID_STEM".lower(), "job", Task.MULTICLASS, SizeGroup.SMALL)            #
+    ACCEL = DatasetInfo("ACCEL".lower(), "wconfid", Task.MULTICLASS, SizeGroup.SMALL)                      #
+    RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE)                           #
+    DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)        #
+    COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
+
+    #ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
+    #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
 
     def info(self) -> DatasetInfo:
         return self.value
