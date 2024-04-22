@@ -4,7 +4,8 @@ import sklearn.datasets as sk_datasets
 import pandas as pd
 import os
 import subprocess
-from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json, has_csv_header, get_n_csv_columns
+from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json, has_csv_header, get_n_csv_columns, load_libsvm
+from Util.sparse_arff import save_sparse_arff
 import lightgbm as lgb
 import gc
 import logging
@@ -59,6 +60,7 @@ class Builtin(Enum, metaclass=MetaEnum):
     DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)        #
     COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
 
+    EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)
     #ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
 
@@ -203,16 +205,17 @@ class Dataset(DatasetInfo):
 
         fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
         try:
-            idx = fns.index(f"{self.name}_train")
-            self.test_path = os.path.join(path, f"{fns[idx]}{exts[idx]}")
+            train_idx = fns.index(f"{self.name}_train")
+            test_idx = fns.index(f"{self.name}_test")
+            self.test_path = os.path.join(path, f"{fns[test_idx]}{exts[test_idx]}")
         except:
             try: 
-                idx = fns.index(self.name)
-                self.test_path = None
+                train_idx = fns.index(self.name)
+                test_idx = None
             except:
                 raise RuntimeError(f"Dataset files not present({path}): {fns}")
         
-        self.train_path = os.path.join(path, f"{fns[idx]}{exts[idx]}")
+        self.train_path = os.path.join(path, f"{fns[train_idx]}{exts[train_idx]}")
 
         if not os.path.exists(self.train_path):
             raise RuntimeError(f"Dataset {self.name} not found in data folder: {self.train_path}")
@@ -307,9 +310,10 @@ class Dataset(DatasetInfo):
             path = self.test_path if self.is_test else self.train_path
         
         fn, ext = os.path.splitext(os.path.basename(path))
+        ext = ext.strip()
         print(f"Loading dataset from path: {path}")
 
-        if ext.strip() == ".csv":
+        if ext == ".csv":
             if has_csv_header(self.train_path):
                 return pd.read_csv(path) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column])
             else:
@@ -317,8 +321,10 @@ class Dataset(DatasetInfo):
                 head = tuple(range(n_cols))
                 data = pd.read_csv(path, names=head) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column], names=head)
                 return data
-        elif ext.strip() == ".arff":
+        elif ext == ".arff":
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
+        elif (ext == '.libsvm') or (ext == '.bz2'):
+            return load_libsvm(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
     
     def load_test_dataset(self) -> 'Dataset':
         return Dataset(self.get_builtin(), is_test=True).load()
@@ -407,12 +413,32 @@ class Dataset(DatasetInfo):
         self.load()
         return self
     
+    def load_frame(self) -> pd.DataFrame:
+        return self.__load()
+    
     @classmethod
     def merge_train_test(cls, d: Builtin):
         dataset = Dataset(d)
         train = dataset.__load()
         test = dataset.__load(force_load_test=True)
+        
+        train_shape = train.shape
+        test_shape = test.shape 
+        
+        is_sparse = train.dtypes.apply(pd.api.types.is_sparse).all()
+        if is_sparse:
+            from scipy import sparse
+            joined = sparse.vstack([train, test])
+        else:
+            joined = pd.concat([train, test], ignore_index=True)
 
-        joined = pd.concat([train, test], ignore_index=True)
-        path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
-        joined.to_csv(path, index=False)
+        correct_shape = (train_shape[0] + test_shape[0], train_shape[1])
+        print(f"{d.name} joind: joined_shape={joined.shape}, expected={correct_shape}")
+        assert joined.shape == correct_shape
+
+        if is_sparse:
+            path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.arff")
+            save_sparse_arff(path, joined)
+        else:
+            path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
+            joined.to_csv(path, index=False)

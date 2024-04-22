@@ -4,10 +4,10 @@ from Util import Integer, Real
 import os
 import re
 import numpy as np
-from Util import find_dir_ver, data_dir, parse_cmd_params, count_lines, remove_lines_up_to
+from Util import find_dir_ver, data_dir, parse_cmd_params, count_lines, remove_lines_up_to, Dataset, Builtin, save_sparse_arff
 
 class Tests(unittest.TestCase):
-    def test_kspace_v2(self):
+    def kspace_v2(self):
         k = 0
 
         space = dict(
@@ -52,9 +52,12 @@ class Tests(unittest.TestCase):
     def dir_ver(self):
         new_version = find_dir_ver(data_dir(add="test_results/KSpaceOptunaSearch[acsi;nparams=6,kparams=2]", make_add_dirs=False))
         print(new_version)
-
-
-
+    
+    def test_merge_train_test(self):
+        dataset = Dataset(Builtin.EPSILON, is_test=True)
+        frame = dataset.load_frame()
+        path = os.path.join(dataset.get_dir(), f"{dataset.name}.arff")
+        save_sparse_arff(path, dataset.name, frame)
 
 if __name__ == "__main__":
     unittest.main()

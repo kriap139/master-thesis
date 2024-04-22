@@ -19,3 +19,16 @@ def load_sparse_arff(path: str) -> pd.DataFrame:
     df = pd.DataFrame.sparse.from_spmatrix(matrix, columns=columns)
     print(df.info())
     return df
+
+def save_sparse_arff(path: str, name: str, data: pd.DataFrame):
+    attributes = [(j, 'NUMERIC') if data[j].dtypes in ['int64', 'float64'] else (j, data[j].unique().astype(str).tolist()) for j in data]
+
+    arff_dic = {
+        'attributes': attributes,
+        'data': data.sparse.to_coo(),
+        'relation': name,
+        'description': f"{name} dataset"
+    }
+
+    with open(path, mode='w', encoding='utf8') as f:
+        arff.dump(arff_dic, f)

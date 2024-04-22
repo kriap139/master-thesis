@@ -9,7 +9,7 @@ from typing import Iterable, Callable
 import math
 import pyunidoe as pydoe
 from itertools import chain
-from sequd import SeqUD, MappingData, EPS
+from sequd import SeqUD, MappingData
 from typing import Iterable, Union
 from numbers import Number
 from .k_space import KSpace, Integer, Real, Categorical

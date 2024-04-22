@@ -11,6 +11,9 @@ from .space import Integer, Real, Categorical
 from .sparse_arff import load_sparse_arff
 import gc
 import glob
+from sklearn.datasets import load_svmlight_file
+from scipy.sparse import csr_matrix
+from scipy import sparse
 
 def json_serialize_unknown(o):
     if isinstance(o, np.integer):
@@ -160,6 +163,17 @@ def data_dir(add: str = None, make_add_dirs=True, force_add_is_fn=False, force_a
         path = data_dir
         
     return path
+
+def load_libsvm(path: str) -> pd.DataFrame:
+    x, y = load_svmlight_file(path)
+    csr_y = sparse.csr_matrix(y.reshape((-1, 1)))
+    data = sparse.hstack([x, csr_y])
+
+    columns = list(range(data.shape[1] - 1))
+    columns.append("target")
+    
+    df = pd.DataFrame.sparse.from_spmatrix(data, columns=columns)
+    return df
 
 def load_arff(path: str) -> pd.DataFrame:
     try:
