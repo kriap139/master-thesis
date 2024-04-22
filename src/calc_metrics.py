@@ -370,8 +370,8 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
         dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
         return f"{{dct_str}}" if include_bracets else dct_str
 
-    def info_str(folder: ResultFolder, is_sub_folder=False) -> str: 
-        train_, test_, time_, info = load_data(folder)
+    def info_str(folder: ResultFolder, is_sub_folder=False, data=None) -> str: 
+        train_, test_, time_, info = load_data(folder) if data is None else data
 
         if 'k' in info["method_params"]:
             info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
@@ -395,7 +395,13 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
             strings = []
             for method, folder in methods.items():
                 if isinstance(folder, list):
-                    sub_strings = '\n      ' + f'\n      '.join(info_str(f, is_sub_folder=True) for f in folder)
+                    # sort by test score
+                    file_datas = [load_data(d) for d in folder]
+                    joined = list(zip(folder, file_datas))
+                    joined.sort(key=lambda tup: tup[1][1])
+                    dirs_sorted = list(zip(**joined))[0]
+
+                    sub_strings = '\n      ' + f'\n      '.join(info_str(f, is_sub_folder=True, data=file_datas[i]) for i, f in enumerate(dirs_sorted))
                     if sub_strings is not None:
                         strings.append(f"   {method}:{sub_strings}")
                 else:
