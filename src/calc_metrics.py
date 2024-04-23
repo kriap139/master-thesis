@@ -399,7 +399,7 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
                     file_datas = [load_data(d) for d in folder]
                     joined = list(zip(folder, file_datas))
                     joined.sort(key=lambda tup: tup[1][1])
-                    dirs_sorted, datas_sorted = list(zip(**joined))
+                    dirs_sorted, datas_sorted = list(zip(*joined))
 
                     sub_strings = '\n      ' + f'\n      '.join(info_str(f, is_sub_folder=True, data=datas_sorted[i]) for i, f in enumerate(dirs_sorted))
                     if sub_strings is not None:
