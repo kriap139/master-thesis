@@ -448,7 +448,7 @@ def print_untesed_kspace_combos(
             #print(file_path)
             if kspace_params is not None and (len(tested_params) > 0):
                 untested = filter(lambda params: params not in tested_params, kspace_params)
-                sub_strings = '\n      ' + f'\n      '.join(untested)
+                sub_strings = '\n      ' + f'\n      '.join([str(d) for d in untested])
                 strings.append(f"   {method}:{sub_strings}")
 
         print(f"{dataset}: \n" + "\n".join(strings) + '\n')
