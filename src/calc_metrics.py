@@ -434,12 +434,15 @@ def print_untesed_kspace_combos(
         strings = []
         for method, folder in methods.items():
             folders = (folder, ) if isinstance(folder, ResultFolder) else folder
+            
+            # Every result folder should have a results file with an info section created before training!
+            file_infos = [load_json(os.path.join(d.dir_path, "result.json"))["info"] for d in folders]
             tested_params = [
-                # Every result folder should have a results file with an info section created before training!
                 info["method_params"]["k"] 
-                for info in load_json(os.path.join(folder.dir_path, "result.json"))["info"]
+                for info in file_infos
                 if 'k' in info["method_params"]
             ]            
+            
             kspace_params = load_json(data_dir(add=f"kspace_values_{dataset}.json"))
             if kspace_params is not None and (len(tested_params) > 0):
                 untested = filter(lambda params: params not in tested_params, kspace_params)
