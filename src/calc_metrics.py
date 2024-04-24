@@ -444,7 +444,7 @@ def print_untesed_kspace_combos(
             ]            
             
             file_path = data_dir(add=f"kspace_values_{dataset.lower()}.json")
-            kspace_params = load_json(file_path)
+            kspace_params = [params['k'] for params in load_json(file_path, default=[])]
             #print(file_path)
             if kspace_params is not None and (len(tested_params) > 0):
                 untested = filter(lambda params: params not in tested_params, kspace_params)
