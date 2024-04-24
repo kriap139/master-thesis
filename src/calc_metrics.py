@@ -44,12 +44,10 @@ def select_version(current: ResultFolder, new: Optional[ResultFolder] = None, se
             test = ResultFolder(current.dir_path, current.dataset, current.search_method, version, select)
 
             curr_hash = current.info_hash()
-            new_hash = new.info_hash()
-
             if new is None:
                 if test.info_hash() == curr_hash and (version is None or version == current.version):
                     return current
-            elif curr_hash == new_hash:
+            elif curr_hash == new.info_hash():
                 if version is None:
                     return new if current.version < new.version else current
                 else:
@@ -57,7 +55,7 @@ def select_version(current: ResultFolder, new: Optional[ResultFolder] = None, se
                         return new
                     elif current.version == version:
                         return current
-            elif test.info_hash() == current.info_hash() and (version is None or version == current.version):
+            elif test.info_hash() == curr_hash and (version is None or version == current.version):
                 return current
             elif test.info_hash() == new.info_hash() and (version is None or version == current.version):
                 return new
@@ -410,14 +408,60 @@ def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
 
+def print_untesed_kspace_combos(
+    ignore_datasets: List[str] = None, 
+    ignore_methods: List[str] = None, 
+    ignore_with_info_filter: Callable[[dict], bool] = None, 
+    skip_unfinished=True):
+
+    folder_sorter = lambda folder: tuple(chain.from_iterable(
+        [
+            (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
+            folder.info.get('k', {}).values()
+        ]
+    ))
+
+    data = load_result_folders(
+        ignore_datasets=ignore_datasets,
+        ignore_methods=ignore_methods,
+        load_all_unique_info_folders=True, 
+        load_all_folder_versions=True, 
+        sort_fn=folder_sorter,
+        ignore_with_info_filter=ignore_with_info_filter
+    )
+
+    for (dataset, methods) in data.items():
+        strings = []
+        for method, folder in methods.items():
+            folders = (folder, ) if isinstance(folder, ResultFolder) else folder
+            tested_params = [
+                # Every result folder should have a results file with an info section created before training!
+                info["method_params"]["k"] 
+                for info in load_json(os.path.join(folder.dir_path, "result.json"))["info"]
+                if 'k' in info["method_params"]
+            ]            
+            kspace_params = load_json(data_dir(add=f"kspace_values_{dataset}.json"))
+            if kspace_params is not None and (len(tested_params) > 0):
+                untested = filter(lambda params: params not in tested_params, kspace_params)
+                sub_strings = '\n      ' + f'\n      '.join(untested)
+                strings.append(f"   {method}:{sub_strings}")
+
+        print(f"{dataset}: \n" + "\n".join(strings) + '\n')
+        strings.clear()
+
+
+
 if __name__ == "__main__":
     ignore_datasets = ()
     ignore_methods = ("KSpaceOptunaSearch", )
     ignore_info_filter = lambda info: ( 
+        # Ignore initial tuning results where non-kspace parameters where tuned with kspace parameters by mistake!
         info['nparams'] != info['kparams'] if 'kparams' in info else False
     )
     #metrics = calc_eval_metrics(ignore_datasets)
-    print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
+    #print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
+    print_untesed_kspace_combos(ignore_datasets, ignore_methods, ignore_with_info_filter)
+    
     
 
 
