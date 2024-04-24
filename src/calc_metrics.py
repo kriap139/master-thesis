@@ -460,8 +460,8 @@ if __name__ == "__main__":
     )
     #metrics = calc_eval_metrics(ignore_datasets)
     #print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
-    print_untesed_kspace_combos(ignore_datasets, ignore_methods, ignore_with_info_filter)
-    
+    print_untesed_kspace_combos(ignore_datasets, ignore_methods, ignore_info_filter)
+
     
 
 
