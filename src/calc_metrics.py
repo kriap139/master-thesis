@@ -329,7 +329,14 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
-def print_folder_results(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, ignore_with_info_filter: Callable[[dict], bool] = None, skip_unfinished=True, load_all_unique_info_folders=True, load_all_folder_versions=True):
+def print_folder_results(
+    ignore_datasets: List[str] = None, 
+    ignore_methods: List[str] = None, 
+    ignore_with_info_filter: Callable[[dict], bool] = None, 
+    skip_unfinished=True, 
+    load_all_unique_info_folders=True, 
+    load_all_folder_versions=True):
+
     folder_sorter = lambda folder: tuple(chain.from_iterable(
         [
             (folder.search_method, folder.dataset.name, folder.info is not None, folder.info.get("nparams", "")),
@@ -412,7 +419,8 @@ def print_untesed_kspace_combos(
     ignore_datasets: List[str] = None, 
     ignore_methods: List[str] = None, 
     ignore_with_info_filter: Callable[[dict], bool] = None, 
-    skip_unfinished=True):
+    skip_unfinished=True,
+    print_folders_loaded=True):
 
     folder_sorter = lambda folder: tuple(chain.from_iterable(
         [
@@ -421,13 +429,15 @@ def print_untesed_kspace_combos(
         ]
     ))
 
+    
     data = load_result_folders(
         ignore_datasets=ignore_datasets,
         ignore_methods=ignore_methods,
         load_all_unique_info_folders=True, 
         load_all_folder_versions=True, 
         sort_fn=folder_sorter,
-        ignore_with_info_filter=ignore_with_info_filter
+        ignore_with_info_filter=ignore_with_info_filter,
+        print_results=print_folders_loaded
     )
 
     for (dataset, methods) in data.items():
@@ -464,8 +474,8 @@ if __name__ == "__main__":
         info['nparams'] != info['kparams'] if 'kparams' in info else False
     )
     #metrics = calc_eval_metrics(ignore_datasets)
-    #print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
-    print_untesed_kspace_combos(ignore_datasets, ignore_methods, ignore_info_filter)
+    print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
+    print_untesed_kspace_combos(_data, ignore_datasets, ignore_methods, ignore_info_filter)
 
     
 
