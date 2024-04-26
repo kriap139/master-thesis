@@ -471,7 +471,7 @@ if __name__ == "__main__":
     ignore_methods = ("KSpaceOptunaSearch", )
     ignore_info_filter = lambda info: ( 
         # Ignore initial tuning results where non-kspace parameters where tuned with kspace parameters by mistake!
-        info['nparams'] != info['kparams'] if 'kparams' in info else True
+        info['nparams'] != info['kparams'] if 'kparams' in info else False
     )
     #metrics = calc_eval_metrics(ignore_datasets)
     print_folder_results(ignore_datasets, ignore_methods, ignore_with_info_filter=ignore_info_filter)
