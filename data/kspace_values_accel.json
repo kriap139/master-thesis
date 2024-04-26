@@ -230,5 +230,31 @@
             "learning_rate": -3,
             "max_depth": 15
         }
+    },
+
+
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": -1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 2,
+            "learning_rate": -1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": -2
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0
+        }
     }
 ]
