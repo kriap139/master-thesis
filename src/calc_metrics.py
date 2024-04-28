@@ -402,7 +402,7 @@ def print_folder_results(
         else:
             info_str = ""
 
-        n_k = len(data[-1]["method_params"].get("k", {}))
+        n_k = len(info["method_params"].get("k", {}))
         if (prev_n_k is not None) and (n_k > prev_n_k) and is_sub_folder:
             prefix = "\n\n         "
         elif is_sub_folder:
