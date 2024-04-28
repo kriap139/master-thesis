@@ -407,7 +407,6 @@ def print_folder_results(
             return info_str + prefix + f"unfinished"
         
         base_diff = f", base_diff={_base_diff}" if _base_diff is not None else ""
-            
         return info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
@@ -424,8 +423,8 @@ def print_folder_results(
                     curr_n_params = 0
                     for i, f in enumerate(dirs_sorted):
                         sub_string = info_str(f, is_sub_folder=True, data=datas_sorted[i])
-                        n_k = len(tup[1][-1]["method_params"].get("k", {}))
-                        
+                        n_k = len(datas_sorted[1][-1]["method_params"].get("k", {}))
+
                         if n_k > curr_n_params:
                             sub_string = f'\n      ' + sub_string
                             curr_n_params = n_k
