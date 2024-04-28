@@ -395,7 +395,6 @@ def print_folder_results(
             info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
         else:
             info_k = ""
-
         if folder.info is not None:
             info_str = "[" + dict_str(folder.info, include_bracets=False) + info_k
             info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
@@ -404,8 +403,8 @@ def print_folder_results(
 
         n_k = len(info["method_params"].get("k", {}))
         if (prev_n_k is not None) and (n_k > prev_n_k) and is_sub_folder:
-            prefix = "\n\n         "
-            info_str = "\n" + info_str
+            prefix = "\n         "
+            info_str = "\n      " + info_str
         elif is_sub_folder:
             prefix = "\n         "
         else:
@@ -429,7 +428,7 @@ def print_folder_results(
                     dirs_sorted, datas_sorted = list(zip(*joined))
 
                     sub_strings = []
-                    n_k = 0
+                    n_k = None
                     for i, f in enumerate(dirs_sorted):
                         sub_string, n_k = info_str(f, is_sub_folder=True, data=datas_sorted[i], prev_n_k=n_k)     
                         sub_strings.append(sub_string)
