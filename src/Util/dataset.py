@@ -180,6 +180,13 @@ class Dataset(DatasetInfo):
             self.load()
 
         self.__set_dataset_paths()
+    
+    @classmethod
+    def splitext(cls, fn: str) -> Tuple[str, str]:
+        parts = fn.split('.')
+        name = parts[0]
+        ext = "." + ".".join(parts[1:]) if (len(parts) > 1) else ''
+        return name, ext
 
     @classmethod
     def try_from(cls, bn: Builtin, log=True, load=True) -> Optional['Dataset']:
@@ -204,7 +211,8 @@ class Dataset(DatasetInfo):
         if self.mod is not None:
             return
 
-        fns, exts = zip(*[os.path.splitext(f) for f in os.listdir(path)])
+        fns, exts = zip(*[self.splitext(f) for f in os.listdir(path)])
+        
         try:
             train_idx = fns.index(f"{self.name}_train")
             test_idx = fns.index(f"{self.name}_test")
@@ -308,12 +316,15 @@ class Dataset(DatasetInfo):
         elif (self.is_test or force_load_test) and (self.test_path is None):
             raise RuntimeError(f"Test path for {self.name} dataset not found")
         else:
-            path = self.test_path if self.is_test else self.train_path
-        
-        fn, ext = os.path.splitext(os.path.basename(path))
-        ext = ext.strip()
-        print(f"Loading dataset from path: {path}")
+            path = self.test_path if self.is_test else self.train_path 
+            print(f"Loading dataset from path: {path}")
 
+        fn, ext = self.splitext(os.path.basename(path))
+        ext = ext.strip()
+        if ext.count('.') > 1:
+            exts = tuple(filter(None, ext.split('.'))) 
+            ext = f".{exts[0]}"
+            
         if ext == ".csv":
             if has_csv_header(self.train_path):
                 return pd.read_csv(path) if not load_labels_only else pd.read_csv(path, usecols=[self.label_column])
@@ -324,7 +335,7 @@ class Dataset(DatasetInfo):
                 return data
         elif ext == ".arff":
             return load_arff(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
-        elif (ext == '.libsvm') or (ext == '.bz2'):
+        elif ext == '.libsvm':
             return load_libsvm(path) if not load_labels_only else extract_labels(load_arff(path), label_column=self.label_column)[1]
     
     def load_test_dataset(self) -> 'Dataset':
