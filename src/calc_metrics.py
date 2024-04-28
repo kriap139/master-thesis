@@ -408,7 +408,7 @@ def print_folder_results(
         elif is_sub_folder:
             prefix = "\n         "
         else:
-            prefix = ""
+            prefix = " "
 
         if any(v is None for v in (train_, test_, time_)):
             return info_str + prefix + f" unfinished"
