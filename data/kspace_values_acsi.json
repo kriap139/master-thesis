@@ -72,5 +72,56 @@
             "n_estimators": 1,
             "learning_rate": 1
         }
+    },
+
+
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": -15
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": -3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": -1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": 0
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": 1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": 3
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 0,
+            "learning_rate": 0,
+            "max_depth": 15
+        }
     }
 ]
