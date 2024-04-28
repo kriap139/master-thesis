@@ -61,7 +61,8 @@ class Builtin(Enum, metaclass=MetaEnum):
     COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
 
     EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)
-    #ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
+    ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL) 
+    EL_NINO = DatasetInfo("el_nino", "ss_temp", Task.REGRESSION, SizeGroup.SMALL)                       
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
 
     def info(self) -> DatasetInfo:

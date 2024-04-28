@@ -26,6 +26,7 @@ DOWNLOADS = [
     DatasetDownload("fps-in-video-games", "https://www.openml.org/data/download/22044773/fps-in-video-games.arff", "https://www.openml.org/search?type=data&status=active&id=42737"),
     DatasetDownload("rcv1.binary", "https://www.openml.org/data/download/1594041/php7t4FlC", "https://www.openml.org/search?type=data&status=active&id=1577&sort=runs"),
     DatasetDownload("ACSIncome", "https://www.openml.org/data/download/22101666/ACSIncome_state_number.arff", "https://www.openml.org/search?type=data&status=active&id=43141&sort=runs"),
-    DatasetDownload("electricity", "https://api.openml.org/data/download/22111904/dataset", "https://www.openml.org/search?type=data&status=active&id=45018")
+    DatasetDownload("electricity", "https://api.openml.org/data/download/22111904/dataset", "https://www.openml.org/search?type=data&status=active&id=45018"),
+    DatasetDownload("el_nino", "https://archive.ics.uci.edu/static/public/122/el+nino.zip", "https://archive.ics.uci.edu/dataset/122/el+nino")
     
 ]
