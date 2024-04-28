@@ -351,7 +351,8 @@ def print_folder_results(
         load_all_unique_info_folders=load_all_unique_info_folders, 
         load_all_folder_versions=load_all_folder_versions, 
         sort_fn=folder_sorter,
-        ignore_with_info_filter=ignore_with_info_filter
+        ignore_with_info_filter=ignore_with_info_filter,
+        print_results=False
     )
 
     def load_data(folder: ResultFolder):
@@ -428,6 +429,8 @@ def print_folder_results(
                         if n_k > curr_n_params:
                             sub_string = f'\n      ' + sub_string
                             curr_n_params = n_k
+                            
+                        sub_strings.append(sub_string)
 
                     sub_strings = '\n      ' + f'\n      '.join(sub_strings)
                     strings.append(f"   {method}:{sub_strings}")
