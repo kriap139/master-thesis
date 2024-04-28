@@ -405,17 +405,18 @@ def print_folder_results(
         n_k = len(info["method_params"].get("k", {}))
         if (prev_n_k is not None) and (n_k > prev_n_k) and is_sub_folder:
             prefix = "\n\n         "
+            info_str = "\n" + info_str
         elif is_sub_folder:
             prefix = "\n         "
         else:
             prefix = ""
 
         if any(v is None for v in (train_, test_, time_)):
-            return info_str + prefix + f"unfinished"
+            return info_str + prefix + f" unfinished"
         
         base_diff = f", base_diff={_base_diff}" if _base_diff is not None else ""
         result = info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}" 
-        return result, (None if n_k > 0 else n_k) 
+        return result, (None if n_k < 0 else n_k) 
 
     for (dataset, methods) in data.items():
             strings = []
