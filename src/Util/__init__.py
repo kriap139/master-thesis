@@ -14,3 +14,5 @@ from .space import (
 )
 
 from .parse_params_cmd import parse_cmd_params
+
+from .search_space import get_search_space, get_n_search_space

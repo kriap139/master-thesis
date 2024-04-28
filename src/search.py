@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params, remove_lines_up_to, count_lines
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params, remove_lines_up_to, count_lines, get_search_space
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -166,35 +166,6 @@ def copy_slurm_logs(dist_dir: str, copy=True, copy_err_from_line: int = None, co
             print(f"Log files dosen't exists: out={out_fp}, err={err_fp}", flush=True)
     else:
         print(f"Unable to get job id and name from environment", flush=True)
-            
-            
-
-def get_search_space(args: argparse.Namespace) -> dict:
-    if args.method == "GridSearch":
-        space = dict(
-            n_estimators=[50, 100, 200, 350, 500],
-            learning_rate=[0.001, 0.01, 0.05, 0.1, 0.02],
-            max_depth=[0, 5, 10, 20, 25],
-            num_leaves=[20, 60, 130, 200, 250],
-        )
-        print(f"GridSearch runs: {len(ParameterGrid(search_space))}")
-    else:
-        space = dict(
-            n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
-            learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
-            max_depth=Integer(0, 30, name="max_depth"),
-            num_leaves=Integer(10, 300, name="num_leaves", prior="log-uniform"),
-            min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf"),
-            feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
-        )
-    
-    if args.search_space is not None:
-        if isinstance(args.search_space, str):
-            space = {args.search_space: space[args.search_space]}
-        elif isinstance(args.search_space, Iterable):
-            space = {param: space[param] for param in args.search_space}
-
-    return space
 
 def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSearch:
     logging.getLogger().setLevel(logging.DEBUG)
@@ -203,7 +174,7 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
     print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
 
-    search_space = get_search_space(args)
+    search_space = get_search_space(args.search_method, args.search_space)
     dataset = Dataset(args.dataset).load()
     check_scoring(args, dataset.task, override_current=True)
     #print(dataset.x.info())

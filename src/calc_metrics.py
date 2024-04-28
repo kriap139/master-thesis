@@ -1,6 +1,7 @@
 import os
-from Util import Dataset, Builtin, data_dir, Task
+from Util import Dataset, Builtin, data_dir, Task, get_n_search_space
 from Util.io_util import load_json, json_to_str, load_csv
+from Util.compat import removeprefix
 from benchmark import BaseSearch, AdjustedSeqUDSearch
 from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 import re
@@ -358,6 +359,17 @@ def print_folder_results(
         history_path = os.path.join(folder.dir_path, "history.csv")
         file_data = load_json(results_path, default={}) 
 
+        base_test = None
+        ver_regex = r'V\d+$'
+        base_method = removeprefix(folder.search_method, "KSpace")
+        base_method = re.sub(r'V\d+$', '', base_method)
+        base_dir = f"{base_method}[{folder.dataset.name.lower()};nparams={get_n_search_space(base_method)}]"
+        base_path = data_dir(add=f"test_results/{base_dir}")
+        if os.path.exists(base_path):
+            base_results = load_json(os.path.join(base_path, "result.json"))
+            if 'result' in base_results:
+                base_test = base_results["result"]["mean_train_acc"]
+
         if ('result' not in file_data) and not skip_unfinished:
             df = load_csv(history_path)
             train_ = df["train_score"].mean()
@@ -368,15 +380,15 @@ def print_folder_results(
             test_ = file_data["result"]["mean_test_acc"]
             time_ = file_data["result"]["time"]
         else:
-            return None, None, None, file_data["info"]
-        return train_, test_, time_, file_data["info"] 
+            return None, None, None, base_test, file_data["info"]
+        return train_, test_, time_, (test_ - base_test), file_data["info"] 
     
     def dict_str(dct: dict, include_bracets=True) -> str:
         dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
         return f"{{dct_str}}" if include_bracets else dct_str
 
     def info_str(folder: ResultFolder, is_sub_folder=False, data=None) -> str: 
-        train_, test_, time_, info = load_data(folder) if data is None else data
+        train_, test_, time_, _base_diff, info = load_data(folder) if data is None else data
 
         if 'k' in info["method_params"]:
             info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
@@ -393,8 +405,10 @@ def print_folder_results(
 
         if any(v is None for v in (train_, test_, time_)):
             return info_str + prefix + f"unfinished"
+        
+        base_diff = f", base_diff={_base_diff}" if _base_diff is not None else ""
             
-        return info_str + prefix + f"train={train_}, test={test_}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
+        return info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
 
     for (dataset, methods) in data.items():
             strings = []
