@@ -174,7 +174,7 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     n_jobs= calc_n_lgb_jobs(search_n_jobs, args.max_lgb_jobs)
     print(f"CPU Cores: {CPU_CORES}, Logical Cores: {psutil.cpu_count(logical=True)}, lgb_n_jobs={n_jobs}, search_n_jobs={search_n_jobs}")
 
-    search_space = get_search_space(args.search_method, args.search_space)
+    search_space = get_search_space(args.method, args.search_space)
     dataset = Dataset(args.dataset).load()
     check_scoring(args, dataset.task, override_current=True)
     #print(dataset.x.info())
