@@ -429,7 +429,7 @@ def print_folder_results(
                         if (n_k > curr_n_params) and (curr_n_params > 0):
                             sub_string = f'\n      ' + sub_string
                             curr_n_params = n_k
-                        elif n_k == 0:
+                        elif curr_n_params == 0:
                             curr_n_params = n_k
                             
                         sub_strings.append(sub_string)
