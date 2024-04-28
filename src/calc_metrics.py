@@ -417,12 +417,21 @@ def print_folder_results(
                     # sort by n_kspace_params, then test_score
                     file_datas = [load_data(d) for d in folder]
                     joined = list(zip(folder, file_datas))
-                    joined.sort(key=lambda tup: tup[1][1])
+                    joined.sort(key=lambda tup: (len(tup[1][-1]["method_params"].get("k", {})), tup[1][1]))
                     dirs_sorted, datas_sorted = list(zip(*joined))
 
-                    sub_strings = '\n      ' + f'\n      '.join(info_str(f, is_sub_folder=True, data=datas_sorted[i]) for i, f in enumerate(dirs_sorted))
-                    if sub_strings is not None:
-                        strings.append(f"   {method}:{sub_strings}")
+                    sub_strings = []
+                    curr_n_params = 0
+                    for i, f in enumerate(dirs_sorted):
+                        sub_string = info_str(f, is_sub_folder=True, data=datas_sorted[i])
+                        n_k = len(tup[1][-1]["method_params"].get("k", {}))
+                        
+                        if n_k > curr_n_params:
+                            sub_string = f'\n      ' + sub_string
+                            curr_n_params = n_k
+
+                    sub_strings = '\n      ' + f'\n      '.join(sub_strings)
+                    strings.append(f"   {method}:{sub_strings}")
                 else:
                     strings.append(f"   {method}:\n      {info_str(folder)}")
 
