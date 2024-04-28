@@ -426,8 +426,10 @@ def print_folder_results(
                         sub_string = info_str(f, is_sub_folder=True, data=datas_sorted[i])
                         n_k = len(datas_sorted[1][-1]["method_params"].get("k", {}))
 
-                        if n_k > curr_n_params:
+                        if (n_k > curr_n_params) and (curr_n_params > 0):
                             sub_string = f'\n      ' + sub_string
+                            curr_n_params = n_k
+                        elif n_k == 0:
                             curr_n_params = n_k
                             
                         sub_strings.append(sub_string)
