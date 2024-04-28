@@ -388,7 +388,7 @@ def print_folder_results(
         dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
         return f"{{dct_str}}" if include_bracets else dct_str
 
-    def info_str(folder: ResultFolder, is_sub_folder=False, data=None) -> str: 
+    def info_str(folder: ResultFolder, is_sub_folder=False, data=None, prev_n_k=None) -> str: 
         train_, test_, time_, _base_diff, info = load_data(folder) if data is None else data
 
         if 'k' in info["method_params"]:
@@ -401,14 +401,21 @@ def print_folder_results(
             info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
         else:
             info_str = ""
-        
-        prefix = "\n         " if is_sub_folder else ""
+
+        n_k = len(data[-1]["method_params"].get("k", {}))
+        if (prev_n_k is not None) and (n_k > prev_n_k) and is_sub_folder:
+            prefix = "\n\n         "
+        elif is_sub_folder:
+            prefix = "\n         "
+        else:
+            prefix = ""
 
         if any(v is None for v in (train_, test_, time_)):
             return info_str + prefix + f"unfinished"
         
         base_diff = f", base_diff={_base_diff}" if _base_diff is not None else ""
-        return info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}"
+        result = info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}" 
+        return result, (None if n_k > 0 else n_k) 
 
     for (dataset, methods) in data.items():
             strings = []
@@ -421,17 +428,9 @@ def print_folder_results(
                     dirs_sorted, datas_sorted = list(zip(*joined))
 
                     sub_strings = []
-                    curr_n_params = 0
+                    n_k = 0
                     for i, f in enumerate(dirs_sorted):
-                        sub_string = info_str(f, is_sub_folder=True, data=datas_sorted[i])
-                        n_k = len(datas_sorted[1][-1]["method_params"].get("k", {}))
-
-                        if (n_k > curr_n_params) and (curr_n_params > 0):
-                            sub_string = f'\n      ' + sub_string
-                            curr_n_params = n_k
-                        elif curr_n_params == 0:
-                            curr_n_params = n_k
-                            
+                        sub_string, n_k = info_str(f, is_sub_folder=True, data=datas_sorted[i], prev_n_k=n_k)     
                         sub_strings.append(sub_string)
 
                     sub_strings = '\n      ' + f'\n      '.join(sub_strings)
