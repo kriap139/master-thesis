@@ -436,7 +436,7 @@ def print_folder_results(
                     sub_strings = '\n      ' + f'\n      '.join(sub_strings)
                     strings.append(f"   {method}:{sub_strings}")
                 else:
-                    strings.append(f"   {method}:\n      {info_str(folder)}")
+                    strings.append(f"   {method}:\n      {info_str(folder)[0]}")
 
             print(f"{dataset}: \n" + "\n".join(strings) + '\n')
             strings.clear()
