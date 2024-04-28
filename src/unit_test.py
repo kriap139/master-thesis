@@ -53,7 +53,7 @@ class Tests(unittest.TestCase):
         new_version = find_dir_ver(data_dir(add="test_results/KSpaceOptunaSearch[acsi;nparams=6,kparams=2]", make_add_dirs=False))
         print(new_version)
     
-    def test_dataset_size_sorted(self):
+    def dataset_size_sorted(self):
         datasets = {
             "okcupid_stem": 50_700 * 20,
             "wave_e": 72_000 * 49,
@@ -72,11 +72,10 @@ class Tests(unittest.TestCase):
         sorted_datasets = dict(sorted(datasets.items(), key=lambda item: item[1]))
         print(sorted_datasets)
     
-    def merge_train_test(self):
+    def test_merge_train_test(self):
         dataset = Dataset(Builtin.EPSILON, is_test=True)
-        frame = dataset.load_frame()
         path = os.path.join(dataset.get_dir(), f"{dataset.name}.arff")
-        save_sparse_arff(path, dataset.name, frame)
+        save_sparse_arff(path, dataset.name, dataset.load_frame)
 
 if __name__ == "__main__":
     unittest.main()
