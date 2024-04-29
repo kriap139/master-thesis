@@ -335,24 +335,7 @@
             "max_depth": 15
         }
     },
-
-
-    {
-        "k": {
-            "n_estimators": 5,
-            "learning_rate": -3,
-            "max_depth": 3,
-            "num_leaves": -15
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 5,
-            "learning_rate": -3,
-            "max_depth": 3,
-            "num_leaves": -15
-        }
-    },
+    
     
     
     {
