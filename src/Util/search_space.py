@@ -17,7 +17,7 @@ def get_search_space(method: str, limit_space: List[str] = None) -> dict:
             n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
             learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
             max_depth=Integer(0, 300, name="max_depth"),
-            num_leaves=Integer(10, 1000, name="num_leaves", prior="log-uniform"),
+            num_leaves=Integer(2, 1000, name="num_leaves", prior="log-uniform"),
             min_data_in_leaf=Integer(0, 300, name="min_data_in_leaf"),
             feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
         )
