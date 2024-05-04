@@ -1,4 +1,4 @@
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params, remove_lines_up_to, count_lines, get_search_space
+from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, SizeGroup, Task, SK_DATASETS, load_json, parse_cmd_params, remove_lines_up_to, count_lines, get_search_space, CVInfo
 import lightgbm as lgb
 import logging
 from benchmark import BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold
@@ -201,7 +201,12 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     cv = get_cv(dataset, args.n_folds, args.n_repeats, args.random_state)
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
     
-    tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, add_save_dir_info=dict(nparams=len(search_space)),
+    save_dir_info = dict(
+        nrepeats=CVInfo(cv).get_n_repeats(),
+        nparams=len(search_space)
+    )
+    
+    tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, add_save_dir_info=save_dir_info,
                   n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, max_outer_iter=args.max_outer_iter, refit=refit, **params)
 
     print(f"Results saved to: {tuner._save_dir}", flush=True)
