@@ -441,6 +441,7 @@ class Dataset(DatasetInfo):
         test_shape = test.shape 
         
         is_sparse = train.dtypes.apply(pd.api.types.is_sparse).all()
+        print(f"train={train.shape}, test={test.shape}")
         if is_sparse:
             from scipy import sparse
             joined = sparse.vstack([train, test])
