@@ -202,7 +202,7 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     inner_cv = get_cv(dataset, args.inner_n_folds, 0, args.inner_random_state, args.inner_shuffle)
     
     save_dir_info = dict(
-        nrepeats=CVInfo(cv).get_n_repeats(),
+        nrepeat=CVInfo(cv).get_n_repeats(),
         nparams=len(search_space)
     )
     
