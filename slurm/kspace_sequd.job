@@ -13,4 +13,10 @@ source venv/bin/activate                # activate venv
 # Batch 1: --dataset={okcupid_stem,fps,acsi}
 # Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
 # Single: higgs, RCV1, COMET_MC
-python3 ./src/search.py --method KSpaceSeqUDSearch --max-lgb-jobs 10 --n-repeats 3 --n-folds 5 --inner-n-folds 3 --inner-shuffle --inner-random-state 9 --dataset accel --params "k={n_estimators=0,learning_rate=0}"
+dataset="accel"
+search_space="n_estimators,learning_rate"
+param_indexes="9 10 11 12"
+params_file="data/kspace_values_$dataset.json"
+repeats="0 3 6"
+
+./scripts/slurm_job_tmpl.sh -m KSpaceSeqUDSearch -r "$repeats" -s "$search_space" -d "$dataset" -f "$params_file" -i "$param_indexes"

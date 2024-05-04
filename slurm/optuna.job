@@ -13,8 +13,8 @@ source venv/bin/activate                # activate venv
 # Batch 1: dataset="okcupid_stem fps acsi"
 # Batch 2: dataset="delays_zurich wave_e sgemm_gkp accel"
 # Single: higgs, RCV1, COMET_MC
-dataset="acsi"
+dataset="acsi higgs"
 search_space="all"
+repeats="9 6"
 
-
-./scripts/slurm_job_tmpl.sh OptunaSearch "$search_space" "$dataset"
+./scripts/slurm_job_tmpl.sh -m OptunaSearch -s "$search_space" -d "$dataset" -r "$repeats"
