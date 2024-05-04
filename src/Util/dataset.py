@@ -13,6 +13,7 @@ from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold, Re
 from numbers import Integral
 import numpy as np
 from Util.compat import removeprefix
+from scipy import sparse
 
 TY_CV = Union[KFold, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold]
 
@@ -432,29 +433,35 @@ class Dataset(DatasetInfo):
         return self.__load()
     
     @classmethod
-    def merge_train_test(cls, d: Builtin):
+    def __merge_train_test(cls, d: Builtin, is_sparse: bool) -> df.DataFrame:
         dataset = Dataset(d)
-        train = dataset.__load()
-        test = dataset.__load(force_load_test=True)
-        
+        train, test = dataset.__load(), dataset.__load(force_load_test=True)
+
         train_shape = train.shape
         test_shape = test.shape 
-        
-        is_sparse = train.dtypes.apply(pd.api.types.is_sparse).all()
-        print(f"train={train.shape}, test={test.shape}")
+
         if is_sparse:
-            from scipy import sparse
+            train, test = train.sparse.to_coo(), test.sparse.to_coo()
+            gc.collect()
             joined = sparse.vstack([train, test])
         else:
             joined = pd.concat([train, test], ignore_index=True)
+        return joined
 
-        correct_shape = (train_shape[0] + test_shape[0], train_shape[1])
-        print(f"{d.name} joind: joined_shape={joined.shape}, expected={correct_shape}")
-        assert joined.shape == correct_shape
+    @classmethod
+    def merge_train_test(cls, d: Builtin):
+        dataset = Dataset(d, is_test=Dataset(d).has_test_set())
+        data = dataset.__load()
+        is_sparse = data.dtypes.apply(pd.api.types.is_sparse).all()
+
+        # let merge sub function handle all memory to limit memory usage
+        del data
+        gc.collect()
 
         if is_sparse:
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.arff")
-            save_sparse_arff(path, joined)
+            save_sparse_arff(path, lambda: cls.__merge_train_test(d, is_sparse=True))
         else:
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
+            joined = cls.__merge_train_test(d, False)
             joined.to_csv(path, index=False)
