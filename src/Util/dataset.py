@@ -433,7 +433,7 @@ class Dataset(DatasetInfo):
         return self.__load()
     
     @classmethod
-    def __merge_train_test(cls, d: Builtin, is_sparse: bool) -> df.DataFrame:
+    def __merge_train_test(cls, d: Builtin, is_sparse: bool) -> pd.DataFrame:
         dataset = Dataset(d)
         train, test = dataset.__load(), dataset.__load(force_load_test=True)
 
