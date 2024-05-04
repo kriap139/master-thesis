@@ -319,7 +319,7 @@ class Dataset(DatasetInfo):
         elif (self.is_test or force_load_test) and (self.test_path is None):
             raise RuntimeError(f"Test path for {self.name} dataset not found")
         else:
-            path = self.test_path if self.is_test else self.train_path 
+            path = self.test_path if (self.is_test or force_load_test) else self.train_path 
             print(f"Loading dataset from path: {path}")
 
         fn, ext = self.splitext(os.path.basename(path))
