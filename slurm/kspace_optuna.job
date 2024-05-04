@@ -10,13 +10,14 @@
 
 source venv/bin/activate # activate venv
 
-# Batch 1: --dataset={okcupid_stem,fps,acsi}
-# Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
-# Single: higgs, RCV1, COMET_MC
+# Batch 1: electricity, accel , okcupid_stem, 
+# Batch 2: wave_e, fps, acsi, 
+# Batch 3: comet_mc, delays_zurich, 
+# Single: higgs, epsilon, rcv1 
 dataset="accel"
 search_space="n_estimators,learning_rate"
 param_indexes="9 10 11 12"
 params_file="data/kspace_values_$dataset.json"
-repeats="0 3 6"
+repeats="3"
 
 ./scripts/slurm_job_tmpl.sh -m KSpaceOptunaSearchV2 -r "$repeats" -s "$search_space" -d "$dataset" -f "$params_file" -i "$param_indexes"

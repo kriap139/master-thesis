@@ -10,9 +10,7 @@
 
 source venv/bin/activate                # activate venv
 
-# Batch 1: --dataset={okcupid_stem,fps,acsi}
-# Batch 2: --dataset={delays_zurich,wave_e,sgemm_gkp,accel}
-# Single: higgs, RCV1, COMET_MC
+#Single electricity, accel , okcupid_stem, wave_e, fps, acsi, comet_mc, delays_zurich, higgs , epsilon , rcv1 
 dataset="acsi"
 search_space="all"
 repeats="9"

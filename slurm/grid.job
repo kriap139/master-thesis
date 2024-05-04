@@ -10,8 +10,8 @@
 
 source venv/bin/activate                # activate venv
 
-# Single: okcupid_stem,fps,acsi,delays_zurich,wave_e,sgemm_gkp,accel, higgs, RCV1, COMET_MC
-dataset="acsi"
-repeats="9"
+#Single: electricity, accel , okcupid_stem, wave_e, fps, acsi, comet_mc, delays_zurich, higgs , epsilon , rcv1 
+dataset="electricity"
+repeats="6"
 
 ./scripts/slurm_job_tmpl.sh -m GridSearch -d "$dataset" -r "$repeats"
