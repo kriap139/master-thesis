@@ -89,9 +89,9 @@ set_move() {
 }
 
 run_search() {
-    echo "method: $method, dataset: $dataset, inner_shuffle: ${inner_shuffle:+--inner-shuffle}, params: ${params:+--params "$params"}"
-    echo "move: ${move:+--move-slurm-logs}, copy_logs: ${copy_logs:+--copy-new-slurm-log-lines}"
-    exit 0
+    #echo "method: $method, dataset: $dataset, inner_shuffle: ${inner_shuffle:+--inner-shuffle}, params: ${params:+--params "$params"}"
+    #echo "move: ${move:+--move-slurm-logs}, copy_logs: ${copy_logs:+--copy-new-slurm-log-lines}"
+    #exit 0
     python3 ./src/search.py                   \
     ${move:+--move-slurm-logs}                  \
     ${copy_logs:+--copy-new-slurm-log-lines}    \
