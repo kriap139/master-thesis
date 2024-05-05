@@ -441,9 +441,12 @@ class Dataset(DatasetInfo):
         test_shape = test.shape 
 
         if is_sparse:
+            columns = list(train.columns)
             train, test = train.sparse.to_coo(), test.sparse.to_coo()
             gc.collect()
             joined = sparse.vstack([train, test])
+            joined = pd.DataFrame.sparse.from_spmatrix(joined, columns=columns)
+            gc.collect()
         else:
             joined = pd.concat([train, test], ignore_index=True)
         return joined
