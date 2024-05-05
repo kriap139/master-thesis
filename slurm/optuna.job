@@ -15,7 +15,6 @@ source venv/bin/activate                # activate venv
 # Batch 3: comet_mc, delays_zurich, 
 # Single: higgs, epsilon, rcv1 
 dataset="accel"
-search_space="all"
 repeats="6"
 
-./scripts/slurm_job_tmpl.sh -m OptunaSearch -s "$search_space" -d "$dataset" -r "$repeats"
+./scripts/slurm_job_tmpl.sh -m OptunaSearch -d "$dataset" -r "$repeats"

@@ -12,7 +12,6 @@ source venv/bin/activate                # activate venv
 
 #Single electricity, accel , okcupid_stem, wave_e, fps, acsi, comet_mc, delays_zurich, higgs , epsilon , rcv1 
 dataset="acsi"
-search_space="all"
 repeats="9"
 
-./scripts/slurm_job_tmpl.sh -m SeqUDSearch -s "$search_space" -d "$dataset" -r "$repeats"
+./scripts/slurm_job_tmpl.sh -m SeqUDSearch -d "$dataset" -r "$repeats"
