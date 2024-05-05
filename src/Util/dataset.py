@@ -460,7 +460,7 @@ class Dataset(DatasetInfo):
 
         if is_sparse:
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.arff")
-            save_sparse_arff(path, lambda: cls.__merge_train_test(d, is_sparse=True))
+            save_sparse_arff(path, dataset.name, lambda: cls.__merge_train_test(d, is_sparse=True))
         else:
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
             joined = cls.__merge_train_test(d, False)
