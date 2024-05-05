@@ -112,7 +112,7 @@ class CVInfo(dict):
         return os.path.join(dir, self.fn())
     
     def get_n_repeats(self) -> int:
-        self.get("n_repeats", 0)
+        return self.get("n_repeats", 0)
     
     @staticmethod
     def _str_filter_cond(pair) -> bool:
