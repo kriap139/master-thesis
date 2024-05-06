@@ -4,14 +4,14 @@ import os
 import json
 import dataclasses
 import numpy as np
-from typing import Union, Iterable, List, Any, Tuple, Optional
+from typing import Union, Iterable, List, Any, Tuple, Optional, Callable
 import csv
 import re
 from .space import Integer, Real, Categorical
 from .sparse_arff import load_sparse_arff
 import gc
 import glob
-from sklearn.datasets import load_svmlight_file
+from sklearn.datasets import load_svmlight_file, dump_svmlight_file
 from scipy.sparse import csr_matrix
 from scipy import sparse
 
@@ -174,6 +174,18 @@ def load_libsvm(path: str) -> pd.DataFrame:
     
     df = pd.DataFrame.sparse.from_spmatrix(data, columns=columns)
     return df
+
+def save_libsvm(path: str, data: Union[Tuple[pd.DataFrame, pd.DataFrame], Callable[[], Tuple[pd.DataFrame, pd.DataFrame]]]) -> pd.DataFrame:
+    is_callable = callable(data)
+    if is_callable:
+        x, y = data()
+
+    x, y = x.to_coo(), y.to_numpy()
+    y.shape = (-1,)
+
+    if is_callable:
+        gc.collect()
+    dump_svmlight_file(x, y, path)  
 
 def load_arff(path: str) -> pd.DataFrame:
     try:

@@ -4,7 +4,7 @@ import sklearn.datasets as sk_datasets
 import pandas as pd
 import os
 import subprocess
-from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json, has_csv_header, get_n_csv_columns, load_libsvm
+from Util.io_util import arff_to_csv, data_dir, load_arff, load_json, save_json, has_csv_header, get_n_csv_columns, load_libsvm, save_libsvm
 from Util.sparse_arff import save_sparse_arff
 import lightgbm as lgb
 import gc
@@ -433,7 +433,7 @@ class Dataset(DatasetInfo):
         return self.__load()
     
     @classmethod
-    def __merge_train_test(cls, d: Builtin, is_sparse: bool) -> pd.DataFrame:
+    def __merge_train_test(cls, d: Builtin, is_sparse: bool, is_libsvm: bool = False) -> pd.DataFrame:
         dataset = Dataset(d)
         train, test = dataset.__load(), dataset.__load(force_load_test=True)
 
@@ -449,6 +449,9 @@ class Dataset(DatasetInfo):
             gc.collect()
         else:
             joined = pd.concat([train, test], ignore_index=True)
+        
+        if is_libsvm:
+            return extract_labels(joined, label_column=dataset.label_column)
         return joined
 
     @classmethod
@@ -461,10 +464,15 @@ class Dataset(DatasetInfo):
         del data
         gc.collect()
 
-        if is_sparse:
+        if is_sparse and (dataset.train_path.rfind('.arff') != -1):
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.arff")
             save_sparse_arff(path, dataset.name, lambda: cls.__merge_train_test(d, is_sparse=True))
-        else:
+        elif is_sparse and (dataset.train_path.rfind('.libsvm') != -1):
+            path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.libsvm")
+            save_libsvm(path, lambda: cls.__merge_train_test(d, is_sparse=True, is_libsvm=True))
+        elif (dataset.train_path.rfind('.csv') != -1):
             path = os.path.join(os.path.dirname(dataset.train_path), f"{d.name.lower()}.csv")
             joined = cls.__merge_train_test(d, False)
             joined.to_csv(path, index=False)
+        else:
+            raise ValueError(f"Failed to find dataset ext for: {dataset.train_path}")
