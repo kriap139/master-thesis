@@ -180,7 +180,7 @@ def save_libsvm(path: str, data: Union[Tuple[pd.DataFrame, pd.DataFrame], Callab
     if is_callable:
         x, y = data()
 
-    x, y = x.to_coo(), y.to_numpy()
+    x, y = x.sparse.to_coo(), y.to_numpy()
     y.shape = (-1,)
 
     if is_callable:
