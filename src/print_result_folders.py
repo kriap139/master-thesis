@@ -10,7 +10,7 @@ import pandas as pd
 import hashlib
 from itertools import chain
 from numbers import Number
-from .calc_metrics import ResultFolder, EvalMetrics, load_result_folders, calc_eval_metrics
+from calc_metrics import ResultFolder, EvalMetrics, load_result_folders, calc_eval_metrics
 
 def get_kspace_base_method_results(folder: ResultFolder, folders: Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]) -> Optional[dict]:
     base_test = None
