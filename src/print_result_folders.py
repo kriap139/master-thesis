@@ -57,7 +57,7 @@ def load_data(folder: ResultFolder, data: TY_FOLDERS, skip_unfinished=True):
     else:
         return None, None, None, base_test, file_data["info"]
     
-    base_diff = (test_ - base_diff) if base_test is not None else None
+    base_diff = (test_ - base_test) if base_test is not None else None
     return train_, test_, time_, base_diff, file_data["info"] 
 
 def info_str(folder: ResultFolder, data, is_sub_folder=False, prev_n_k=None) -> str: 
