@@ -34,7 +34,7 @@ def dict_str(dct: dict, include_bracets=True) -> str:
     dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
     return f"{{dct_str}}" if include_bracets else dct_str
 
-def load_data(folder: ResultFolder, data: TY_FOLDERS):
+def load_data(folder: ResultFolder, data: TY_FOLDERS, skip_unfinished=True):
     results_path = os.path.join(folder.dir_path, "result.json")
     history_path = os.path.join(folder.dir_path, "history.csv")
     file_data = load_json(results_path, default={}) 
@@ -119,7 +119,7 @@ def print_folder_results(
         for method, folder in methods.items():
             if isinstance(folder, list):
                 # sort by n_kspace_params, then test_score
-                file_datas = [load_data(d, data) for d in folder]
+                file_datas = [load_data(d, data, skip_unfinished) for d in folder]
                 joined = list(zip(folder, file_datas))
                 joined.sort(key=lambda tup: (len(tup[1][-1]["method_params"].get("k", {})), tup[1][1]))
                 dirs_sorted, datas_sorted = list(zip(*joined))
@@ -133,7 +133,7 @@ def print_folder_results(
                 sub_strings = '\n      ' + f'\n      '.join(sub_strings)
                 strings.append(f"   {method}:{sub_strings}")
             else:
-                strings.append(f"   {method}:\n      {info_str(folder, data=load_data(folder, data))[0]}")
+                strings.append(f"   {method}:\n      {info_str(folder, data=load_data(folder, data, skip_unfinished))[0]}")
 
         print(f"{dataset}: \n" + "\n".join(strings) + '\n')
         strings.clear()
