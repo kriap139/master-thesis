@@ -59,7 +59,7 @@ def print_folder_results(
         file_data = load_json(results_path, default={}) 
 
         base_results = get_kspace_base_method_results(folder, data)
-        if 'result' in base_results:
+        if base_results is not None and ('result' in base_results):
             base_test = base_results["result"]["mean_train_acc"]
 
         if ('result' not in file_data) and not skip_unfinished:
