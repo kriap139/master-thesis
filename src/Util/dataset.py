@@ -160,7 +160,7 @@ class CVInfo(dict):
         return {k:v for k, v in self.items()}
 
 class Dataset(DatasetInfo):
-    def __init__(self, d: Union[Builtin, DatasetInfo, str], is_test=False):
+    def __init__(self, d: Union[Builtin, DatasetInfo, str], is_test=False, force_no_train_test=False):
         if isinstance(d, Builtin):
             super().__init__(d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod)
         elif isinstance(d, DatasetInfo):
@@ -174,6 +174,7 @@ class Dataset(DatasetInfo):
         self.y = None
         self.cat_features: list = []
         self.is_test = is_test
+        self.force_no_train_test = force_no_train_test
 
         self.test_path = None
         self.train_path = None
@@ -218,6 +219,9 @@ class Dataset(DatasetInfo):
         fns, exts = zip(*[self.splitext(f) for f in os.listdir(path)])
         
         try:
+            if self.force_no_train_test:
+                raise ValueError(f"train test datasets is not accepted")
+
             train_idx = fns.index(f"{self.name}_train")
             test_idx = fns.index(f"{self.name}_test")
             self.test_path = os.path.join(path, f"{fns[test_idx]}{exts[test_idx]}")
