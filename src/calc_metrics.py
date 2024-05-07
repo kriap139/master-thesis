@@ -175,7 +175,7 @@ def load_result_folders(
         else:
             folder = select_version(result, new_folder, select_versions)
             if folder is not None:
-                dataset_results[method] = new_folder
+                dataset_results[method] = [new_folder]
     
     for (dataset, methods) in results.items():
         for key in methods.keys():
