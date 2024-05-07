@@ -35,12 +35,13 @@ class Task(Flag):
     REGRESSION = auto()
 
 class DatasetInfo:
-    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup, mod=None):
+    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup, mod=None, force_no_train_test=False):
         self.name = name
         self.label_column = label_column
         self.task = task
         self.size_group = size_group
         self.mod = mod
+        self.force_no_train_test = force_no_train_test
 
 class MetaEnum(EnumMeta):
     def __contains__(cls, item):
@@ -57,7 +58,7 @@ class Builtin(Enum, metaclass=MetaEnum):
     WAVE_E = DatasetInfo("WAVE_E".lower(), "energy_total", Task.REGRESSION, SizeGroup.SMALL)               # 
     OKCUPID_STEM = DatasetInfo("OKCUPID_STEM".lower(), "job", Task.MULTICLASS, SizeGroup.SMALL)            #
     ACCEL = DatasetInfo("ACCEL".lower(), "wconfid", Task.MULTICLASS, SizeGroup.SMALL)                      #
-    RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE)                           #
+    RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE, force_no_train_test=True) #
     DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)        #
     COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
 
@@ -174,7 +175,7 @@ class Dataset(DatasetInfo):
         self.y = None
         self.cat_features: list = []
         self.is_test = is_test
-        self.force_no_train_test = force_no_train_test
+        self.force_no_train_test |= force_no_train_test
 
         self.test_path = None
         self.train_path = None
