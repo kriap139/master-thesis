@@ -69,7 +69,7 @@ def info_str(folder: ResultFolder, data, is_sub_folder=False, prev_n_k=None) -> 
         info_k = ""
     if folder.info is not None:
         info_str = "[" + dict_str(folder.info, include_bracets=False) + info_k
-        info_str += f"] ({folder.version}): " if folder.version > 0 else "]:"
+        info_str += f"] ({folder.version}) (ver {folder.version}): " if folder.version > 0 else "]:"
     else:
         info_str = ""
 
