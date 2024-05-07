@@ -212,6 +212,8 @@ class EvalMetrics:
     nas: pd.DataFrame
     nrs: pd.DataFrame
     js: pd.DataFrame
+    method_names: List[str]
+    w_nas: float
 
     def get_method_names(self) -> List[str]:
         names = set()
@@ -233,13 +235,18 @@ class EvalMetrics:
         return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
-def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: List[str] = None) -> EvalMetrics:
+def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: List[str] = None, w_nas: float = 0.5) -> EvalMetrics:
     data = load_result_folders(ignore_datasets, ignore_methods)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     max_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     datasets_max_acc: [str, float] = {dataset: 0 for dataset in data.keys()}
+    dataset_methods_names: Dict[str, list] = {}
+
+    D_n = len(data)
+    methods_names = []
+
 
     printed_newline = False
     for dataset, methods in data.items():
@@ -263,11 +270,25 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
             mean_accs[dataset][method] = file_data["result"]["mean_test_acc"]
             max_accs[dataset][method] = file_data["result"]["max_test_acc"]
             results[dataset][method] = file_data
+
+            names = dataset_methods_names.get(dataset, None)
+            if names is None:
+                names = [method]
+                dataset_methods_names[dataset] = names
+            else:
+                names.append(method)
+            
+            if len(names) > len(methods_names):
+                methods_names = names
     
     if printed_newline:
         print()
 
     for dataset, methods in results.items():
+        if len(methods) < len(methods_names):
+            missing = set(methods_names) - set(methods.keys())
+            raise ValueError(f"Dataset {dataset} is missing results from {len(methods)} methods named: {missing}")
+
         for (method, result) in methods.items():
             max_dataset = datasets_max_acc[dataset]
             max_method = result["result"]["max_test_acc"]
@@ -283,24 +304,21 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
     norm_frame = pd.DataFrame.from_dict(normalized_scores)
 
     agg_scores = norm_frame.sum(axis=1)
-    agg_min = agg_scores.min()
     rank_scores = mean_ranks.sum(axis=0)
-    rank_min = rank_scores.min()
 
-    as_min = agg_scores.copy() - agg_min
-    rs_min = rank_scores.copy() -  rank_min
+    D_n = len(data)
+    N = len(methods_names)
+    nas = agg_scores / D_n
+    nrs = rs_min / (D_n * N)
 
-    nas = as_min / agg_scores
-    nrs = rs_min / rank_scores
-
-    js = nas + nrs
+    js = w_nas * nas + (1 - w_nas) * nrs
 
     return EvalMetrics(
         data,
         results,
         mean_frame, mean_ranks, max_frame, max_ranks,
         norm_frame, agg_scores, rank_scores,
-        nas, nrs, js
+        nas, nrs, js, methods_names, w_nas
     )
 
 def time_frame(data: EvalMetrics) -> pd.DataFrame:
