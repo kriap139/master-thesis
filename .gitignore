@@ -4,6 +4,7 @@ data/datasets/**/
 data/test_results
 data/test_archive
 data/basic_*.json
+data/zips
 
 table.txt
 *.out
