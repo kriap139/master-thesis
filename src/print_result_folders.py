@@ -73,7 +73,9 @@ def print_folder_results(
             time_ = file_data["result"]["time"]
         else:
             return None, None, None, base_test, file_data["info"]
-        return train_, test_, time_, (test_ - base_test), file_data["info"] 
+        
+        base_diff = (test_ - base_diff) if base_test is not None else None
+        return train_, test_, time_, base_diff, file_data["info"] 
     
     def dict_str(dct: dict, include_bracets=True) -> str:
         dct_str = ",".join(f"{k}={v}" for k, v in dct.items())
