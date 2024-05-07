@@ -25,7 +25,7 @@ def get_kspace_base_method_results(folder: ResultFolder, folders: Dict[str, Dict
         results.sort(key=lambda f: f.version)
         base_folder = results[-1]
 
-    base_results = load_json(base_folder.dir_path)
+    base_results = load_json(os.path.join(base_folder.dir_path, "result.json"))
     return base_results
 
 def print_folder_results(
