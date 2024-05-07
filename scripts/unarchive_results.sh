@@ -23,6 +23,8 @@ nested_dir="$results_dir/${nested_dir%%.*}"
 echo "Nested_dir: $nested_dir"
 if [ -d "$nested_dir" ]; then
     rm -r "$nested_dir"
+elif [ -d "$results_dir/results_archive" ]; then 
+    rm -r "$results_dir/results_archive"
 else
     find "$results_dir" -name "*.tar.gz" -type f --delete
 fi
