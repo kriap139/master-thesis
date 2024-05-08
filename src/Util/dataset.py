@@ -61,9 +61,9 @@ class Builtin(Enum, metaclass=MetaEnum):
     RCV1 = DatasetInfo("RCV1".lower(), "class", Task.BINARY, SizeGroup.MODERATE, force_no_train_test=True) #
     DELAYS_ZURICH = DatasetInfo("DELAYS_ZURICH".lower(), "delay", Task.REGRESSION, SizeGroup.LARGE)        #
     COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
+    EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)                               #
+    ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
 
-    EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)
-    ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL) 
     EL_NINO = DatasetInfo("el_nino", "ss_temp", Task.REGRESSION, SizeGroup.SMALL)                       
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
 
