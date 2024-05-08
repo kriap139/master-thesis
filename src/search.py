@@ -108,7 +108,10 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
         args.params = parse_cmd_params(args.params)
     
     if args.search_space is not None:
-        args.search_space = [param.strip() for param in args.search_space.split(',')]
+        if args.search_space == 'all':
+            args.search_space = None
+        else:
+            args.search_space = [param.strip() for param in args.search_space.split(',')]
 
     return args
 
