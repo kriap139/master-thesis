@@ -134,26 +134,27 @@ def load_result_folders(
             info = [v.split('=') for v in info]
             info = {tup[0]: tup[1] for tup in info}
         else:
-            dataset = info.strip()
+            dataset = info.strip().upper()
             info = None
 
         version = re.findall(r'(\d+)', remainder)
         version = int(version[0]) if len(version) else 0
 
-        new_folder = ResultFolder(path, Builtin[dataset], method, version, info)
-        dataset_results = results.get(dataset, None)
-
         if (dataset in ignore_datasets) or (method in ignore_methods):
             continue
         elif ignore_with_info_filter is not None and ignore_with_info_filter(info):
             continue
-        elif dataset_results is None: 
+
+        new_folder = ResultFolder(path, Builtin[dataset], method, version, info)
+        dataset_results = results.get(dataset, None)
+        
+        if dataset_results is None: 
             folder = select_version(new_folder, select_versions=select_versions)
             if folder is not None:
                 results[dataset] = {method: [folder]}
             continue
-
-        result = dataset_results.get(method, None)
+        else:
+            result = dataset_results.get(method, None)
 
         if result is None:
             folder = select_version(new_folder, select_versions=select_versions)
@@ -173,7 +174,7 @@ def load_result_folders(
                 else:
                     result.append(new_folder)
         else:
-            folder = select_version(result, new_folder, select_versions)
+            folder = select_version(result[0], new_folder, select_versions)
             if folder is not None:
                 dataset_results[method] = [new_folder]
     
