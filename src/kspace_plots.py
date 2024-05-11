@@ -277,7 +277,7 @@ def plot_kspace_ud_random(
         colors = ['red', 'blue']    
     
     plt.subplot(2, 1, 1)
-    plt.title(f"kspace random {param}")
+    plt.title(f"kspace random (n_iter={n_iter}) {param}")
     plot_kspace_random(
         param=param, 
         k=k, 
@@ -295,7 +295,7 @@ def plot_kspace_ud_random(
     )
 
     plt.subplot(2, 1, 2)
-    plt.title(f"kspace UD {param}")
+    plt.title(f"kspace UD (n_iter={n_iter}) {param}")
     plot_kspace_ud(
         param=param, 
         k=k, 
@@ -323,4 +323,4 @@ if "__main__" == __name__:
 
     #plot_kspace_random(param, k, n_iter=100, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
     #plot_kspace_ud(param, k, n_iter=100, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
-    plot_kspace_ud_random(param, k, n_iter=100, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
+    plot_kspace_ud_random(param, k, n_iter=50, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
