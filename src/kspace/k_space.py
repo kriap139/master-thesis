@@ -71,12 +71,19 @@ class KSpace:
             return x.round().astype(int)
         elif isinstance(x, Number):
             return round(x)
-        return x
+        elif isinstance(x, np.ndarray):
+            return x.round()
+        else:
+            return x
     
+    @classmethod
+    def _rescale(cls, y_u: Number, y_l: Number, y: TY_X) -> TY_X:
+        slope = 1 / (y_u - y_l)
+        return slope * (y - y_l)
+
     def _rescale_wrapper(self, param: str, y: TY_X) -> TY_RETURN:
         y_u, y_l = self.k_space[param].high, self.k_space[param].low
-        slope = 1 / (y_u - y_l)
-        x = slope * (y - y_l)
+        x = self._rescale(y_u, y_l, y)
         ky = self.f(x, y_l, y_u, self._kmap[param])
         #print(f"param={param}, x_inn={y}, x={x}, y={ky}")
         return ky
@@ -95,3 +102,12 @@ class KSpaceV2(KSpace):
     @classmethod
     def h(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         return x * (y_u / np.exp(abs(k) * (1 - x))) + y_l
+
+class KSpaceV3(KSpace):
+    @classmethod
+    def h(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+        return x * ((y_u - y_l) / np.exp(abs(k) * (1 - x))) + y_l
+    
+    @classmethod
+    def g(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
+        return (y_u + y_l) - cls.h((1 - x), y_l, y_u, k)
