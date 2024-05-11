@@ -10,3 +10,5 @@ psutil
 joblib
 liac-arff>=2.5.0
 sequd @ git+https://github.com/kriap139/SeqUD.git
+pyunidoe @ git+https://github.com/kriap139/pyunidoe.git
+pyDOE

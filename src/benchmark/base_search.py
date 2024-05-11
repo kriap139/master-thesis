@@ -276,7 +276,7 @@ class BaseSearch:
         self.init_save(search_space, fixed_params)
         
         if not self.train_data.has_saved_folds(self.cv):
-            print(f"Saveing {CVInfo(self.cv)} folds for dataset {self.train_data.name}")
+            print(f"Saving {CVInfo(self.cv)} folds for dataset {self.train_data.name}")
             self.train_data.save_folds(self.cv)
         
         data = self.train_data.load_saved_folds_file(self.cv)

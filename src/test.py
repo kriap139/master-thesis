@@ -234,60 +234,6 @@ def print_basic_test_results(descriptions: dict):
         diff_score = np.mean(diff_scores[name])
         print(f"# {descriptions[name]}\n\t{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
 
-
-def kspace_discrepancy(search: Union[BaseSearch, str]):
-    if isinstance(search, BaseSearch):
-        assert search._inner_history_fp is not None and os.path.exists(search._inner_history_fp)
-
-        inner_history = load_csv(search._inner_history_fp)
-        info = load_json(search._result_fp)["info"]
-        space = info["space"]
-        outer_dir = os.path.split(search._save_dir)[1]
-    else:
-        assert os.path.exists(search)
-        print(f"results dir: {search}")
-
-        inner_history = load_csv(os.path.join(search, "inner_history.csv"))
-        outer_dir = os.path.split(search)[1]
-        info = load_json(os.path.join(search, "result.json"))["info"]
-        space = info["space"]
-
-    para_names = space.keys()
-    first_iter = inner_history[inner_history["outer_iter"] == 0]
-    
-    cols = list(first_iter.columns)
-    for i in range(len(cols)):
-        checks = tuple(cols[i].startswith(prefix) for prefix in ("params_", "user_attrs_"))
-        if any(checks):
-            splits = 2 if checks[1] else 1
-            cols[i] = cols[i].split("_", maxsplit=splits)[splits]
-
-    rename = {old: _new for old, _new in zip(first_iter.columns, cols)}
-    first_iter = first_iter.rename(columns=rename)
-    print(first_iter.columns)
-
-    params = first_iter[para_names]
-    param = "learning_rate"
-
-    print(first_iter)
-    print(params)
-
-    k_space = {k: getattr(Util, d.pop('cls'))(**d) for k, d in space.items()}
-    lr = params[param]
-
-    if info["method_params"].get("x_in_search_space", None) is not None:
-        x_in_search_space = info["method_params"]["x_in_search_space"]
-    else:
-        x_in_search_space = False
-
-    kspace = KSpace(k_space, k=info["method_params"]["k"], x_in_search_space=x_in_search_space)
-    x = np.linspace(0, 1, 60_000)
-
-    plt.plot(x, kspace.kmap(param, x), color='green')
-    plt.plot(first_iter[param + "_kx"].to_numpy(), lr.to_numpy(), color='red')
-    plt.legend()
-    plt.show()
-
 if "__main__" == __name__:
     # Args method is not Used in this script!
     args = cli()
@@ -314,7 +260,6 @@ if "__main__" == __name__:
 
     tuner = search(args)
     #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
-    kspace_discrepancy(tuner)
 
 
 
