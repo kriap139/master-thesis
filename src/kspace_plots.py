@@ -277,6 +277,7 @@ def plot_kspace_ud_random(
         colors = ['red', 'blue']    
     
     plt.subplot(2, 1, 1)
+    plt.title(f"kspace random {param}")
     plot_kspace_random(
         param=param, 
         k=k, 
@@ -294,6 +295,7 @@ def plot_kspace_ud_random(
     )
 
     plt.subplot(2, 1, 2)
+    plt.title(f"kspace UD {param}")
     plot_kspace_ud(
         param=param, 
         k=k, 
