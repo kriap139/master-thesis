@@ -13,6 +13,12 @@ from sklearn.model_selection import ParameterSampler
 from dataclasses import dataclass
 import json
 from numbers import Number
+import random
+import os
+
+def get_search_name(name: str) -> str:
+    idx = name.rfind("Search")
+    return name[:idx]
 
 def kspace_discrepancy(
     search: Union[BaseSearch, str, dict], 
@@ -34,16 +40,19 @@ def kspace_discrepancy(
         inner_history = load_csv(search._inner_history_fp)
         info = load_json(search._result_fp)["info"]
         space = info["space"]
+        name = get_search_name(search.__class__.__name__)
     elif isinstance(search, dict):
         inner_history = search["inner_history"]
         info = search["info"]
         space = info["space"]
+        name = info["name"]
     else:
         assert os.path.exists(search)
         print(f"results dir: {search}")
         inner_history = load_csv(os.path.join(search, "inner_history.csv"))
         info = load_json(os.path.join(search, "result.json"))["info"]
         space = info["space"]
+        name = get_search_name(os.path.split(search)[1].split('[')[0])
     
     if info["method_params"].get("x_in_search_space", None) is not None:
         x_in_search_space = info["method_params"]["x_in_search_space"]
@@ -58,7 +67,14 @@ def kspace_discrepancy(
             k = float(k)
     
     if fig is None:
-        fig = plt
+        ax = plt
+        fig.title(f"kspace {name} {param}")
+    elif isinstance(fig,tuple):
+        fig, ax = fig
+        fig.suptitle(f"kspace {name} {param}")
+    else:
+        ax = fig
+        fig.suptitle(f"kspace {name} {param}")
 
     k_space = {k: getattr(Util, d.pop('cls'))(**d) for k, d in space.items()}
     kspace = KSpaceV3(k_space, k=k, x_in_search_space=x_in_search_space)
@@ -70,12 +86,16 @@ def kspace_discrepancy(
 
     if k_graph_label is None:
         k_graph_label = f"k={kspace._kmap[param]} plot"
-    if iters_labels is None:
-        iters_labels = [f"outer_iter {n_iter}" for n_iter in outer_iters]
+
     if colors is None:
         colors = ['red' for n_iter in outer_iters]
     elif isinstance(colors, str):
         colors = [colors for n_iter in outer_iters]
+    
+    if iters_labels is None and (len(outer_iters) == 1):
+        iters_labels = [name]
+    elif iters_labels is None:
+        iters_labels = [f"outer_iter {n_iter}" for n_iter in outer_iters]
 
     if plot_k_graph:
         if k_graph_color is None:
@@ -89,7 +109,7 @@ def kspace_discrepancy(
             y = kspace.kmap(param, x)
 
         #print(list(y))
-        plt.plot(x, y, color=k_graph_color, alpha=k_graph_alpha, label=k_graph_label)
+        ax.plot(x, y, color=k_graph_color, alpha=k_graph_alpha, label=k_graph_label)
 
     for n_iter, outer_iter in enumerate(outer_iters):
         _iter = inner_history[inner_history["outer_iter"] == outer_iter]
@@ -119,9 +139,9 @@ def kspace_discrepancy(
         if x_in_search_space:
             params_x = KSpaceV3._rescale(y_u, y_l, params_x)
 
-        plt.scatter(params_x, params_y, color=colors[n_iter], label=iters_labels[n_iter], alpha=alpha)
+        ax.scatter(params_x, params_y, color=colors[n_iter], label=iters_labels[n_iter], alpha=alpha)
         
-    plt.legend()
+    ax.legend()
     if save is not None:
         name = f"kspace_plot_{param}.png"
         plt.savefig(name)
@@ -132,6 +152,7 @@ def plot_kspace_wrapper(
     search_space: dict, 
     params: List[Dict[str, Number]], 
     param: str, 
+    name: str,
     k: Union[int, dict], 
     x_in_search_space=False, 
     show=True, 
@@ -163,6 +184,7 @@ def plot_kspace_wrapper(
     data = dict(
         inner_history=inner_history,
         info=dict(
+            name=name,
             space=json.loads(json_to_str(search_space)),
             method_params=dict(
                 x_in_search_space=x_in_search_space,
@@ -207,7 +229,8 @@ def plot_kspace_random(
     plot_kspace_wrapper(
         search_space=search_space, 
         params=params, 
-        param=param, 
+        param=param,
+        name="Random", 
         k=k, 
         x_in_search_space=True, 
         save=save, 
@@ -245,7 +268,8 @@ def plot_kspace_ud(
     plot_kspace_wrapper(
         search_space=search_space, 
         params=params, 
-        param=param, 
+        param=param,
+        name="Uniform Design", 
         k=k, 
         x_in_search_space=False, 
         save=save, 
@@ -260,7 +284,7 @@ def plot_kspace_ud(
         fig=fig
     )
 
-def plot_kspace_ud_random( 
+def plot_kspace_ud_random_optuna( 
     param: str, 
     k: int = 3, 
     n_iter: int = 100, 
@@ -271,49 +295,43 @@ def plot_kspace_ud_random(
     alpha=0.5,
     k_graph_alpha=0.8,
     colors: Union[list, str] = None,
-    k_graph_color=None):
+    k_graph_color=None,
+    path=None):
 
-    if colors is None or (len(colors) < 2):
-        colors = ['red', 'blue']    
+    if colors is None:
+        colors = ['red', 'blue', "purple"]
+    kspace_wrapper_args = dict(k=k, n_iter=n_iter, limit_space=limit_space)
     
-    plt.subplot(2, 1, 1)
-    plt.title(f"kspace random (n_iter={n_iter}) {param}")
-    plot_kspace_random(
-        param=param, 
-        k=k, 
-        n_iter=n_iter, 
-        show=False, 
-        save=False, 
-        limit_space=limit_space, 
-        k_graph_label=None,
-        iters_labels=["Random"], 
-        alpha=alpha, 
-        k_graph_alpha=k_graph_alpha, 
-        plot_k_graph=plot_k_graph, 
-        colors=[colors[0]], 
-        k_graph_color=k_graph_color
-    )
+    funcs = [
+        (plot_kspace_ud, kspace_wrapper_args), 
+        (plot_kspace_random, kspace_wrapper_args)
+    ]
 
-    plt.subplot(2, 1, 2)
-    plt.title(f"kspace UD (n_iter={n_iter}) {param}")
-    plot_kspace_ud(
-        param=param, 
-        k=k, 
-        n_iter=n_iter, 
-        show=show, 
-        save=save, 
-        limit_space=limit_space, 
-        k_graph_label=None,
-        iters_labels=["UD"], 
-        alpha=alpha, 
-        k_graph_alpha=k_graph_alpha, 
-        plot_k_graph=plot_k_graph, 
-        colors=[colors[1]], 
-        k_graph_color=k_graph_color
-    )
+    if path is not None:
+        fig, axs = plt.subplots(3, sharex=True)
+        funcs.append((kspace_discrepancy, dict(search=path)))
+    else:
+        fig, axs = plt.subplots(2, sharex=True)
+    
+    last_idx = len(funcs) - 1
+    for i, (func, kwargs) in enumerate(funcs):            
+        func(
+            **kwargs,
+            param=param, 
+            show=show if i == last_idx else False, 
+            save=save if i == last_idx else False, 
+            k_graph_label=None,
+            iters_labels=None, 
+            alpha=alpha, 
+            k_graph_alpha=k_graph_alpha, 
+            plot_k_graph=plot_k_graph, 
+            colors=[colors[i]], 
+            k_graph_color=k_graph_color,
+            fig=(fig, axs[i])
+        )
 
 if "__main__" == __name__:
-    path = ""
+    path = "data/zips/scp-test/KSpaceOptunaSearchV2[accel;nparams=3,kparams=3] (7)"
     param = "n_estimators"  # "n_estimators" "learning_rate"
     limit_space=['learning_rate', 'n_estimators']
     k = dict(
@@ -321,6 +339,7 @@ if "__main__" == __name__:
         n_estimators=3
     )
 
+
     #plot_kspace_random(param, k, n_iter=100, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
     #plot_kspace_ud(param, k, n_iter=100, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
-    plot_kspace_ud_random(param, k, n_iter=50, show=True, save=False, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9)
+    plot_kspace_ud_random_optuna(param, k, n_iter=50, show=True, save=True, limit_space=limit_space, plot_k_graph=True, alpha=0.3, k_graph_alpha=0.9, path=path)
