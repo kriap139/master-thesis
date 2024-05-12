@@ -14,7 +14,7 @@ from calc_metrics import ResultFolder, EvalMetrics, load_result_folders, calc_ev
 
 TY_FOLDERS = Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]
 
-def get_kspace_base_method_results(folder: ResultFolder, folders: TY_FOLDERS) -> Optional[dict]:
+def get_kspace_base_method_results(folder: ResultFolder, folders: TY_FOLDERS, file_data: dict = None) -> Optional[dict]:
     base_test = None
     ver_regex = r'V\d+$'
     base_method = removeprefix(folder.search_method, "KSpace")
@@ -39,7 +39,7 @@ def load_data(folder: ResultFolder, data: TY_FOLDERS, skip_unfinished=True):
     history_path = os.path.join(folder.dir_path, "history.csv")
     file_data = load_json(results_path, default={}) 
 
-    base_results = get_kspace_base_method_results(folder, data)
+    base_results = get_kspace_base_method_results(folder, data, file_data)
     if base_results is not None and ('result' in base_results):
         base_test = base_results["result"]["mean_train_acc"]
     else:
@@ -67,9 +67,10 @@ def info_str(folder: ResultFolder, data, is_sub_folder=False, prev_n_k=None) -> 
         info_k = f", k=(" + dict_str(info["method_params"]["k"], False) + ")"
     else:
         info_k = ""
+
     if folder.info is not None:
         info_str = "[" + dict_str(folder.info, include_bracets=False) + info_k
-        info_str += f"] ({folder.version}) (ver {folder.version}): " if folder.version > 0 else "]:"
+        info_str += f"] (ver {folder.version}): " if folder.version > 0 else "]:"
     else:
         info_str = ""
 
