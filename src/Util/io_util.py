@@ -7,7 +7,7 @@ import numpy as np
 from typing import Union, Iterable, List, Any, Tuple, Optional, Callable
 import csv
 import re
-from .space import Integer, Real, Categorical
+from .scikit_space import Integer, Real, Categorical
 from .sparse_arff import load_sparse_arff
 import gc
 import glob

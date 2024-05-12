@@ -19,7 +19,6 @@ from .transformers import Identity
 from .transformers import LogN
 from .transformers import Pipeline
 
-
 # helper class to be able to print [1, ..., 4] instead of [1, '...', 4]
 class _Ellipsis:
     def __repr__(self):

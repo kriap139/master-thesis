@@ -9,10 +9,8 @@ from .io_util import (
 
 from .sparse_arff import save_sparse_arff
 
-from .space import (
-    Integer, Real, Categorical
-)
+from .scikit_space import Integer, Real, Categorical, TY_DIM, TY_SPACE
 
 from .parse_params_cmd import parse_cmd_params
 
-from .search_space import get_search_space, get_n_search_space
+from .search_space import get_search_space, get_n_search_space, json_to_space
