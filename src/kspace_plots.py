@@ -1,7 +1,11 @@
 import numpy as np
 import pandas as pd
 from typing import Iterable, Callable, Tuple, Dict, Union, List
-from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, load_csv, get_search_space, json_to_str
+from Util import (
+    Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, 
+    save_json, TY_CV, load_json, load_csv, get_search_space, json_to_str, TY_DIM, json_to_space
+)
+from Util.maths import map_space
 from kspace import KSpaceV3
 from benchmark import (
     BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch,
@@ -15,6 +19,7 @@ import json
 from numbers import Number
 import random
 import os
+import Util.compat as compat
 
 def get_search_name(name: str) -> str:
     idx = name.rfind("Search")
@@ -66,17 +71,19 @@ def kspace_discrepancy(
         except:
             k = float(k)
     
+    title = compat.removeprefix(name.lower(), "kspace").capitalize()
+
     if fig is None:
         ax = plt
-        fig.title(f"kspace {name} {param}")
+        plt.title(f"kspace {title} ({param})")
     elif isinstance(fig,tuple):
         fig, ax = fig
-        fig.suptitle(f"kspace {name} {param}")
+        ax.set_title(f"kspace {title} ({param})")
     else:
         ax = fig
-        fig.suptitle(f"kspace {name} {param}")
+        ax_set_title(f"kspace {title} ({param})")
 
-    k_space = {k: getattr(Util, d.pop('cls'))(**d) for k, d in space.items()}
+    k_space = json_to_space(space)
     kspace = KSpaceV3(k_space, k=k, x_in_search_space=x_in_search_space)
     y_u, y_l = k_space[param].high, k_space[param].low
 
@@ -137,14 +144,20 @@ def kspace_discrepancy(
         params_y = params_y[indexes]
 
         if x_in_search_space:
+            _y = params_x
             params_x = KSpaceV3._rescale(y_u, y_l, params_x)
+            ax.scatter(params_x, _y, label=f"{iters_labels[n_iter]} initial", alpha=alpha)
+        else:
+            kspace0 = KSpaceV3(k_space, k=0)
+            ax.scatter(params_x, kspace0.kmap(param, params_x), label=f"{iters_labels[n_iter]} initial", alpha=alpha)
 
         ax.scatter(params_x, params_y, color=colors[n_iter], label=iters_labels[n_iter], alpha=alpha)
+
         
     ax.legend()
     if save is not None:
         name = f"kspace_plot_{param}.png"
-        plt.savefig(name)
+        plt.savefig(name) if fig is None else fig.savefig(name)
     if show:
         plt.show()
 
@@ -308,10 +321,10 @@ def plot_kspace_ud_random_optuna(
     ]
 
     if path is not None:
-        fig, axs = plt.subplots(3, sharex=True)
+        fig, axs = plt.subplots(3)
         funcs.append((kspace_discrepancy, dict(search=path)))
     else:
-        fig, axs = plt.subplots(2, sharex=True)
+        fig, axs = plt.subplots(2)
     
     last_idx = len(funcs) - 1
     for i, (func, kwargs) in enumerate(funcs):            

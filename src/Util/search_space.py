@@ -1,7 +1,8 @@
 import argparse
 from sklearn.model_selection import ParameterGrid
-from . import Integer, Real, Categorical
+from .scikit_space import Integer, Real, Categorical, TY_DIM, TY_SPACE
 from typing import List, Iterable
+from . import scikit_space
 
 def get_search_space(method: str, limit_space: List[str] = None) -> dict:
     if method == "GridSearch":
@@ -31,3 +32,6 @@ def get_search_space(method: str, limit_space: List[str] = None) -> dict:
 
 def get_n_search_space(method: str) -> int:
     return len(get_search_space(method).keys())
+
+def json_to_space(data: dict) -> TY_SPACE:
+    return {k: getattr(scikit_space, d.pop('cls'))(**d) for k, d in data.items()}
