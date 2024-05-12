@@ -3,14 +3,13 @@ import pandas as pd
 from typing import Iterable, Union, Dict, Optional
 from numbers import Number
 from abc import ABC, abstractclassmethod
-from Util import Integer, Categorical, Real
+from Util import Integer, Categorical, Real, TY_SPACE
 
-TY_DIM = Union[Integer, Real, Categorical]
 TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
 
 class KSpace:
-    def __init__(self, k_space: Dict[str, TY_DIM], k:  Union[Number, dict] = None, x_in_search_space=False):
+    def __init__(self, k_space: TY_SPACE, k:  Union[Number, dict] = None, x_in_search_space=False):
         self.k_space = k_space
         self.k = k
         self.mapping_funcs = {}
