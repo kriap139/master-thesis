@@ -4,20 +4,10 @@ from numbers import Number
 from typing import Union, List, Optional
 import os
 import re
+from .maths import try_number
 
 comma_pattern = r',(?![^{]*})(?![^\[]*\])'
 eq_pattern = r'=(?![^{]*})(?![^\[]*\])'
-
-def try_number(param: str) -> Optional[Number]:
-    if param == "None":
-        return None
-    try:
-        return int(param)
-    except ValueError:
-        try:
-            return float(param)
-        except ValueError:
-            return param
 
 def parse_list(a: str) -> list:
     result = []
@@ -34,7 +24,7 @@ def parse_list(a: str) -> list:
 
 def parse_dict(d: str) -> dict:
     result = {}
-    string = d[1:len(d) - 1].strip()
+    string = d.strip()[1:len(d) - 1].strip()
     for param in re.split(comma_pattern, string):
         k, v = re.split(eq_pattern, param)
         v = v.strip()

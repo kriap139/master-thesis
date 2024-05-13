@@ -5,7 +5,7 @@ from Util import (
     Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, 
     save_json, TY_CV, load_json, load_csv, get_search_space, json_to_str, TY_DIM, json_to_space
 )
-from Util.maths import map_space
+from Util.maths import map_space, try_number
 from kspace import KSpaceV3
 from benchmark import (
     BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch,
@@ -66,13 +66,9 @@ def kspace_discrepancy(
     
     k = info["method_params"]["k"]
     if not isinstance(k, dict):
-        try:
-            k = int(k)
-        except:
-            k = float(k)
-    
-    title = compat.removeprefix(name.lower(), "kspace").capitalize()
+        k = try_number(k)
 
+    title = compat.removeprefix(name.lower(), "kspace").capitalize()
     if fig is None:
         ax = plt
         plt.title(f"kspace {title} ({param})")

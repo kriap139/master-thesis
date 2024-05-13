@@ -1,6 +1,6 @@
 
 from numbers import Number
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 import pandas as pd
 import numpy as np
 from . import Categorical, Integer, Real, TY_SPACE
@@ -29,6 +29,17 @@ def map_space(search_space: TY_SPACE, norm_frame: pd.DataFrame) -> pd.DataFrame:
             return _map(norm_frame, y_min=y_l, y_max=y_u).round().astype(int)
         else: 
             return _map(norm_frame, y_min=y_l, y_max=y_u)
+
+def try_number(param: str) -> Optional[Union[Number, str]]:
+    if param == "None":
+        return None
+    try:
+        return int(param)
+    except ValueError:
+        try:
+            return float(param)
+        except ValueError:
+            return param
         
 
         
