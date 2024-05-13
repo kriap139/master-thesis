@@ -99,7 +99,7 @@ elif [ ${#search_spaces[@]} -eq 1 ] && [ ${#param_indexes[@]} -eq 0 ] && [ ${#da
     echo "Expanding single search_space, to all datsets: ${search_spaces[*]}"
 
 elif [ ${#search_spaces[@]} -eq 0 ] && [ ${#param_indexes[@]} -gt 0 ]; then
-    spaces="$(python3 src/Util/params_file_infer_search_space.py "$params_file" "${param_indexes[@]}" )"
+    spaces="$(python3 src/params_file_infer_search_space.py "$params_file" "${param_indexes[@]}" )"
     check_exit "Failed to infer search spaces: $spaces"
     search_spaces=() && for a in $spaces; do search_spaces+=("$a"); done
     echo "infered search space from params file: ${search_spaces[*]}"
@@ -159,7 +159,7 @@ run_search_with_params() {
     do
         params_idx=${param_indexes[$i]}
         search_space=${search_spaces[$i]}
-        params="$(python3 src/Util/params_file_to_cmd.py "$params_file" "$params_idx")"
+        params="$(python3 src/params_file_to_cmd.py "$params_file" "$params_idx")"
         print_search_space_info
         
         # last params index
