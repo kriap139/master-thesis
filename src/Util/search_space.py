@@ -1,10 +1,20 @@
 import argparse
 from sklearn.model_selection import ParameterGrid
 from .scikit_space import Integer, Real, Categorical, TY_DIM, TY_SPACE
-from typing import List, Iterable
+from typing import List, Iterable, Dict
 from . import scikit_space
 
-def get_search_space(method: str, limit_space: List[str] = None) -> dict:
+def get_search_space(method: str, limit_space: List[str] = None, add_priors: Dict[str, str]  = None, add_unset_default_priors=True) -> dict:
+    default_priors = dict(n_estimators="log-uniform", learning_rate="log-uniform", num_leaves="log-uniform", feature_fraction="log-uniform")
+    if add_priors is None:
+        prior_map = default_priors
+    else:
+        prior_map = {param: prior for param, prior in add_priors.items()}
+        if add_unset_default_priors:
+            for k, v in default_priors.items():
+                if prior_map.get(k, None) is None:
+                    prior_map[k] = v
+
     if method == "GridSearch":
         space = dict(
             n_estimators=[50, 100, 200, 350, 500],
@@ -15,12 +25,12 @@ def get_search_space(method: str, limit_space: List[str] = None) -> dict:
         print(f"GridSearch runs: {len(ParameterGrid(space))}")
     else:
         space = dict(
-            n_estimators=Integer(1, 500, name="n_estimators", prior="log-uniform"),
-            learning_rate=Real(0.0001, 1.0, name="learning_rate", prior="log-uniform"),
-            max_depth=Integer(0, 30, name="max_depth"),
-            num_leaves=Integer(10, 300, name="num_leaves", prior="log-uniform"),
-            min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf"),
-            feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior="log-uniform")
+            n_estimators=Integer(1, 500, name="n_estimators", prior=prior_map.get("n_estimators", "uniform")),
+            learning_rate=Real(0.0001, 1.0, name="learning_rate", prior=prior_map.get("learning_rate", "uniform")),
+            max_depth=Integer(0, 30, name="max_depth", prior=prior_map.get("max_depth", "uniform")),
+            num_leaves=Integer(10, 300, name="num_leaves", prior=prior_map.get("num_leaves", "uniform")),
+            min_data_in_leaf=Integer(0, 30, name="min_data_in_leaf", prior=prior_map.get("min_data_in_leaf", "uniform")),
+            feature_fraction=Real(0.1, 1.0, name="feature_fraction", prior=prior_map.get("feature_fraction", "uniform"))
         )
     
     if limit_space is not None:

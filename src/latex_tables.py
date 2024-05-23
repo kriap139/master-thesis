@@ -485,7 +485,7 @@ def create_manual_kspace_table(ignore_datasets: List[str] = None, sort_fn=None, 
 
     for (dataset, methods) in data.items():
         for method, folder in methods.items():
-            print(f"dataset={} info={folder.info}")
+            print(f"dataset={folder.dataset} info={folder.info}")
 
 
 def save_table(table: str):

@@ -230,9 +230,10 @@ def plot_kspace_random(
     plot_k_graph=True,
     colors: Union[list, str] = None,
     k_graph_color=None,
+    add_priors=None,
     fig=None):
 
-    search_space = get_search_space("RandomSearch", limit_space=limit_space)
+    search_space = get_search_space("RandomSearch", limit_space=limit_space, add_priors=add_priors)
     sampler = ParameterSampler(search_space, n_iter=n_iter)
     params = list(sampler)
     plot_kspace_wrapper(
@@ -310,10 +311,17 @@ def plot_kspace_ud_random_optuna(
     if colors is None:
         colors = ['red', 'blue', "purple"]
     kspace_wrapper_args = dict(k=k, n_iter=n_iter, limit_space=limit_space)
-    
+
+    random1 = kspace_wrapper_args.copy()
+    random1["iters_labels"] = ["log-uniform"]
+    random2 = kspace_wrapper_args.copy()
+    random2["add_priors"] = {"learning_rate": "uniform"}
+    random2["iters_labels"] = ["uniform"]
+
     funcs = [
-        (plot_kspace_ud, kspace_wrapper_args), 
-        (plot_kspace_random, kspace_wrapper_args)
+        #(plot_kspace_ud, kspace_wrapper_args), 
+        (plot_kspace_random, random1),
+        (plot_kspace_random, random2)
     ]
 
     if path is not None:
@@ -329,8 +337,7 @@ def plot_kspace_ud_random_optuna(
             param=param, 
             show=show if i == last_idx else False, 
             save=save if i == last_idx else False, 
-            k_graph_label=None,
-            iters_labels=None, 
+            k_graph_label=None, 
             alpha=alpha, 
             k_graph_alpha=k_graph_alpha, 
             plot_k_graph=plot_k_graph, 
@@ -340,11 +347,11 @@ def plot_kspace_ud_random_optuna(
         )
 
 if "__main__" == __name__:
-    path = "data/zips/scp-test/KSpaceOptunaSearchV2[accel;nparams=3,kparams=3] (7)"
-    param = "n_estimators"  # "n_estimators" "learning_rate"
+    path = None #"data/zips/scp-test/KSpaceOptunaSearchV2[accel;nparams=3,kparams=3] (7)"
+    param = "learning_rate"  # "n_estimators" "learning_rate"
     limit_space=['learning_rate', 'n_estimators']
     k = dict(
-        learning_rate=-3,
+        learning_rate=-6,
         n_estimators=3
     )
 
