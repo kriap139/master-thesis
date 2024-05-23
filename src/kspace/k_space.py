@@ -4,6 +4,7 @@ from typing import Iterable, Union, Dict, Optional
 from numbers import Number
 from abc import ABC, abstractclassmethod
 from Util import Integer, Categorical, Real, TY_SPACE
+from typing import Type
 
 TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
@@ -110,3 +111,16 @@ class KSpaceV3(KSpace):
     @classmethod
     def g(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         return (y_u + y_l) - cls.h((1 - x), y_l, y_u, k)
+
+
+def get_kspace_ver(k_space_ver: int) -> Type[KSpace]:
+    if k_space_ver == 1:
+        return KSpace
+    else:
+        import sys
+        this_module = sys.modules[__name__]
+
+        cls = getattr(k_space, "KSpaceV" + str(k_space_ver), None)
+        if cls is None:
+            raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
+        return cls

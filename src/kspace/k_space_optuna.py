@@ -11,8 +11,7 @@ from optuna.storages._heartbeat import is_heartbeat_enabled
 from optuna.distributions import BaseDistribution, IntDistribution, FloatDistribution, CategoricalDistribution
 from typing import Sequence, Union, Dict, Any, Optional, Tuple
 from numbers import Number
-from . import k_space
-from .k_space import KSpace
+from .k_space import KSpace, get_kspace_ver
 from Util import Integer, Real, Categorical
 
 
@@ -75,15 +74,7 @@ class KSpaceStudy(Study):
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
         self.k = k
-
-        cls: KSpace = None
-        if k_space_ver == 1:
-            cls = KSpace
-        else:
-            cls = getattr(k_space, "KSpaceV" + str(k_space_ver), None)
-            if cls is None:
-                raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
-
+        cls = get_kspace_ver(k_space_ver)
         self.kspace = cls(self._encode_k_search_space(search_space), k, x_in_search_space=True)
     
     def _encode_k_search_space(self, search_space: Dict[str, distributions.BaseDistribution]) -> dict:

@@ -1,5 +1,5 @@
 from .base_search import BaseSearch, InnerResult
-from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv
+from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE
 import lightgbm as lgb
 from typing import Callable, Iterable, Dict, Union
 from numbers import Number
@@ -33,11 +33,12 @@ class OptunaSearch(BaseSearch):
         save_inner_history=True, 
         max_outer_iter: int = None, 
         refit=True, 
-        add_save_dir_info: dict = None,
-        study=None):
+        add_save_dir_info: dict = None):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
-        self._study = study
     
+    def _create_study(self, search_space: TY_SPACE) -> Study:
+        return create_study(sampler=TPESampler(), direction="maximize")
+
     def __update_inner_history(self, search_iter: int, clf: OptunaSearchCV):
         df = clf.trials_dataframe()
         df["outer_iter"] = search_iter
@@ -58,13 +59,8 @@ class OptunaSearch(BaseSearch):
                 raise ValueError(f"search space contains unsupported type for '{k}': {type(v)}")
         return space
     
-    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        if self._study is None:
-            study = create_study(sampler=TPESampler(), direction="maximize")
-        else:
-            study = self._study
-
-        search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=self.scoring, study=study, refit=True)
+    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:        
+        search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=self.scoring, study=self._create_study(search_space), refit=True)
         results = search.fit(x_train, y_train, **fixed_params)
         if self.save_inner_history:
             self.__update_inner_history(search_iter, search)
@@ -88,17 +84,13 @@ class KSpaceOptunaSearch(OptunaSearch):
             add_save_dir_info: dict = None,
             k:  Union[Number, dict] = None
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, add_save_dir_info, study=None)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.k = k
         self.x_in_search_space = True
         self._pre_init_save(save)
-        self._inner_func = self._init_study
 
     def _create_save_dir(self) -> str:
-        if isinstance(self.k, Number):
-            info = None
-        elif isinstance(self.k, dict):
-            info = dict(kparams=len(self.k.keys()))
+        info = dict(kparams=len(self.k.keys())) if isinstance(self.k, dict) else None
         return super()._create_save_dir(info)
     
     def _get_search_method_info(self) -> dict:
@@ -107,14 +99,9 @@ class KSpaceOptunaSearch(OptunaSearch):
         info["x_in_search_space"] = self.x_in_search_space
         return info
     
-    def _init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict, k_space_ver: int = 1) -> InnerResult:
-        self._study = KSpaceStudy.create_study(search_space, self.k, k_space_ver=k_space_ver)
-        self._inner_func = super()._inner_search
-        return super()._inner_search(search_iter, x_train, y_train, search_space, fixed_params)
-
-    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        return self._inner_func(search_iter, x_train, y_train, search_space, fixed_params)
+    def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
+        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=1)
 
 class KSpaceOptunaSearchV2(KSpaceOptunaSearch):
-    def _init_study(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict, k_space_ver: int = 1) -> InnerResult:
-        return super()._init_study(search_iter, x_train, y_train, search_space, fixed_params, k_space_ver=2)
+    def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
+        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=2)
