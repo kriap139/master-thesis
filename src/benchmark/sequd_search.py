@@ -78,11 +78,10 @@ class AdjustedSeqUDSearch(SeqUDSearch):
             t=0.25, 
             exp_step=0.18
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.t = t
         self.exp_step = exp_step
         self.adjust_method = adjust_method
-        self._pre_init_save(save)
     
     def _create_save_dir(self) -> str:
         if self.adjust_method == 'linear':
@@ -132,9 +131,8 @@ class KSpaceSeqUDSearch(SeqUDSearch):
             add_save_dir_info: dict = None,
             k=0
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.k = k
-        self._pre_init_save(save=save)
     
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):

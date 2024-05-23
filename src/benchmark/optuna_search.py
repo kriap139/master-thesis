@@ -84,10 +84,9 @@ class KSpaceOptunaSearch(OptunaSearch):
             add_save_dir_info: dict = None,
             k:  Union[Number, dict] = None
         ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, False, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.k = k
         self.x_in_search_space = True
-        self._pre_init_save(save)
 
     def _create_save_dir(self) -> str:
         info = dict(kparams=len(self.k.keys())) if isinstance(self.k, dict) else None
