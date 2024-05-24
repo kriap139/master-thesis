@@ -45,7 +45,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     parser = argparse.ArgumentParser(description="...")
     parser.add_argument("--method", 
         choices=(
-            "RandomSearch", "SeqUDSearch", "AdjustedSeqUDSearch", 
+            "RandomSearch", "SeqUDSearch",
             "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch", "KSpaceOptunaSearch",
             "KSpaceOptunaSearchV2"
         ),

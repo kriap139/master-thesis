@@ -2,7 +2,7 @@ import os
 from Util import Dataset, Builtin, data_dir, Task, get_n_search_space
 from Util.io_util import load_json, json_to_str, load_csv
 from Util.compat import removeprefix
-from benchmark import BaseSearch, AdjustedSeqUDSearch
+from benchmark import BaseSearch
 from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 import re
 from dataclasses import dataclass

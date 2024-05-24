@@ -8,7 +8,7 @@ from Util import (
 from Util.maths import map_space, try_number
 from kspace import KSpaceV3
 from benchmark import (
-    BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch,
+    BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, RandomSearch,
     KSpaceSeqUDSearch, KSpaceOptunaSearch
 )
 import matplotlib.pyplot as plt

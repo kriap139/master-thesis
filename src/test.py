@@ -16,7 +16,7 @@ from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union, List
 
 from benchmark import (
-    BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, AdjustedSeqUDSearch, RandomSearch,
+    BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, RandomSearch,
     KSpaceSeqUDSearch, KSpaceOptunaSearch
 )
 from Util import Dataset, Builtin, Task, data_dir, Integer, Real, Categorical, has_csv_header, CVInfo, save_json, TY_CV, load_json, find_files, load_csv, get_search_space
