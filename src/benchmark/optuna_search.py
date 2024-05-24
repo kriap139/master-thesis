@@ -19,23 +19,6 @@ from optuna.samplers import TPESampler
 from kspace import KSpaceStudy
         
 class OptunaSearch(BaseSearch):
-    def __init__(
-        self, 
-        model, 
-        train_data: Dataset, 
-        test_data: Dataset = None,
-        n_iter=100, 
-        n_jobs=None, 
-        cv: TY_CV = None, 
-        inner_cv: TY_CV = None, 
-        scoring = None, 
-        save=False, 
-        save_inner_history=True, 
-        max_outer_iter: int = None, 
-        refit=True, 
-        add_save_dir_info: dict = None):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
-    
     def _create_study(self, search_space: TY_SPACE) -> Study:
         return create_study(sampler=TPESampler(), direction="maximize")
     
@@ -59,24 +42,8 @@ class OptunaSearch(BaseSearch):
         return InnerResult(results.best_index_, results.best_params_, results.best_score_,  results.trials_dataframe(), results.best_estimator_)
 
 class KSpaceOptunaSearch(OptunaSearch):
-    def __init__(
-            self, 
-            model, 
-            train_data: Dataset, 
-            test_data: Dataset = None,
-            n_iter=100, 
-            n_jobs=None, 
-            cv: TY_CV = None, 
-            inner_cv: TY_CV = None, 
-            scoring = None, 
-            save=False, 
-            save_inner_history=True, 
-            max_outer_iter: int = None, 
-            refit=True, 
-            add_save_dir_info: dict = None,
-            k:  Union[Number, dict] = None
-        ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+    def __init__(self, k:  Union[Number, dict] = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = True
         self.error_score='raise'

@@ -12,10 +12,8 @@ from kspace import KSpaceSeqUD
 from numbers import Number
 
 class SeqUDSearch(BaseSearch):
-    def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring = None, save=False, 
-                 n_runs_per_stage=20, max_search_iter=100, save_inner_history=True, max_outer_iter: int = None, refit=True, add_save_dir_info: dict = None):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+    def __init__(self, n_runs_per_stage=20, max_search_iter=100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
     
@@ -39,26 +37,8 @@ class SeqUDSearch(BaseSearch):
 
 
 class KSpaceSeqUDSearch(SeqUDSearch):
-    def __init__(
-            self, 
-            model, 
-            train_data: Dataset, 
-            test_data: Dataset = None,
-            n_iter=100, 
-            n_jobs=None, 
-            cv: TY_CV = None, 
-            inner_cv: TY_CV = None, 
-            scoring = None, 
-            save=False, 
-            n_runs_per_stage=20, 
-            max_search_iter=100, 
-            save_inner_history=True, 
-            max_outer_iter: int = None,
-            refit=True,
-            add_save_dir_info: dict = None,
-            k=0
-        ):
-        super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
+    def __init__(self, k=0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = False
         self.error_score = 'raise'
