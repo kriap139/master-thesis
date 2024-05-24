@@ -19,4 +19,4 @@ param_indexes="9 10 11 12"
 params_file="data/kspace_values_$dataset.json"
 repeats="3"
 
-./scripts/slurm_job_tmpl.sh -m KSpaceOptunaSearchV2 -r "$repeats" -d "$dataset" -f "$params_file" -i "$param_indexes"
+./scripts/slurm_job_tmpl.sh -m KSpaceOptunaSearchV3 -r "$repeats" -d "$dataset" -f "$params_file" -i "$param_indexes"

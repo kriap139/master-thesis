@@ -46,7 +46,6 @@ class KSpaceOptunaSearch(OptunaSearch):
         super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = True
-        self.error_score='raise'
 
     def _create_save_dir(self) -> str:
         info = dict(kparams=len(self.k.keys())) if isinstance(self.k, dict) else None
@@ -58,3 +57,7 @@ class KSpaceOptunaSearch(OptunaSearch):
 class KSpaceOptunaSearchV2(KSpaceOptunaSearch):
     def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
         return KSpaceStudy.create_study(search_space, self.k, k_space_ver=2)
+
+class KSpaceOptunaSearchV3(KSpaceOptunaSearch):
+    def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
+        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=3)

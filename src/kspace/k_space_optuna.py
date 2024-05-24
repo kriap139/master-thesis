@@ -70,7 +70,7 @@ class KSpaceStudy(Study):
         sampler: Optional[samplers.BaseSampler] = None,
         pruner: Optional[pruners.BasePruner] = None,
         k: Union[Number, dict] = None,
-        k_space_ver: int = 1
+        k_space_ver: int = 3
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
         self.k = k
