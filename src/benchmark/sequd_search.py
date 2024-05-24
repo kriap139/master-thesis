@@ -41,21 +41,7 @@ class KSpaceSeqUDSearch(SeqUDSearch):
         super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = False
-    
-    def kspace_ver(self) -> int:
-        name = self.__class__.__name__
-        if name == 'KSpaceSeqUDSearch':
-            return 1
-
-        idx = name.rfind('V')
-        if idx == -1:
-            raise ValueError(f"Unable to infer kspace version name for subclass {name}")
         
-        ver = int(name[idx + 1])
-        return ver
-        
-        
-    
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
             k_mask = self.k
@@ -72,7 +58,7 @@ class KSpaceSeqUDSearch(SeqUDSearch):
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = KSpaceSeqUD(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, self.scoring, self.refit,
-            verbose=3, kspace_ver=self.kspace_ver(), k=self.k
+            verbose=3, kspace_ver=self.__class__.__name__, k=self.k
         )
         search.fit(x_train, y_train, **fixed_params)
         return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.logs, search.best_estimator_)
@@ -80,5 +66,5 @@ class KSpaceSeqUDSearch(SeqUDSearch):
 class KSpaceSeqUDSearchV2(KSpaceSeqUDSearch):
     pass
 
-class KSpaceSeqUDSearchV2(KSpaceSeqUDSearch):
+class KSpaceSeqUDSearchV3(KSpaceSeqUDSearch):
     pass

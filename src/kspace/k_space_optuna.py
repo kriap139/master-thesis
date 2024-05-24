@@ -73,9 +73,7 @@ class KSpaceStudy(Study):
         k_space_ver: int = 3
     ) -> None:
         super().__init__(study_name, storage, sampler, pruner)
-        self.k = k
-        cls = get_kspace_ver(k_space_ver)
-        self.kspace = cls(self._encode_k_search_space(search_space), k, x_in_search_space=True)
+        self.kspace = get_kspace_ver(k_space_ver, self._encode_k_search_space(search_space), k, x_in_search_space=True)
     
     def _encode_k_search_space(self, search_space: Dict[str, distributions.BaseDistribution]) -> dict:
         space = {}

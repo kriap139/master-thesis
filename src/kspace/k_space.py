@@ -5,6 +5,7 @@ from numbers import Number
 from abc import ABC, abstractclassmethod
 from Util import Integer, Categorical, Real, TY_SPACE
 from typing import Type
+from Util.maths import try_number
 
 TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
@@ -112,15 +113,31 @@ class KSpaceV3(KSpace):
     def g(cls, x: TY_X, y_l: Number, y_u: Number, k: Number) -> TY_RETURN:
         return (y_u + y_l) - cls.h((1 - x), y_l, y_u, k)
 
+def infer_kspace_ver(method: str, default='raise') -> int:
+    idx = method.rfind('V')
+    if idx == -1:
+        return 1
+    
+    ver = try_number(name[idx + 1])
+    if (not isinstance(ver, int)) and (default == 'raise'):
+        raise ValueError(f"Unable to parse kspace version from subclass {method}")
+    elif not isinstance(ver, int):
+        return default
 
-def get_kspace_ver(k_space_ver: int) -> Type[KSpace]:
-    if k_space_ver == 1:
+    return ver
+
+def get_kspace_ver(kspace_ver: Union[int, str], k_space: TY_SPACE, k:  Union[Number, dict] = None, x_in_search_space=False) -> KSpace:
+    if isinstance(kspace_ver, str):
+        kspace_ver = infer_kspace_ver(kspace_ver)
+    if kspace_ver == 1:
         return KSpace
-    else:
-        import sys
-        this_module = sys.modules[__name__]
+    
+    import sys
+    this_module = sys.modules[__name__]
 
-        cls = getattr(k_space, "KSpaceV" + str(k_space_ver), None)
-        if cls is None:
-            raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
-        return cls
+    cls: KSpace = getattr(this_module, "KSpaceV" + str(k_space_ver), None)
+    if cls is None:
+        raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
+    
+    return cls(k_space, k, x_in_search_space)
+        

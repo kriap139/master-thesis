@@ -52,12 +52,10 @@ class KSpaceOptunaSearch(OptunaSearch):
         return super()._create_save_dir(info)
     
     def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
-        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=1)
+        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=self.__class__.__name__)
 
 class KSpaceOptunaSearchV2(KSpaceOptunaSearch):
-    def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
-        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=2)
+    pass
 
 class KSpaceOptunaSearchV3(KSpaceOptunaSearch):
-    def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
-        return KSpaceStudy.create_study(search_space, self.k, k_space_ver=3)
+    pass

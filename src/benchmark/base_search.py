@@ -29,8 +29,11 @@ class InnerResult:
         self.inner_history = inner_history
 
 class BaseSearch:
-    def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
-                 n_iter=100, n_jobs=None, cv: TY_CV = None, inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, add_save_dir_info: dict = None):
+    def __init__(
+        self, model, train_data: Dataset, test_data: Dataset = None, n_iter=100, n_jobs=None, cv: TY_CV = None, 
+        inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, 
+        add_save_dir_info: dict = None):
+
         self.train_data = train_data
         self.test_data = test_data
         self.n_iter = n_iter
