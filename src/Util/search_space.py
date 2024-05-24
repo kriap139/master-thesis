@@ -5,11 +5,11 @@ from typing import List, Iterable, Dict
 from . import scikit_space
 
 def get_search_space(method: str, limit_space: List[str] = None, add_priors: Dict[str, str]  = None, add_unset_default_priors=True) -> dict:
-    default_priors = dict(n_estimators="log-uniform", learning_rate="log-uniform", num_leaves="log-uniform", feature_fraction="log-uniform")
+    default_priors = dict(learning_rate="log-uniform")
     if add_priors is None:
         prior_map = default_priors
     else:
-        prior_map = {param: prior for param, prior in add_priors.items()}
+        prior_map = add_priors.copy()
         if add_unset_default_priors:
             for k, v in default_priors.items():
                 if prior_map.get(k, None) is None:
