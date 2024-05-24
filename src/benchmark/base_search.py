@@ -21,11 +21,12 @@ import shutil
 from itertools import chain
 
 class InnerResult:
-    def __init__(self, best_index: int, best_params: dict, best_score: float, best_model):
+    def __init__(self, best_index: int, best_params: dict, best_score: float, inner_history: pd.DataFrame, best_model):
         self.best_params = best_params
         self.best_score = best_score
         self.best_model = best_model
         self.best_index = best_index
+        self.inner_history = inner_history
 
 class BaseSearch:
     def __init__(self, model, train_data: Dataset, test_data: Dataset = None,
@@ -157,6 +158,13 @@ class BaseSearch:
         row.update(params)
         save_csv(self._history_fp, self.history_head, row)
     
+    def update_inner_history(self, outer_iter: int, inner_history: pd.DataFrame): 
+        inner_history["outer_iter"] = outer_iter
+        rows = inner_history.to_dict(orient="records")
+        head = list(inner_history.columns)
+        #head.sort()
+        save_csv(self._inner_history_fp, head, rows)
+    
     def save_model(self, model, outer_id: int = None, inner_id: int = None):
         if inner_id is None and outer_id is None:
             raise RuntimeError(f"Both outer_id and inner_id cant't be None")
@@ -256,9 +264,6 @@ class BaseSearch:
         model = lgb.LGBMClassifier(**params, **fixed_params)
         model.fit(X=self.train_data.x, y=self.train_data.y, categorical_feature=self.train_data.cat_features)
         return self.score(model, self.test_data.x, self.test_data.y)
-
-    def _get_search_method_info(self) -> dict:
-        return {}
     
     def _encode_search_space(self, search_space: dict) -> dict:
         return search_space
@@ -308,6 +313,8 @@ class BaseSearch:
             if self._save:
                 self.update_history(result.best_index, result.best_params, result.best_score, acc, end)
                 self.save_model(result.best_model, outer_id=i)
+                if self.save_inner_history:
+                    self.update_inner_history(outer_iter=i, inner_history=result.inner_history)
 
             print(f"{i}: best_score={round(result.best_score, 4)}, test_score={round(acc, 4)}, params={json_to_str(result.best_params, indent=None)}")
 

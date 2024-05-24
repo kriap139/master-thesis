@@ -19,12 +19,6 @@ class SeqUDSearch(BaseSearch):
         self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
     
-    def _update_inner_history(self, search_iter: int, clf: SeqUD):
-        clf.logs["outer_iter"] = search_iter
-        head = list(clf.logs.columns)
-        rows = clf.logs.to_dict(orient="records")
-        save_csv(self._inner_history_fp, head, rows)
-    
     def _encode_search_space(self, search_space: dict) -> dict:
         space = {}
         for k, v in search_space.items():
@@ -41,11 +35,7 @@ class SeqUDSearch(BaseSearch):
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = SeqUD(search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, self.scoring, refit=self.refit, verbose=2)
         search.fit(x_train, y_train, **fixed_params)
-
-        if self.save_inner_history:
-            self._update_inner_history(search_iter, search)
-
-        return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
+        return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.logs, search.best_estimator_)
 
 
 class KSpaceSeqUDSearch(SeqUDSearch):
@@ -92,8 +82,4 @@ class KSpaceSeqUDSearch(SeqUDSearch):
             self.scoring, refit=self.refit, verbose=2, k=self.k, error_score=self.error_score
         )
         search.fit(x_train, y_train, **fixed_params)
-
-        if self.save_inner_history:
-            self._update_inner_history(search_iter, search)
-
-        return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.best_estimator_)
+        return InnerResult(search.best_index_, search.best_params_, search.best_score_, search.logs, search.best_estimator_)

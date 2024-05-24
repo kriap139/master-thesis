@@ -38,12 +38,6 @@ class OptunaSearch(BaseSearch):
     
     def _create_study(self, search_space: TY_SPACE) -> Study:
         return create_study(sampler=TPESampler(), direction="maximize")
-
-    def __update_inner_history(self, search_iter: int, clf: OptunaSearchCV):
-        df = clf.trials_dataframe()
-        df["outer_iter"] = search_iter
-        head = list(df.columns)
-        save_csv(self._inner_history_fp, head, df.to_dict(orient="records"))
     
     def _encode_search_space(self, search_space: dict) -> dict:
         space = search_space.copy()
@@ -62,9 +56,7 @@ class OptunaSearch(BaseSearch):
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:        
         search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=self.scoring, study=self._create_study(search_space), refit=True)
         results = search.fit(x_train, y_train, **fixed_params)
-        if self.save_inner_history:
-            self.__update_inner_history(search_iter, search)
-        return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.best_estimator_)
+        return InnerResult(results.best_index_, results.best_params_, results.best_score_,  results.trials_dataframe(), results.best_estimator_)
 
 class KSpaceOptunaSearch(OptunaSearch):
     def __init__(
