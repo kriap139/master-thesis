@@ -73,69 +73,78 @@ class BaseSearch:
             return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]", make_add_dirs=False)
         return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]", make_add_dirs=False) 
     
-    def _init_save_paths(self):
+    def _init_save_paths(self, create_dirs=False):
         self._save_dir = self._create_save_dir()
+
         if os.path.exists(self._save_dir):
             old_dir = self._save_dir
             self._save_dir = find_dir_ver(self._save_dir)
             logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")   
 
-        if self._save_dir is None:
-            self._history_fp = None
-            self._inner_history_fp = None
-            self._result_fp = None
-            self._models_dir = None
-        else:
-            self._history_fp = os.path.join(self._save_dir, "history.csv")
-            self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
-            self._result_fp = os.path.join(self._save_dir, "result.json")
-            self._models_dir = os.path.join(self._save_dir, "models")    
-    
-    def init_save(self, search_space: dict, fixed_params: dict):
-        if not self._save:
-            return
+        self._history_fp = os.path.join(self._save_dir, "history.csv")
+        self._inner_history_fp = os.path.join(self._save_dir, "inner_history.csv")
+        self._result_fp = os.path.join(self._save_dir, "result.json")
+        self._models_dir = os.path.join(self._save_dir, "models")  
 
-        self._init_save_paths()
-        os.makedirs(self._save_dir, exist_ok=True)
-        os.makedirs(self._models_dir, exist_ok=True)
+        if create_dirs:
+            os.makedirs(self._save_dir, exist_ok=True)
+            os.makedirs(self._models_dir, exist_ok=True)
 
-        data = load_json(self._result_fp, default={})
+
+    def _get_search_attrs(self, current_attrs: dict = None) -> dict:
+        ignore_attrs =("result")
+        params = self._model.get_params() if hasattr(self._model, "get_params") else None
 
         if hasattr(self._model, "__qualname__"):
             name = self._model.__qualname__
         else:
             name = self._model.__class__.__qualname__
-
-        params = self._model.get_params() if hasattr(self._model, "get_params") else None
-
-        data = dict(
-            info=dict(
-                model=dict(
-                    name=name,
-                    params=params
-                ),
-                space=search_space, 
-                fixed_params=fixed_params,
-                refit=self.refit,
-                dataset=self.train_data.name,
-                n_iter=self.n_iter,
-                n_jobs=self.n_jobs,
-                max_outer_iter=self.max_outer_iter if (self.max_outer_iter != sys.maxsize) else None,
-                cv=CVInfo(self.cv).to_dict() if self.cv is not None else None,
-                inner_cv=CVInfo(self.inner_cv).to_dict() if self.inner_cv is not None else None,
-                method_params=self._get_search_method_info()
-            )
+        
+        info = dict(
+            search_method=self.__class__.__name__,
+            model=dict(
+                name=name,
+                params=params
+            ),
+            dataset=self.train_data.name,
+            method_params={}
         )
 
-        if callable(self.scoring):
-            data["info"]["scoring"] = self.scoring.__name__
-        else:
-            data["info"]["scoring"] = self.scoring
-        save_json(self._result_fp, data)
+        base_attrs = BaseSearch.__init__.__code__.co_names
+        for k, v in self.__dict__.items():
+            if k.startswith("_") or k.startswith("__") or (k in ignore_attrs):
+                continue
+            elif k in ("inner_cv", "cv"):
+                info[k] = CVInfo(v).to_dict() if v is not None else None
+            elif k == "max_outer_iter":
+                info[k] = v if (self.max_outer_iter != sys.maxsize) else None
+            elif k == "search_space": # for compatibility with old format
+                info["space"] = v
+            elif isinstance(v, (pd.DataFrame, Dataset)):
+                logging.debug(f"{self.__class__.__name__}: Attrvalue {v} of type '{type(v)}' skipped for save info!")
+            elif k in base_attrs:
+                info[k] = v if not callable(v) else v.__name__
+            else:
+                info["method_params"][k] = v if not callable(v) else v.__name__
+        
+        if current_attrs is not None:
+            current_attrs["info"] = info
+            return current_attrs
+
+        return dict(info=info)
+                
+    def init_save(self, search_space: dict, fixed_params: dict):
+        if not self._save:
+            return
+        self._init_save_paths(create_dirs=True)
 
         self.history_head = list(chain.from_iterable([
             ("inner_index", ), [name for name, v in search_space.items()], ("train_score", "test_score", "time")
         ]))
+
+        data = load_json(self._result_fp, default={})
+        data = self._get_search_attrs(current_attrs=data)
+        save_json(self._result_fp, data)
         save_csv(self._history_fp, self.history_head)
     
     def _update_info(self, update_keys: dict):

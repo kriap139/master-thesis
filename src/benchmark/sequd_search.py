@@ -19,12 +19,6 @@ class SeqUDSearch(BaseSearch):
         self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
     
-    def _get_search_method_info(self) -> dict:
-        return dict(
-            n_runs_per_stage=self.n_runs_per_stage,
-            max_search_iter=self.max_search_iter
-        )
-    
     def _update_inner_history(self, search_iter: int, clf: SeqUD):
         clf.logs["outer_iter"] = search_iter
         head = list(clf.logs.columns)
@@ -89,13 +83,6 @@ class AdjustedSeqUDSearch(SeqUDSearch):
         elif self.adjust_method == 'exp':
             info = dict(exp_step=self.exp_step)
         return super()._create_save_dir(info)
-    
-    def _get_search_method_info(self) -> dict:
-        info = super()._get_search_method_info()
-        info["adjust_method"] = self.adjust_method
-        info["t"] = self.t
-        info["exp_step"] = self.exp_step
-        return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = AdjustedSequd(
@@ -111,7 +98,6 @@ class AdjustedSeqUDSearch(SeqUDSearch):
 
 
 class KSpaceSeqUDSearch(SeqUDSearch):
-
     def __init__(
             self, 
             model, 
@@ -133,6 +119,8 @@ class KSpaceSeqUDSearch(SeqUDSearch):
         ):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, n_runs_per_stage, max_search_iter, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.k = k
+        self.x_in_search_space = False
+        self.error_score = 'raise'
     
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):
@@ -146,17 +134,11 @@ class KSpaceSeqUDSearch(SeqUDSearch):
         if k_params is not None:
             info['kparams'] = k_params
         return super()._create_save_dir(info)
-    
-    def _get_search_method_info(self) -> dict:
-        info = super()._get_search_method_info()
-        info["k"] = self.k
-        info["x_in_search_space"] = False
-        return info
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = KSpaceSeqUD(
             search_space, self.n_runs_per_stage, self.n_iter, self.max_search_iter, self.n_jobs, self._model, self.cv, 
-            self.scoring, refit=self.refit, verbose=2, k=self.k
+            self.scoring, refit=self.refit, verbose=2, k=self.k, error_score=self.error_score
         )
         search.fit(x_train, y_train, **fixed_params)
 

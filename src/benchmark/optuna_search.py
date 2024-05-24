@@ -87,16 +87,11 @@ class KSpaceOptunaSearch(OptunaSearch):
         super().__init__(model, train_data, test_data, n_iter, n_jobs, cv, inner_cv, scoring, save, save_inner_history, max_outer_iter, refit, add_save_dir_info)
         self.k = k
         self.x_in_search_space = True
+        self.error_score='raise'
 
     def _create_save_dir(self) -> str:
         info = dict(kparams=len(self.k.keys())) if isinstance(self.k, dict) else None
         return super()._create_save_dir(info)
-    
-    def _get_search_method_info(self) -> dict:
-        info = super()._get_search_method_info()
-        info["k"] = self.k
-        info["x_in_search_space"] = self.x_in_search_space
-        return info
     
     def _create_study(self, search_space: TY_SPACE) -> KSpaceStudy:
         return KSpaceStudy.create_study(search_space, self.k, k_space_ver=1)
