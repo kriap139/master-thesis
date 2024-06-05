@@ -36,8 +36,9 @@ class OptunaSearch(BaseSearch):
                 raise ValueError(f"search space contains unsupported type for '{k}': {type(v)}")
         return space
     
-    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:        
-        search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=self.scoring, study=self._create_study(search_space), refit=True)
+    def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        scoring = self.refit if isinstance(self.scoring, (list, tuple)) else self.scoring
+        search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=scoring, study=self._create_study(search_space), refit=True)
         results = search.fit(x_train, y_train, **fixed_params)
         return InnerResult(results.best_index_, results.best_params_, results.best_score_,  results.trials_dataframe(), results.best_estimator_)
 
