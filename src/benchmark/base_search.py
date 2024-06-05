@@ -62,6 +62,9 @@ class BaseSearch:
             self.max_outer_iter = sys.maxsize
         if not self._save:
             self.save_inner_history = False
+            
+        if self._save:
+            self._init_save_paths(create_dirs=False)
     
     def _create_save_dir(self, info: dict = None) -> str:
         if self.add_save_dir_info is not None:
