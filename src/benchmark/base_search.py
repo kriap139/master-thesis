@@ -98,7 +98,7 @@ class BaseSearch:
             os.makedirs(self._models_dir, exist_ok=True)
 
 
-    def _get_search_attrs(self, current_attrs: dict = None) -> dict:
+    def _get_search_attrs(self, search_space: dict, current_attrs: dict = None) -> dict:
         ignore_attrs =("result")
         params = self._model.get_params() if hasattr(self._model, "get_params") else None
 
@@ -113,6 +113,7 @@ class BaseSearch:
                 name=name,
                 params=params
             ),
+            space=search_space, # named space for compatibility with old format!
             dataset=self.train_data.name,
             method_params={}
         )
@@ -125,8 +126,6 @@ class BaseSearch:
                 info[k] = CVInfo(v).to_dict() if v is not None else None
             elif k == "max_outer_iter":
                 info[k] = v if (self.max_outer_iter != sys.maxsize) else None
-            elif k == "search_space": # for compatibility with old format
-                info["space"] = v
             elif isinstance(v, (pd.DataFrame, Dataset)):
                 logging.debug(f"{self.__class__.__name__}: Attrvalue {v} of type '{type(v)}' skipped for save info!")
             elif k in base_attrs:
@@ -135,7 +134,10 @@ class BaseSearch:
                 info["method_params"][k] = v if not callable(v) else v.__name__
         
         if current_attrs is not None:
-            current_attrs["info"] = info
+            if current_attrs.get("info", None) is None:
+                current_attrs["info"] = info
+            else:
+                current_attrs["info"].update(info)
             return current_attrs
 
         return dict(info=info)
@@ -150,7 +152,8 @@ class BaseSearch:
         ]))
 
         data = load_json(self._result_fp, default={})
-        data = self._get_search_attrs(current_attrs=data)
+        data = self._get_search_attrs(search_space, current_attrs=data)
+
         save_json(self._result_fp, data)
         save_csv(self._history_fp, self.history_head)
     
