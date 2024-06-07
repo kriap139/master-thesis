@@ -5,7 +5,7 @@ from numbers import Number
 from abc import ABC, abstractclassmethod
 from Util import Integer, Categorical, Real, TY_SPACE
 from typing import Type
-from Util.maths import try_number
+from Util.maths import try_number, try_int
 
 TY_RETURN = Union[pd.Series, float, int, str]
 TY_X = Union[pd.Series, float, str]
@@ -116,7 +116,8 @@ class KSpaceV3(KSpace):
 def infer_kspace_ver(method: str, default='raise') -> int:
     idx = method.rfind('V')
     if idx == -1:
-        return 1
+        ver = try_int(method)
+        return 1 if type(ver) != int else ver
     
     ver = try_number(name[idx + 1])
     if (not isinstance(ver, int)) and (default == 'raise'):

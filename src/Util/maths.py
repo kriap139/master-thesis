@@ -31,6 +31,7 @@ def map_space(search_space: TY_SPACE, norm_frame: pd.DataFrame) -> pd.DataFrame:
             return _map(norm_frame, y_min=y_l, y_max=y_u)
 
 def try_number(param: str) -> Optional[Union[Number, str]]:
+    param = param.strip()
     if param == "None":
         return None
     try:
@@ -40,6 +41,15 @@ def try_number(param: str) -> Optional[Union[Number, str]]:
             return float(param)
         except ValueError:
             return param
+
+def try_int(param: str) -> Optional[Union[int, str]]:
+    param = param.strip()
+    if param.strip() == "None":
+        return None
+    try:
+        return int(param)
+    except:
+        return param
         
 
         
