@@ -256,8 +256,11 @@ class BaseSearch:
             save_json(self._result_fp, _data, overwrite=True)
     
     def score(self, model, x_test: pd.DataFrame, y_test: pd.DataFrame) -> float:
-        if self.scoring is not None:
+        if (self.scoring is not None) and isinstance(self.scoring, str):
             scorer = get_scorer(self.scoring)
+            return scorer(model, x_test, y_test)
+        elif (self.scoring is not None) and isinstance(self.refit, str):
+            scorer = get_scorer(self.refit)
             return scorer(model, x_test, y_test)
         elif hasattr(model, "score"):
             return model.score(x_test, y_test)
