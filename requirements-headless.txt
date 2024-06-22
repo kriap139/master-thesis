@@ -9,4 +9,5 @@ sigopt
 psutil
 joblib
 liac-arff
+optuna-integration
 sequd @ git+https://github.com/kriap139/SeqUD.git

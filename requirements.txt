@@ -9,6 +9,7 @@ sigopt>=8.8.2
 psutil
 joblib
 liac-arff>=2.5.0
+optuna-integration
 sequd @ git+https://github.com/kriap139/SeqUD.git
 pyunidoe @ git+https://github.com/kriap139/pyunidoe.git
 pyDOE
