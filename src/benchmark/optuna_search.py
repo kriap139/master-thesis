@@ -1,7 +1,7 @@
 from .base_search import BaseSearch, InnerResult
 from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE
 import lightgbm as lgb
-from typing import Callable, Iterable, Dict, Union
+from typing import Callable, Iterable, Dict, Union, Sequence
 from numbers import Number
 import time
 import numpy as np
@@ -37,7 +37,11 @@ class OptunaSearch(BaseSearch):
         return space
     
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        scoring = self.refit if not isinstance(self.scoring, str) else self.scoring
+        if isinstance(self.scoring, Sequence) and (not isinstance(self.scoring, str)):
+            scoring = self.refit
+        else:
+            scoring = self.scoring
+        
         search = OptunaSearchCV(self._model, search_space, n_trials=self.n_iter, n_jobs=self.n_jobs, cv=self.inner_cv, scoring=scoring, study=self._create_study(search_space), refit=True)
         results = search.fit(x_train, y_train, **fixed_params)
         return InnerResult(results.best_index_, results.best_params_, results.best_score_,  results.trials_dataframe(), results.best_estimator_)
