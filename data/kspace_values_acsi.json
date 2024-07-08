@@ -1,20 +1,20 @@
 [
     {
         "k": {
-            "n_estimators": 20,
-            "learning_rate": -20
+            "n_estimators": 0,
+            "learning_rate": 0
         }
     },
     {
         "k": {
-            "n_estimators": 15,
-            "learning_rate": -15
+            "n_estimators": 1,
+            "learning_rate": -1
         }
     },
     {
-        "k":  {
-            "n_estimators": 6,
-            "learning_rate": -6
+        "k": {
+            "n_estimators": -1,
+            "learning_rate": 1
         }
     },
     {
@@ -25,103 +25,14 @@
     },
     {
         "k": {
-            "n_estimators": 1,
-            "learning_rate": -1
+            "n_estimators": 6,
+            "learning_rate": -6
         }
     },
     {
         "k": {
-            "n_estimators": 0,
-            "learning_rate": 0
-        }
-    },
-
-
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": -1
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 1
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 1,
-            "learning_rate": 0
-        }
-    },
-    {
-        "k": {
-            "n_estimators": -1,
-            "learning_rate": 0
-        }
-    },
-    {
-        "k": {
-            "n_estimators": -1,
-            "learning_rate": -1
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 1,
-            "learning_rate": 1
-        }
-    },
-
-
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": -15
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": -3
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": -1
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": 0
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": 1
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": 3
-        }
-    },
-    {
-        "k": {
-            "n_estimators": 0,
-            "learning_rate": 0,
-            "max_depth": 15
+            "n_estimators": 9,
+            "learning_rate": -9
         }
     }
 ]
