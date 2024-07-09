@@ -27,7 +27,7 @@ check_exit() {
 }
 
 # Get the options
-while getopts ":f:i:d:s:m:r:" option; do
+while getopts ":f:i:d:s:m:r:b" option; do
    case $option in
       d) # datasets
          for a in $OPTARG; do datasets+=("$a") ; done
@@ -47,6 +47,9 @@ while getopts ":f:i:d:s:m:r:" option; do
       
       m) # Search Method
          method="$OPTARG";;
+      
+      b) # save best models
+         save_best_models=1;;
 
      \?) # Invalid option
          echo "Error: Invalid option"
@@ -150,6 +153,7 @@ run_search() {
     ${inner_shuffle:+--inner-shuffle}           \
     --inner-random-state $inner_random_state    \
     --dataset "$dataset"                        \
+    ${save_best_models:+--save-best-models}     \
     ${params:+--params "$params"}               \
     ${search_space:+--search-space "$search_space"}              
 }

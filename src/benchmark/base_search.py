@@ -32,7 +32,7 @@ class BaseSearch:
     def __init__(
         self, model, train_data: Dataset, test_data: Dataset = None, n_iter=100, n_jobs=None, cv: TY_CV = None, 
         inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, 
-        add_save_dir_info: dict = None):
+        add_save_dir_info: dict = None, save_best_models=False):
 
         self.train_data = train_data
         self.test_data = test_data
@@ -48,6 +48,7 @@ class BaseSearch:
         self.add_save_dir_info = add_save_dir_info
         self.history_head = None
         self.save_inner_history = save_inner_history
+        self.save_best_models = save_best_models
         self._save = save
 
         self._result_fp = None
@@ -324,7 +325,8 @@ class BaseSearch:
 
             if self._save:
                 self.update_history(result.best_index, result.best_params, result.best_score, acc, end)
-                self.save_model(result.best_model, outer_id=i)
+                if self.save_best_models:
+                    self.save_model(result.best_model, outer_id=i)
                 if self.save_inner_history:
                     self.update_inner_history(outer_iter=i, inner_history=result.inner_history)
 
