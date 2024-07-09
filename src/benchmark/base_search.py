@@ -96,7 +96,8 @@ class BaseSearch:
 
         if create_dirs:
             os.makedirs(self._save_dir, exist_ok=True)
-            os.makedirs(self._models_dir, exist_ok=True)
+            if self.save_best_models:
+                os.makedirs(self._models_dir, exist_ok=True)
 
 
     def _get_search_attrs(self, search_space: dict, current_attrs: dict = None) -> dict:
