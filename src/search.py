@@ -78,7 +78,6 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
 
     parser.add_argument("--inner-n-folds", type=int, default=5)
     parser.add_argument("--inner-shuffle", action='store_true')
-    parser.add_argument("--inner-shuffle", action='store_true')
     parser.add_argument("--inner-random-state", type=int, default=None)
     parser.add_argument("--refit_metric", type=str, default=None)
 
