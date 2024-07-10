@@ -13,9 +13,9 @@ from numbers import Number
 
 class SeqUDSearch(BaseSearch):
     def __init__(self, n_runs_per_stage=20, max_search_iter=100, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n_runs_per_stage = n_runs_per_stage
         self.max_search_iter = max_search_iter
+        self.n_runs_per_stage = n_runs_per_stage
+        super().__init__(*args, **kwargs)
     
     def _encode_search_space(self, search_space: dict) -> dict:
         space = {}
@@ -38,9 +38,9 @@ class SeqUDSearch(BaseSearch):
 
 class KSpaceSeqUDSearch(SeqUDSearch):
     def __init__(self, k=0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = False
+        super().__init__(*args, **kwargs)
         
     def _create_save_dir(self) -> str:
         if isinstance(self.k, Number):

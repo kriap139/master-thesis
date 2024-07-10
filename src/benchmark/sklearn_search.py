@@ -9,8 +9,8 @@ import pandas as pd
 
 class RandomSearch(BaseSearch):
     def __init__(self, verbose=0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.verbose = verbose
+        super().__init__(*args, **kwargs)
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = RandomizedSearchCV(self._model, search_space, n_iter=self.n_iter, scoring=self.scoring, n_jobs=self.n_jobs, cv=self.inner_cv, refit=self.refit, verbose=self.verbose)
@@ -19,8 +19,8 @@ class RandomSearch(BaseSearch):
 
 class GridSearch(BaseSearch):
     def __init__(self, verbose=0, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.verbose = verbose
+        super().__init__(*args, **kwargs)
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         search = GridSearchCV(self._model, search_space, n_jobs=self.n_jobs, scoring=self.scoring, cv=self.inner_cv, refit=self.refit, verbose=self.verbose)

@@ -48,9 +48,9 @@ class OptunaSearch(BaseSearch):
 
 class KSpaceOptunaSearch(OptunaSearch):
     def __init__(self, k:  Union[Number, dict] = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.k = k
         self.x_in_search_space = True
+        super().__init__(*args, **kwargs)
 
     def _create_save_dir(self) -> str:
         info = dict(kparams=len(self.k.keys())) if isinstance(self.k, dict) else None
