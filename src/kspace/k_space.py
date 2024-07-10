@@ -124,7 +124,7 @@ def infer_kspace_ver(method: str, default='raise') -> int:
                 return default
         return ver
     
-    ver = try_number(method[idx + 1])
+    ver = try_number(method[idx + 1:])
     if (not isinstance(ver, int)) and (default == 'raise'):
         raise ValueError(f"Unable to parse kspace version from subclass {method}")
     elif not isinstance(ver, int):
@@ -141,9 +141,9 @@ def get_kspace_ver(kspace_ver: Union[int, str], k_space: TY_SPACE, k:  Union[Num
     import sys
     this_module = sys.modules[__name__]
 
-    cls: KSpace = getattr(this_module, "KSpaceV" + str(k_space_ver), None)
+    cls: KSpace = getattr(this_module, "KSpaceV" + str(kspace_ver), None)
     if cls is None:
-        raise RuntimeError(f"Invalid kspace implementation version: {k_space_ver}")
+        raise RuntimeError(f"Invalid kspace implementation version: {kspace_ver}")
     
     return cls(k_space, k, x_in_search_space)
         
