@@ -117,9 +117,14 @@ def infer_kspace_ver(method: str, default='raise') -> int:
     idx = method.rfind('V')
     if idx == -1:
         ver = try_int(method)
-        return 1 if type(ver) != int else ver
+        if type(ver) != int:
+            if default == 'raise':
+                 raise ValueError(f"Unable to parse kspace version from string: {method}")
+            else:
+                return default
+        return ver
     
-    ver = try_number(name[idx + 1])
+    ver = try_number(method[idx + 1])
     if (not isinstance(ver, int)) and (default == 'raise'):
         raise ValueError(f"Unable to parse kspace version from subclass {method}")
     elif not isinstance(ver, int):

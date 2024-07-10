@@ -8,7 +8,7 @@ import json
 from sequd import SeqUD
 import pandas as pd
 from itertools import chain
-from kspace import KSpaceSeqUD
+from kspace import KSpaceSeqUD, infer_kspace_ver
 from numbers import Number
 
 class SeqUDSearch(BaseSearch):
@@ -40,6 +40,7 @@ class KSpaceSeqUDSearch(SeqUDSearch):
     def __init__(self, k=0, *args, **kwargs):
         self.k = k
         self.x_in_search_space = False
+        self.kspace_ver = infer_kspace_ver(method=self.__class__.__name__)
         super().__init__(*args, **kwargs)
         
     def _create_save_dir(self) -> str:

@@ -16,7 +16,7 @@ from optuna.study import Study, create_study
 from optuna.trial import Trial
 from optuna.distributions import FloatDistribution, IntDistribution, CategoricalDistribution
 from optuna.samplers import TPESampler
-from kspace import KSpaceStudy
+from kspace import KSpaceStudy, infer_kspace_ver
         
 class OptunaSearch(BaseSearch):
     def _create_study(self, search_space: TY_SPACE) -> Study:
@@ -50,6 +50,7 @@ class KSpaceOptunaSearch(OptunaSearch):
     def __init__(self, k:  Union[Number, dict] = None, *args, **kwargs):
         self.k = k
         self.x_in_search_space = True
+        self.kspace_ver = infer_kspace_ver(method=self.__class__.__name__)
         super().__init__(*args, **kwargs)
 
     def _create_save_dir(self) -> str:
