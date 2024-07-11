@@ -41,7 +41,7 @@ def load_data(folder: ResultFolder, data: TY_FOLDERS, skip_unfinished=True):
 
     base_results = get_kspace_base_method_results(folder, data, file_data)
     if base_results is not None and ('result' in base_results):
-        base_test = base_results["result"]["mean_train_acc"]
+        base_test = base_results["result"]["mean_test_acc"]
     else:
         base_test = None
 
@@ -87,7 +87,7 @@ def info_str(folder: ResultFolder, data, is_sub_folder=False, prev_n_k=None) -> 
         return info_str + prefix + f" unfinished"
     
     base_diff = f", base_diff={_base_diff}" if _base_diff is not None else ""
-    result = info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={round(time_)}s, time={BaseSearch.time_to_str(time_)}" 
+    result = info_str + prefix + f"train={train_}, test={test_}{base_diff}, time={BaseSearch.time_to_str(time_)}" 
     return result, (None if n_k < 0 else n_k) 
 
 def print_folder_results(
