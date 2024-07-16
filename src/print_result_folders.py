@@ -191,8 +191,8 @@ def print_untesed_kspace_combos(
 
 
 if __name__ == "__main__":
-    ignore_datasets = ()
-    ignore_methods = ("KSpaceOptunaSearch", )
+    ignore_datasets = ("electricity", "okcupid_stem", "wave_e", "fps", "comet_mc", "delays_zurich", "higgs" , "epsilon" , "rcv1")
+    ignore_methods = ("KSpaceOptunaSearch", "RandomSearch", "GridSearch", "SeqUDSearch")
     ignore_info_filter = lambda info: ( 
         # Ignore initial tuning results where non-kspace parameters where tuned with kspace parameters by mistake!
         info['nparams'] != info['kparams'] if 'kparams' in info else False
