@@ -24,8 +24,14 @@ def get_kspace_base_method_results(folder: ResultFolder, folders: TY_FOLDERS, fi
     if isinstance(results, ResultFolder):
         base_folder = results
     elif isinstance(results, list):
-        results.sort(key=lambda f: f.version)
-        base_folder = results[-1]
+        results.sort(
+            key=lambda f: (
+                f.info["nrepeat"] == folder.info["nrepeat"], 
+                f.info["nparams"] == folder.info["nparams"]
+            ), 
+            reverse=True
+        )
+        base_folder = results[0]
 
     base_results = load_json(os.path.join(base_folder.dir_path, "result.json"))
     return base_results
