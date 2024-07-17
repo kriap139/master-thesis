@@ -33,8 +33,12 @@ def get_kspace_base_method_results(folder: ResultFolder, folders: TY_FOLDERS, fi
             reverse=True
         )
         base_folder = results[0]
-        if base_folder.info["nrepeat"] == folder.info["nrepeat"]:
-            logging.warn(f"Non maching nrepeats for {folder.search_method} (ver {folder.version}): {base_folder.search_method} (ver {base_folder.version})")
+        if base_folder.info["nrepeat"] != folder.info["nrepeat"]:
+            logging.warning(
+                f"Non maching nrepeats ({folder.info["nrepeats"]}) for {folder.search_method}"
+                f" (ver {folder.version}): {base_folder.search_method} (ver {base_folder.version})"
+                f" which have {base_folder.info["nrepeats"]} nrepeats."
+            )
 
     base_results = load_json(os.path.join(base_folder.dir_path, "result.json"))
     return base_results
