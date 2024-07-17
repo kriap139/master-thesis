@@ -11,6 +11,7 @@ import hashlib
 from itertools import chain
 from numbers import Number
 from calc_metrics import ResultFolder, EvalMetrics, load_result_folders, calc_eval_metrics
+import logging
 
 TY_FOLDERS = Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]
 
@@ -26,12 +27,14 @@ def get_kspace_base_method_results(folder: ResultFolder, folders: TY_FOLDERS, fi
     elif isinstance(results, list):
         results.sort(
             key=lambda f: (
-                f.info["nrepeat"] == folder.info["nrepeat"], 
-                f.info["nparams"] == folder.info["nparams"]
+                int(f.info["nrepeat"] == folder.info["nrepeat"]), 
+                int(f.info["nparams"] == folder.info["nparams"])
             ), 
             reverse=True
         )
         base_folder = results[0]
+        if base_folder.info["nrepeat"] == folder.info["nrepeat"]:
+            logging.warn(f"Non maching nrepeats for {folder.search_method} (ver {folder.version}): {base_folder.search_method} (ver {base_folder.version})")
 
     base_results = load_json(os.path.join(base_folder.dir_path, "result.json"))
     return base_results
