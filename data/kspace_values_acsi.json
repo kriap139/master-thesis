@@ -171,5 +171,53 @@
             "max_depth": 2,
             "num_leaves": 0
         }
+    },
+
+
+
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0,
+            "max_depth": 0,
+            "num_leaves": 2,
+            "min_data_in_leaf": 0
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0,
+            "max_depth": 0,
+            "num_leaves": 2,
+            "min_data_in_leaf": -1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0,
+            "max_depth": 0,
+            "num_leaves": 2,
+            "min_data_in_leaf": 1
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0,
+            "max_depth": 0,
+            "num_leaves": 2,
+            "min_data_in_leaf": -2
+        }
+    },
+    {
+        "k": {
+            "n_estimators": 1,
+            "learning_rate": 0,
+            "max_depth": 0,
+            "num_leaves": 2,
+            "min_data_in_leaf": 2
+        }
     }
 ]
