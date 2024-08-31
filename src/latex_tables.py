@@ -1,6 +1,6 @@
 import pandas as pd
-from typing import List, Tuple, Dict, Any, Union, Iterable
-from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders
+from typing import List, Tuple, Dict, Any, Union, Iterable, Optional
+from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check
 from Util import Task, SizeGroup
 import numbers
 from dataclasses import dataclass
@@ -76,7 +76,7 @@ class Latex:
         return s
     
     @classmethod
-    def escapes(cls, s: Union[str, Iterable]) -> Union[str, Iterable]:
+    def escapes(cls, s: Union[str, Iterable[str]]) -> Union[str, list]:
         if type(s) == str:
             return cls.escape(s)
         elif isinstance(s, Iterable):
@@ -123,7 +123,7 @@ class Latex:
     @classmethod
     def cell(cls, v: Any, n_round = None, postfix: str = None) -> str:
         if isinstance(v, numbers.Number):
-            v = str(rounder(v))
+            v = str(cls.rounder(v, n_round))
         else:
             v = cls.escapes(v)
         return v if postfix is None else v + postfix
@@ -151,6 +151,7 @@ class Latex:
         last_row = len(data.index) - 1
         for i, (label, row) in enumerate(data.iterrows()):
             row_data = [cls.cell(cell, n_round, col_cells_postfix[col]) for col, cell in enumerate(row)]
+
             if (i == last_row) and not outer_row_lines:
                 table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
             elif (i == last_row) and outer_row_lines and not row_lines:
@@ -184,6 +185,7 @@ class LatexTable(Latex):
             header += ROW_LINE_NL
         return header + '\n'
     
+    @classmethod
     def create(
         cls,
         data: pd.DataFrame,
@@ -201,6 +203,7 @@ class LatexTable(Latex):
 
         if caption is None:
             caption = str(caption)
+
         n_cols = len(data.columns) if add_row_label is None else len(data.columns) + 1    
         
         header = cls.header(data.columns, bold_header, row_lines, outer_col_lines, add_row_label)
@@ -211,22 +214,22 @@ class LatexTable(Latex):
 
 class LatexMulticolTable(Latex):
 
-    def __init__(self, labels: List[str], sub_labels: List[str], rest_space_idx: int = None):
+    def __init__(self, rest_space_idx: int = None):
         super().__init__()
-        self.labels = labels
-        self.sub_labels = sub_labels
         self.rest_space_idx = rest_space_idx
-        self.encoded_labels = self._encode(labels, sub_labels, rest_space_idx)
         self.data: Dict[str, dict] = {}
         self.col_cells_postfix = {}
 
-    def header(self, labels: List[str], sub_labels: List[str], rest_space_idx: int = None, bold_labels=True, bold_sub_labels=False, row_lines=True, outer_row_lines=True, col_lines=True, outer_col_lines=True) -> str:
+    def header(self, labels: List[str], sub_labels: List[str], bold_labels=True, bold_sub_labels=False, row_lines=True, outer_row_lines=True, col_lines=True, outer_col_lines=True) -> str:
+        labels = self.escapes(labels)
+        sub_labels = self.escapes(sub_labels)
+        
         if bold_labels:
             labels = self.bold(labels)
         if bold_sub_labels:
             sub_labels = self.bold(sub_labels)
 
-        if rest_space_idx is not None:
+        if self.rest_space_idx is not None:
             cline = f"\n{SPACES_L3}\\cline{{{len(sub_labels)}-{len(labels) * len(sub_labels) - len(sub_labels) + 1}}}\n"
         else:
             cline = ROW_LINE_NL
@@ -235,18 +238,18 @@ class LatexMulticolTable(Latex):
         parts = []
 
         for i, label in enumerate(labels):
-            if rest_space_idx is not None and (i == rest_space_idx):
+            if self.rest_space_idx is not None and (i == self.rest_space_idx):
                 parts.append(f"\\multirow{{{len(sub_labels)}}}{{*}}{{{label}}}")
             elif (i == len(labels) - 1):
-                parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{col_format(1, col_lines, False)}}}{{{label}}}")
+                parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{self.col_format(1, col_lines, False)}}}{{{label}}}")
             else:
-                parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{col_format(1, col_lines, False, True)}}}{{{label}}}")
+                parts.append(f"\\multicolumn{{{len(sub_labels)}}}{{{self.col_format(1, col_lines, False, True)}}}{{{label}}}")
         
         label_header = f"{SPACES_L3}\\hline\n" + SPACES_L3 + " & ".join(parts) + f" \\\\{cline}"
         parts.clear()
 
         for i, _ in enumerate(labels):
-            if rest_space_idx is not None and (i == rest_space_idx):
+            if self.rest_space_idx is not None and (i == self.rest_space_idx):
                 parts.append(f"& ")
             else:
                 parts.extend(" & ".join(sub_labels))
@@ -257,16 +260,6 @@ class LatexMulticolTable(Latex):
         
         label_header += SPACES_L3 + "".join(parts) + row_line
         return label_header
-
-    def _encode(self, labels: List[str], sub_labels: List[str], rest_space_idx: int = None) -> List[str]:
-        columns = []
-        for i, label in enumerate(labels):
-            if rest_space_idx is not None and (i == rest_space_idx):
-                columns.append(f"rest_space_{label}")
-            else:
-                for sub_label in sub_labels:
-                    columns.append(f"sublabel_{label}_{sub_label}")
-        return columns
     
     def _encode_label(self, label: str, sub_label: str = None) -> str:
         if sub_label is None:
@@ -274,10 +267,36 @@ class LatexMulticolTable(Latex):
         else:
             return f"sublabel_{label}_{sub_label}"
     
+    def _decode_label(self, label: str) -> Tuple[str, Optional[str]]:
+        if label.startswith("rest_space_"):
+            return label[len("rest_space_"):], None
+        elif label.startswith("sublabel_"):
+            label = label[len("sublabel_"):]
+            
+            label_end = label.find("_")
+            assert label_end != -1
+
+            decoded_label = label[:label_end]
+            decoded_sub_label = label[label_end + 1:]
+            return decoded_label, decoded_sub_label
+    
+    def _decode_labels(self, labels: List[str]) -> Tuple[List[str], List[str]]:
+        _labels = {}
+        _sub_labels = {}
+        for i, label in enumerate(labels):
+            decoded, decoded_sub = self._decode_label(label)
+            if _labels.get(decoded) is None:
+                _labels[decoded] = i
+            if decoded_sub is not None and (_sub_labels.get(decoded_sub) is None):
+                _sub_labels[decoded_sub] = i
+
+        return list(_labels.keys()), list(_sub_labels.keys())
+        
+    
     def add_cell(self, index, label: str, sub_label: str = None, data = None):
         mapped_label = self._encode_label(label, sub_label)
-        if label not in self.data:
-            self.data[mapped_label] = dict(index=data)
+        if mapped_label not in self.data:
+            self.data[mapped_label] = {index: data}
         else:
             self.data[mapped_label][index] = data
     
@@ -290,7 +309,7 @@ class LatexMulticolTable(Latex):
         label: str,
         caption: str = None,
         add_column_labels=True,
-        round: int = None, 
+        n_round: int = None, 
         bold_header=True, 
         bold_sub_header=False,
         row_lines=True, 
@@ -302,18 +321,22 @@ class LatexMulticolTable(Latex):
         if caption is None:
             caption = str(caption)
 
+        data = pd.DataFrame.from_dict(self.data, orient='columns')
+        col_cells_postfix = [self.col_cells_postfix.get(col, "") for col in data.columns]
+
+        labels, sub_labels = self._decode_labels(data.columns)
+        print(labels)
+        print(sub_labels)
+
         header = self.header(
-            self.labels, self.sub_labels, self.rest_space_idx, bold_header, 
+            labels, sub_labels, bold_header, 
             bold_sub_header, row_lines, outer_row_lines, col_lines, outer_col_lines
         )
 
-        data = pd.DataFrame.from_dict(self.data, orient='columns', columns=header)
-        col_cells_postfix = [self.col_cells_postfix.get(col, default="") for col in data.columns]
-
         if row_labels is None:
-            rows = self.tabular_rows(data, round, row_lines, outer_row_lines, False, col_cells_postfix)
+            rows = self.tabular_rows(data, n_round, row_lines, outer_row_lines, False, col_cells_postfix)
         else:
-            rows = self.tabular_rows_with_label_rows(data, len(data.columns), row_labels, round, row_lines, outer_row_lines, outer_col_lines, False, col_cells_postfix)
+            rows = self.tabular_rows_with_label_rows(data, len(data.columns), row_labels, n_round, row_lines, outer_row_lines, outer_col_lines, False, col_cells_postfix)
 
         tabular = self.tabular_skel(header, rows, len(data.columns), col_lines, outer_col_lines)
         table = self.table_skel(tabular, caption, label)
@@ -325,12 +348,14 @@ def create_task_filter_fn(task: Task):
 
 
 def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='test_result_stats') -> str:
-    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
+    data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
 
     labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-    sub_labels = ["mean", "std", "min", "max"]
-    ltx = LatexMulticolTable(labels=labels, sub_labels=sub_labels, rest_space_idx=0)
+    sub_labels = ["std", "min", "max"]
+    ltx = LatexMulticolTable(rest_space_idx=0)
 
     for i, (dataset, results) in enumerate(data.results.items()):
         index = dataset.lower()
@@ -340,8 +365,8 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
         for (method, result) in results.items():
             for sub_label in sub_labels:
                 ltx.add_cell(index, method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
-    
-    return ltx.create(label, None, round=3, row_lines=False, outer_col_lines=False)
+
+    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
 
 def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
     reg = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse)
@@ -351,12 +376,14 @@ def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=
 
 
 def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
-    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
+    data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
 
     labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-    sub_labels = ["Train", "Test"]
-    ltx = LatexMulticolTable(labels=labels, sub_labels=sub_labels, rest_space_idx=0)
+    sub_labels = ["train_acc", "test_acc"]
+    ltx = LatexMulticolTable(rest_space_idx=0)
     
     for i, (dataset, results) in enumerate(data.results.items()):
         index = dataset.lower()
@@ -364,9 +391,11 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
         ltx.add_cell(index, "Dataset", data=dataset.lower())
 
         for (method, result) in results.items():
+            #print(f"{method}: train={result["result"]["mean_train_acc"]}, test={result["result"]["mean_test_acc"]}")
             ltx.add_cell(index, method, "Train", data=result["result"]["mean_train_acc"])
             ltx.add_cell(index, method, "Test", data=result["result"]["mean_test_acc"])
-    return ltx.create(label, None, round=3, row_lines=False, outer_col_lines=False)
+    
+    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
 
 def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
     reg = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse, label='baseline_results_reg_train_test')
@@ -402,7 +431,7 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
 
     labels = list(chain.from_iterable([["Dataset"], pct.columns]))
     sub_labels = ["pct", "stamp"]
-    ltx = LatexMulticolTable(labels=labels, sub_labels=sub_labels, rest_space_idx=0)
+    ltx = LatexMulticolTable(rest_space_idx=0)
     
     for i, (dataset, results) in enumerate(pct.iterrows()):
         index = dataset.lower()
@@ -418,13 +447,15 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
 
 
 
-def create_ns_rank_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='baseline_ns_ranks') -> str:
-    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
+def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, filter_fn=None, sort_reverse=True, label='ns_ranks') -> str:
+    data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
 
     labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
     sub_labels = ["ns", "rank"]
-    ltx = LatexMulticolTable(labels=labels, sub_labels=sub_labels, rest_space_idx=0)
+    ltx = LatexMulticolTable(rest_space_idx=0)
 
     # Sort by columns by thehigest ns!
     # summed = data.normalized_scores.sum
@@ -438,28 +469,25 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, filter_fn=None, sort
             ltx.add_cell(index, method, "ns", data=data.normalized_scores.at[method, dataset])
             ltx.add_cell(index, method, "rank", data=data.mean_ranks.at[dataset, method])
 
-    return  ltx.create(label, None, round=3, row_lines=False, outer_col_lines=False)
-
-def create_ns_rank_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
-    reg = create_ns_rank_table(ignore_datasets, None, sort_fn, sort_reverse, label='baseline_ns_ranks_reg')
-    classif = create_ns_rank_table(ignore_datasets, None, sort_fn, sort_reverse, label='baseline_ns_ranks_cls')
-    return f"{reg}\n\n{classif}"
+    return  ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
 
 
 
 def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='basline_metric') -> str:
-    folders = load_result_folders(ignore_datasets, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
-
-    latex_dict = dict(
-        AS=data.agg_scores.to_dict(),
-        RS=data.rank_scores.to_dict(),
-        NAS=data.nas.to_dict(),
-        NRS=data.nrs.to_dict(),
-        JS=data.js.to_dict()
+    data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
     )
+
+    latex_dict = {
+        'as': data.agg_scores.to_dict(),
+        'rs':data.rank_scores.to_dict(),
+        'nas': data.nas.to_dict(),
+        'nrs': data.nrs.to_dict(),
+        'js': data.js.to_dict()
+    }
     frame = pd.DataFrame.from_dict(latex_dict)
-    return LatexTable.create(frame, label, None, round=3, add_row_label="Dataset", row_lines=False, outer_col_lines=False)
+    return LatexTable.create(frame, label, None, round=4, add_row_label="Dataset", row_lines=False, outer_col_lines=True)
 
 def create_manual_kspace_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='kspace_manual'):
     def load_data(folder: ResultFolder):
@@ -493,7 +521,7 @@ def save_table(table: str):
         f.write(table)
 
 if __name__ == "__main__":
-    ignore_datasets = (Builtin.AIRLINES.name, )
+    ignore_datasets = tuple()
 
     folder_sorter = lambda folder: ( 
         folder.dataset.info().task in (Task.BINARY, Task.MULTICLASS), 
@@ -505,9 +533,10 @@ if __name__ == "__main__":
         folder.search_method
     )
 
-    table = create_time_table(ignore_datasets, folder_sorter, sort_reverse=True)
-    print(table)
-    # save_table(table)
+    #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
+    table = create_ns_rank_table(ignore_datasets, folder_sorter)  #create_time_table(ignore_datasets, folder_sorter, sort_reverse=True)
+    #print(table)
+    save_table(table)
 
 
 

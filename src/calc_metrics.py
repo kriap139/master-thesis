@@ -10,6 +10,8 @@ import pandas as pd
 import hashlib
 from itertools import chain
 from numbers import Number
+from scipy.stats import friedmanchisquare
+
 
 @dataclass
 class ResultFolder:
@@ -153,8 +155,8 @@ def load_result_folders(
             if folder is not None:
                 results[dataset] = {method: [folder]}
             continue
-        else:
-            result = dataset_results.get(method, None)
+        
+        result = dataset_results.get(method, None)
 
         if result is None:
             folder = select_version(new_folder, select_versions=select_versions)
@@ -215,6 +217,7 @@ class EvalMetrics:
     js: pd.DataFrame
     method_names: List[str]
     w_nas: float
+    friedman_stats: Any
 
     def get_method_names(self) -> List[str]:
         names = set()
@@ -236,8 +239,8 @@ class EvalMetrics:
         return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
-def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: List[str] = None, w_nas: float = 0.5) -> EvalMetrics:
-    data = load_result_folders(ignore_datasets, ignore_methods)
+def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) -> EvalMetrics:
+    data = load_result_folders(*load_folder_args, **load_folders_kwargs)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
@@ -245,10 +248,7 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
     datasets_max_acc: [str, float] = {dataset: 0 for dataset in data.keys()}
     dataset_methods_names: Dict[str, list] = {}
 
-    D_n = len(data)
     methods_names = []
-
-
     printed_newline = False
     for dataset, methods in data.items():
         for (method, folder) in methods.items():
@@ -285,6 +285,8 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
     if printed_newline:
         print()
 
+    friedman_subscores = {m: [] for m in methods_names}
+
     for dataset, methods in results.items():
         if len(methods) < len(methods_names):
             missing = set(methods_names) - set(methods.keys())
@@ -295,6 +297,10 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
             max_method = result["result"]["max_test_acc"]
             ns = max_method / max_dataset
             normalized_scores[dataset][method] = ns
+
+            mns = result["result"]["mean_test_acc"] / max_dataset
+            subset_score = w_nas * ns + (1 - w_nas) *  mns
+            friedman_subscores[method].append(subset_score)
     
     mean_frame = pd.DataFrame.from_dict(mean_accs, orient='index')
     mean_ranks = mean_frame.rank(axis=1)
@@ -307,19 +313,22 @@ def calc_eval_metrics(ignore_datasets: List[Builtin] = None, ignore_methods: Lis
     agg_scores = norm_frame.sum(axis=1)
     rank_scores = mean_ranks.sum(axis=0)
 
-    D_n = len(data)
-    N = len(methods_names)
-    nas = agg_scores / D_n
-    nrs = rs_min / (D_n * N)
+    d_n = len(data)
+    n = len(methods_names)
+
+    nas = agg_scores / d_n
+    nrs = rank_scores / (d_n * n)
 
     js = w_nas * nas + (1 - w_nas) * nrs
+
+    friedman_stats = friedmanchisquare(*friedman_subscores.values())
 
     return EvalMetrics(
         data,
         results,
         mean_frame, mean_ranks, max_frame, max_ranks,
         norm_frame, agg_scores, rank_scores,
-        nas, nrs, js, methods_names, w_nas
+        nas, nrs, js, methods_names, w_nas, friedman_stats
     )
 
 def time_frame(data: EvalMetrics) -> pd.DataFrame:
@@ -348,6 +357,17 @@ def time_frame_pct(data: EvalMetrics) -> pd.DataFrame:
 def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
+
+
+def friedman_check(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, confidence: float = 0.05):
+    friedman = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, sort_fn=sort_fn, reverse=sort_reverse, print_results=False
+    ).friedman_stats
+
+    if friedman.pvalue < confidence:
+        print("There is a statisitically significant difference between the tested algorithms.")
+    else:
+        print("There isn't a statisitically significant difference between the tested algorithms.")
 
     
 
