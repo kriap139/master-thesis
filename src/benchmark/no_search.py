@@ -9,7 +9,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.base import clone
 
 class NOSearch(BaseSearch):
-    def __init__(self, verbose=0, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
