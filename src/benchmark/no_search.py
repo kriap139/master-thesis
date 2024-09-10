@@ -28,6 +28,6 @@ class NOSearch(BaseSearch):
         model = clone(self._model).fit(x_train, y_train, **fixed_params)
 
         params = model.get_params()
-        best_params = {k:v for k,v in params if k in search_space}
+        best_params = {k:v for k,v in params if k in search_space.items()}
 
         return InnerResult(0, best_params, result.mean(), pd.DataFrame(), model)
