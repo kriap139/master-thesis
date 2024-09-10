@@ -15,4 +15,8 @@ class NOSearch(BaseSearch):
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
         result = cross_val_score(self._model, x_train, y_train, n_jobs=self.n_jobs, scoring=self.scoring, cv=self.inner_cv, params=fixed_params)
         model = clone(self._model).fit(x_train, y_train, **fixed_params)
-        return InnerResult(0, self._model.get_params(), result.mean(), pd.DataFrame(), model)
+
+        params = model.get_params()
+        best_params = {k:v for k,v in params if k in search_space}
+
+        return InnerResult(0, best_params, result.mean(), pd.DataFrame(), model)
