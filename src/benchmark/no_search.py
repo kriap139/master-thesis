@@ -1,7 +1,7 @@
 from .base_search import BaseSearch, InnerResult
 from Util import Dataset, TY_CV, json_to_str, save_csv
 import lightgbm as lgb
-from typing import Callable
+from typing import Callable, Sequence
 import time
 import numpy as np
 import pandas as pd
@@ -19,11 +19,17 @@ class NOSearch(BaseSearch):
         # TODO: Fix this!
 
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
+        # Multi metric not supported bt cross_val_score!
+        if isinstance(self.scoring, Sequence) and (not isinstance(self.scoring, str)):
+            scoring = self.refit
+        else:
+            scoring = self.scoring
+        
         # needed for compatibility with older scikit learn version on slurm cluster!
         if self.useFitParamsParameter: 
-            result = cross_val_score(self._model, x_train, y_train, n_jobs=self.n_jobs, scoring=self.scoring, cv=self.inner_cv, fit_params=fixed_params)
+            result = cross_val_score(self._model, x_train, y_train, n_jobs=self.n_jobs, scoring=scoring, cv=self.inner_cv, fit_params=fixed_params)
         else:
-            result = cross_val_score(self._model, x_train, y_train, n_jobs=self.n_jobs, scoring=self.scoring, cv=self.inner_cv, params=fixed_params)
+            result = cross_val_score(self._model, x_train, y_train, n_jobs=self.n_jobs, scoring=scoring, cv=self.inner_cv, params=fixed_params)
         
         model = clone(self._model).fit(x_train, y_train, **fixed_params)
 
