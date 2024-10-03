@@ -23,20 +23,33 @@ ROW_LINE_NL = f"\n{SPACES_L3}{ROW_LINE}"
 
 
 class Latex:
-    ESCAPES = ["_", "%"]
+    ESCAPES = ["_", "%", "&"]
 
     @classmethod
-    def table_skel(cls, tabular: str, caption: str, label: str) -> str:
-        return (
-            "\\begin{table}[H]\n"
+    def table_skel(cls, tabular: str, caption: str, label: str, vertical=False) -> str:
+        resize_to = "\\linewidth" if vertical else "\\textwidth"
+
+        table = (
+            f"\\begin{{table}}[H]\n"
             f"{SPACES_L1}\\centering\n"
-            f"{SPACES_L1}\\resizebox{{\\textwidth}}{{!}}{{\n"
+            f"{SPACES_L1}\\resizebox{{{resize_to}}}{{!}}{{\n"
             f"{tabular}\n"
             f"{SPACES_L1}}}\n"
             f"{SPACES_L1}\\caption{{{caption}}}\n"
             f"{SPACES_L1}\\label{{tab:{label}}}\n"
             f"\\end{{table}}"
         ) 
+
+        if vertical:
+            table = (
+                f"\\begin{{landscape}}\n" # requires \usepackage{lscape}
+                f"\\vspace*{{\\fill}}"
+                f"{table}"
+                f"\\vspace*{{\\fill}}"
+                f"\\end{{landscape}}\n"
+            )
+
+        return table
 
     @classmethod
     def col_format(cls, n_cols: int, col_lines=True, outer_col_lines=True, multicol_header=False) -> str:
@@ -96,6 +109,13 @@ class Latex:
     @classmethod
     def tabular_rows_with_label_rows(cls, data: pd.DataFrame, n_cols: int, label_rows: Iterable[RowLabel], n_round: int = None, row_lines=True, outer_row_lines=True, outer_col_lines=False, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
         rows = []
+
+        if len(label_rows) and (label_rows[0].start_idx != 0):
+            subset = data.iloc[0:label_rows[0].start_idx, :]
+            rows.extend(
+                cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels, col_cells_postfix)
+            )
+
         for lr in label_rows:
             if lr.end_idx is not None:
                 rows.append(cls.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
@@ -187,19 +207,19 @@ class LatexTable(Latex):
     
     @classmethod
     def create(
-        cls,
-        data: pd.DataFrame,
-        label: str,
-        caption: str = None,
+        cls, 
+        data: pd.DataFrame, 
+        label: str, 
+        caption: str = None, 
         add_column_labels=True, 
-        add_row_label: str = None,
+        add_row_label: str = None, 
         round: int = None, 
         bold_header=True, 
         row_lines=True, 
-        outer_row_lines=True,
-        col_lines=True,
+        outer_row_lines=True, 
+        col_lines=True, 
         outer_col_lines=True, 
-        col_cells_postfix: Union[str, List[str]] = None) -> str:
+        col_cells_postfix: Union[str, List[str]] = None) -> str: 
 
         if caption is None:
             caption = str(caption)
@@ -316,7 +336,8 @@ class LatexMulticolTable(Latex):
         outer_row_lines=True,
         col_lines=True,
         outer_col_lines=True,
-        row_labels: Iterable[RowLabel] = None) -> str:
+        row_labels: Iterable[RowLabel] = None,
+        vertical=False) -> str:
 
         if caption is None:
             caption = str(caption)
@@ -339,7 +360,7 @@ class LatexMulticolTable(Latex):
             rows = self.tabular_rows_with_label_rows(data, len(data.columns), row_labels, n_round, row_lines, outer_row_lines, outer_col_lines, False, col_cells_postfix)
 
         tabular = self.tabular_skel(header, rows, len(data.columns), col_lines, outer_col_lines)
-        table = self.table_skel(tabular, caption, label)
+        table = self.table_skel(tabular, caption, label, vertical)
         return table
 
 def create_task_filter_fn(task: Task):
@@ -348,25 +369,41 @@ def create_task_filter_fn(task: Task):
 
 
 def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='test_result_stats') -> str:
-    data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+    reg_data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, 
+        filter_fn=create_task_filter_fn(Task.REGRESSION), sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-
-    labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-    sub_labels = ["std", "min", "max"]
+    cls_data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, 
+        filter_fn=create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
+    
     ltx = LatexMulticolTable(rest_space_idx=0)
+    sub_labels = ["mean", "std", "min", "max"]
+    row_labels = []
+    
+    row_start = 0
+    n_rows = 0
+    for domain, data in dict(Classification=cls_data, regression=reg_data).items():
+        labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
 
-    for i, (dataset, results) in enumerate(data.results.items()):
-        index = dataset.lower()
-        # FIXME: Use index instead of own column as in normal table!
-        ltx.add_cell(index, "Dataset", data=dataset.lower())
+        for i, (dataset, results) in enumerate(data.results.items()):
+            index = dataset.lower()
+            # FIXME: Use index instead of own column as in normal table!
+            ltx.add_cell(index, "Dataset", data=dataset.lower())
 
-        for (method, result) in results.items():
-            for sub_label in sub_labels:
-                ltx.add_cell(index, method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
-
-    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
+            for (method, result) in results.items():
+                for sub_label in sub_labels:
+                    ltx.add_cell(index, method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
+            n_row += 1
+        
+        row_start += max(0, n_rows - 1)
+        if domain == "regression":
+            row_labels.append(RowLabel(row_start, domain, False, None))
+    
+    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False, row_labels=row_labels, vertical=True)
 
 def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
     reg = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse)
@@ -534,7 +571,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
-    table = create_ns_rank_table(ignore_datasets, folder_sorter)  #create_time_table(ignore_datasets, folder_sorter, sort_reverse=True)
+    table = create_test_results_stats_table(ignore_datasets, sort_fn=folder_sorter)
     #print(table)
     save_table(table)
 
