@@ -35,13 +35,14 @@ class Task(Flag):
     REGRESSION = auto()
 
 class DatasetInfo:
-    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup, mod=None, force_no_train_test=False):
+    def __init__(self, name: str, label_column: Union[str, int], task: Task, size_group: SizeGroup, mod=None, force_no_train_test=False, base_name: str = None):
         self.name = name
         self.label_column = label_column
         self.task = task
         self.size_group = size_group
         self.mod = mod
         self.force_no_train_test = force_no_train_test
+        self.base_name = base_name
 
 class MetaEnum(EnumMeta):
     def __contains__(cls, item):
@@ -64,6 +65,8 @@ class Builtin(Enum, metaclass=MetaEnum):
     EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)                               #
     ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
     KDD1998 = DatasetInfo("kdd1998", "TARGET_B", Task.BINARY, SizeGroup.MODERATE)
+    KDD1998_ALLCAT = DatasetInfo("kdd1998_allcat", "TARGET_B", Task.BINARY, SizeGroup.MODERATE)
+    KDD1998_NONUM = DatasetInfo("kdd1998_nonum", "TARGET_B", Task.BINARY, SizeGroup.SMALL)
 
     EL_NINO = DatasetInfo("el_nino", "ss_temp", Task.REGRESSION, SizeGroup.SMALL)                       
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
@@ -164,13 +167,16 @@ class CVInfo(dict):
 class Dataset(DatasetInfo):
     def __init__(self, d: Union[Builtin, DatasetInfo, str], is_test=False, force_no_train_test=False):
         if isinstance(d, Builtin):
-            super().__init__(d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod)
+            super().__init__(d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod, d.info().base_name)
         elif isinstance(d, DatasetInfo):
-            super().__init__(d.name, d.label_column, d.task, d.size_group, d.mod)
+            super().__init__(d.name, d.label_column, d.task, d.size_group, d.mod, d.base_name)
         elif isinstance(d, str) and d.__contains__("."):
             super().__init__(d, None, None, None, mod=True)
         else:
             raise RuntimeError(f"Dataset info is of invalid type ({type(d)}): {d}")
+        
+        if self.base_name is None:
+            self.base_name = self.name
         
         self.x = None
         self.y = None
@@ -187,7 +193,7 @@ class Dataset(DatasetInfo):
             self.load()
 
         self.__set_dataset_paths()
-    
+
     @classmethod
     def splitext(cls, fn: str) -> Tuple[str, str]:
         parts = fn.split('.')
@@ -208,28 +214,28 @@ class Dataset(DatasetInfo):
         return Builtin[self.name.upper()]
 
     def get_dir(self) -> str:
-        path = data_dir(f"datasets/{self.name}", make_add_dirs=self.mod)
+        path = data_dir(f"datasets/{self.base_name}", make_add_dirs=self.mod)
         if not os.path.exists(path):
             raise RuntimeError(f"Dataset path dosen't exist: {path}")
         return path
     
     def __set_dataset_paths(self):
-        path = self.get_dir()
         if self.mod is not None:
             return
 
+        path = self.get_dir()
         fns, exts = zip(*[self.splitext(f) for f in os.listdir(path)])
         
         try:
             if self.force_no_train_test:
                 raise ValueError(f"train test datasets is not accepted")
 
-            train_idx = fns.index(f"{self.name}_train")
-            test_idx = fns.index(f"{self.name}_test")
+            train_idx = fns.index(f"{self.base_name}_train")
+            test_idx = fns.index(f"{self.base_name}_test")
             self.test_path = os.path.join(path, f"{fns[test_idx]}{exts[test_idx]}")
         except:
             try: 
-                train_idx = fns.index(self.name)
+                train_idx = fns.index(self.base_name)
                 test_idx = None
             except:
                 raise RuntimeError(f"Dataset files not present({path}): {fns}")
@@ -237,10 +243,10 @@ class Dataset(DatasetInfo):
         self.train_path = os.path.join(path, f"{fns[train_idx]}{exts[train_idx]}")
 
         if not os.path.exists(self.train_path):
-            raise RuntimeError(f"Dataset {self.name} not found in data folder: {self.train_path}")
+            raise RuntimeError(f"Dataset {self.base_name} not found in data folder: {self.train_path}")
 
         if (self.test_path is not None) and (not os.path.exists(self.test_path)):
-            raise RuntimeError(f"Test data for dataset '{self.name}' not found in data folder: {self.test_path}")
+            raise RuntimeError(f"Test data for dataset '{self.base_name}' not found in data folder: {self.test_path}")
     
     def has_test_set(self) -> bool:
         return self.test_path is not None
@@ -253,7 +259,7 @@ class Dataset(DatasetInfo):
         info = CVInfo(cv)
         path = info.path(self.get_dir())
         if not os.path.exists(path):
-            raise RuntimeError(f"No {str(info)} saved folds data found for dataset {self.name}")
+            raise RuntimeError(f"No {str(info)} saved folds data found for dataset {self.base_name}")
 
         data = load_json(path)
         folds = data["folds"]
@@ -355,7 +361,15 @@ class Dataset(DatasetInfo):
         data = self.__load()
         if data is None:
             return self
-        elif isinstance(data, tuple):
+        
+        if self.name == "kdd1998_nonum":
+            data = data.select_dtypes(exclude=["float64"])
+        elif self.name == "kdd1998_allcat":
+            numeric = data.select_dtypes('float64').columns.tolist()
+            for col in numeric:
+                data[col] = data[col].astype('category')
+        
+        if isinstance(data, tuple):
             self.x, self.y = data
             shape = (self.x.shape[0], self.x.shape[1] + 1)
         else:
@@ -423,10 +437,10 @@ class Dataset(DatasetInfo):
             x_train.insert(self.label_column, self.label_column, y_train)
             x_test.insert(self.label_column, self.label_column, y_test)
 
-        path = data_dir(f"datasets/{self.name}")
+        path = data_dir(f"datasets/{self.base_name}")
         fn, ext = os.path.splitext(os.path.basename(path))
-        train_path = os.path.join(path, f"{self.name}_train{ext}")
-        test_path = os.path.join(path, f"{self.name}_test{ext}")
+        train_path = os.path.join(path, f"{self.base_name}_train{ext}")
+        test_path = os.path.join(path, f"{self.base_name}_test{ext}")
 
         x_train.to_csv(train_path, index=False, index_label=False, header=False)
         x_test.to_csv(test_path, index=False, index_label=False, header=False)
