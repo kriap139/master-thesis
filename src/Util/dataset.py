@@ -182,7 +182,7 @@ class Dataset(DatasetInfo):
         self.y = None
         self.cat_features: list = []
         self.is_test = is_test
-        self.force_no_train_test |= force_no_train_test
+        self.force_no_train_test = force_no_train_test
 
         self.test_path = None
         self.train_path = None
