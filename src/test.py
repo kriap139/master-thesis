@@ -236,8 +236,8 @@ def print_basic_test_results(descriptions: dict):
 
 if "__main__" == __name__:
     # Args method is not Used in this script!
-    args = cli()
-    datasets = [args.dataset] if not isinstance(args.dataset, Iterable) else args.dataset
+    #args = cli()
+    #datasets = [args.dataset] if not isinstance(args.dataset, Iterable) else args.dataset
 
     tests = [
         basic_split_test, 
@@ -258,8 +258,13 @@ if "__main__" == __name__:
     #run_basic_tests(tests, datasets, args, save=True)
     #print_basic_test_results(descriptions)
 
-    tuner = search(args)
+    #tuner = search(args)
     #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
+
+    dataset = Dataset(Builtin.KDD1998).load_frame()
+    print(dataset.info())
+
+
 
 
 
