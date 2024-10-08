@@ -45,13 +45,16 @@ class Latex:
         col_ordering: dict[str, str] = None, 
         row_ordering: str = None, 
         mark_best_in_row=None, 
-        mark_best_in_column=None):
+        mark_best_in_column=None,
+        exclude_marking_columns: list = None):
 
         self.post_process_table = {row: dict() for row in data.index}
 
         if col_cells_postfix is None:
             col_cells_postfix = {col: "" for col in data.columns}
-        
+        if exclude_marking_columns is None:
+            exclude_marking_columns = []
+
         if mark_best_in_row is not None:
             mark_best_in_row = getattr(self, mark_best_in_row, None)
         if mark_best_in_column is not None:
@@ -63,6 +66,11 @@ class Latex:
 
         for row in data.index:
             for col, postfix in col_cells_postfix.items():
+                
+                if col in exclude_marking_columns:
+                    self.post_process_table[row][col] = postfix
+                    continue
+
                 if callable(mark_best_in_row) and (best_by_row[row] == col) and callable(mark_best_in_column) and (best_by_col[col] == row):
                     self.post_process_table[row][col] = lambda best: mark_best_in_column(mark_best_in_row(best + postfix))
                 elif callable(mark_best_in_row) and (best_by_row[row] == col):
@@ -455,11 +463,7 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
         w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-
-    labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-    sub_labels = ["train_acc", "test_acc"]
     ltx = LatexMulticolTable(rest_space_idx=0)
-    
     for i, (dataset, results) in enumerate(data.results.items()):
         index = dataset.lower()
         # FIXME: Use index instead of own column as in normal table!
@@ -467,8 +471,8 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
 
         for (method, result) in results.items():
             #print(f"{method}: train={result["result"]["mean_train_acc"]}, test={result["result"]["mean_test_acc"]}")
-            ltx.add_cell(index, method, "Train", data=result["result"]["mean_train_acc"])
-            ltx.add_cell(index, method, "Test", data=result["result"]["mean_test_acc"])
+            ltx.add_cell(index, method, "train_acc", data=result["result"]["mean_train_acc"])
+            ltx.add_cell(index, method, "test_acc", data=result["result"]["mean_test_acc"])
     
     return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
 
@@ -480,16 +484,13 @@ def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, so
 def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
     folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
     data = calc_eval_metrics(folders)
-    pct = time_frame_pct(data)
     stamps = time_frame_stamps(data)
 
-    mins = pct.min().sort_values()
-    pct = pct[mins.index]
-    stamps = stamps[mins.index]
+    #mins = pct.min().sort_values()
+    #pct = pct[mins.index]
+    #stamps = stamps[mins.index]
 
     delta_t = "$\\delta t$"
-    labels = list(chain.from_iterable([["Dataset"], pct.columns]))
-
     ltx = LatexMulticolTable(rest_space_idx=0)
     
     for i, (dataset, results) in enumerate(pct.iterrows()):
@@ -500,7 +501,6 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
         for (method, pct) in results.items():
              ltx.add_cell(index, method, delta_t, data=pct)
              ltx.add_cell(index, method, "time", data=stamps.at[dataset, method])
-             ltx.add_col_cells_postfix('s', method, delta_t)
         
     return ltx.create(label, None, round=0, row_lines=False, outer_col_lines=False)
 
@@ -511,14 +511,8 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, filter
         w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-
-    labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-    sub_labels = ["ns", "rank"]
     ltx = LatexMulticolTable(rest_space_idx=0)
 
-    # Sort by columns by thehigest ns!
-    # summed = data.normalized_scores.sum
-    
     for i, (dataset, results) in enumerate(data.results.items()):
         index = dataset.lower()
         # FIXME: Use index instead of own column as in normal table!
@@ -529,8 +523,6 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, filter
             ltx.add_cell(index, method, "rank", data=data.mean_ranks.at[dataset, method])
 
     return  ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
-
-
 
 def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='basline_metric') -> str:
     data = calc_eval_metrics(
