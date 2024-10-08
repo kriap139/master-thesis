@@ -25,6 +25,53 @@ ROW_LINE_NL = f"\n{SPACES_L3}{ROW_LINE}"
 class Latex:
     ESCAPES = ["_", "%", "&"]
 
+    def __init__(self):
+        self.post_process_table = None
+    
+    def apply_cell_post_processing(self, row: int, col: int, data: str) -> str:
+        if self.post_process_table is None:
+            return data
+
+        post = self.post_process_table[row][col]
+        if isinstance(post, str):
+            return data + post
+        elif callable(post):
+            return post(data)
+        return data
+    
+    def create_post_process_table(self, 
+        data: pd.DataFrame, 
+        col_cells_postfix: dict = None, 
+        col_ordering: dict[str, str] = None, 
+        row_ordering: str = None, 
+        mark_best_in_row=None, 
+        mark_best_in_column=None):
+
+        self.post_process_table = {row: dict() for row in data.index}
+
+        if col_cells_postfix is None:
+            col_cells_postfix = {col: "" for col in data.columns}
+        
+        if mark_best_in_row is not None:
+            mark_best_in_row = getattr(self, mark_best_in_row, None)
+        if mark_best_in_column is not None:
+            mark_best_in_column = getattr(self, mark_best_in_row, None)
+
+        # ascending -> small to big, escending -> big to small
+        best_by_row = data.idxmin(axis=0) if row_ordering == 'acending' else data.idxmax(axis=0)
+        best_by_col = data.idxmin(axis=1) if row_ordering == 'acending' else data.idxmax(axis=1)
+
+        for row in data.index:
+            for col, postfix in col_cells_postfix.items():
+                if callable(mark_best_in_row) and (best_by_row[row] == col) and callable(mark_best_in_column) and (best_by_col[col] == row):
+                    self.post_process_table[row][col] = lambda best: mark_best_in_column(mark_best_in_row(best + postfix))
+                elif callable(mark_best_in_row) and (best_by_row[row] == col):
+                    self.post_process_table[row][col] = lambda best: mark_best_in_row(best + postfix)
+                elif callable(mark_best_in_column) and best_by_col[col] == row:
+                    self.post_process_table[row][col] = lambda best: mark_best_in_column(best + postfix)
+                else:
+                    self.post_process_table[row][col] = postfix
+
     @classmethod
     def table_skel(cls, tabular: str, caption: str, label: str, vertical=False) -> str:
         resize_to = "\\linewidth" if vertical else "\\textwidth"
@@ -75,12 +122,20 @@ class Latex:
         )
     
     @classmethod
-    def bold(cls, s: Union[str, Iterable], default=None) -> Union[str, Iterable[str]]:
+    def bold(cls, s: Union[str, Iterable]) -> Union[str, Iterable[str]]:
         if type(s) == str:
             return f"\\textbf{{{s}}}"
         elif isinstance(s, Iterable):
             return [f"\\textbf{{{label}}}" for label in s]
-        return default
+        return s
+    
+    @classmethod
+    def underline(cls, s: Union[str, Iterable]) -> Union[str, Iterable[str]]:
+        if type(s) == str:
+            return f"\\textbf{{{s}}}"
+        elif isinstance(s, Iterable):
+            return [f"\\textbf{{{label}}}" for label in s]
+        return s
     
     @classmethod
     def escape(cls, s: str) -> str:
@@ -106,14 +161,13 @@ class Latex:
             label = self.bold(label)
         return f"{row_line_top}{SPACES_L3}\\multicolumn{{{n_cols}}}{{{col_fmt}}}{{{label}}} \\\\ {row_line_bottom}"
     
-    @classmethod
-    def tabular_rows_with_label_rows(cls, data: pd.DataFrame, n_cols: int, label_rows: Iterable[RowLabel], n_round: int = None, row_lines=True, outer_row_lines=True, outer_col_lines=False, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
+    def tabular_rows_with_label_rows(self, data: pd.DataFrame, n_cols: int, label_rows: Iterable[RowLabel], n_round: int = None, row_lines=True, outer_row_lines=True, outer_col_lines=False, add_row_labels=False) -> List[str]:
         rows = []
 
         if len(label_rows) and (label_rows[0].start_idx != 0):
             subset = data.iloc[0:label_rows[0].start_idx, :]
             rows.extend(
-                cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels, col_cells_postfix)
+                cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
             )
 
         for lr in label_rows:
@@ -121,13 +175,13 @@ class Latex:
                 rows.append(cls.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
                 subset = data.iloc[lr.start_idx:lr.end_idx, :]
                 rows.extend(
-                    cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels, col_cells_postfix)
+                    cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
                 )
             else:
                 rows.append(cls.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
                 subset = data.iloc[lr.start_idx:, :]
                 rows.extend(
-                    cls.tabular_rows(subset, n_round, row_lines, outer_row_lines, add_row_labels, col_cells_postfix)
+                    cls.tabular_rows(subset, n_round, row_lines, outer_row_lines, add_row_labels)
                 )
         return rows
     
@@ -140,37 +194,25 @@ class Latex:
         else:
             return round(v, n_round)
     
-    @classmethod
-    def cell(cls, v: Any, n_round = None, postfix: str = None) -> str:
+    def cell(self, row, col, v: Any, n_round = None) -> str:
         if isinstance(v, numbers.Number):
             v = str(cls.rounder(v, n_round))
         else:
             v = cls.escapes(v)
-        return v if postfix is None else v + postfix
+        return self.apply_cell_post_processing(row, col, v)
     
-    @classmethod
-    def tabular_rows(cls, data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False, col_cells_postfix: Union[str, List[str]] = None) -> List[str]:
+    def tabular_rows(self, data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False) -> List[str]:
         table_rows = []
         row_line = ROW_LINE_NL if row_lines else ""
 
-        if col_cells_postfix is not None:
-            col_cells_postfix = cls.escapes(col_cells_postfix)
-        
         if add_row_labels:
             row_labels = [f"{cls.escapes(label)} & " for label in data.index]
         else:
             row_labels = ["" for _ in data.index]
-        
-        if type(col_cells_postfix) == str:
-            col_cells_postfix = [col_cells_postfix for _ in data.columns]
-        elif type(col_cells_postfix) == list:
-            assert len(col_cells_postfix) == len(data.columns)
-        else:
-            col_cells_postfix = ["" for _ in data.columns]
 
         last_row = len(data.index) - 1
-        for i, (label, row) in enumerate(data.iterrows()):
-            row_data = [cls.cell(cell, n_round, col_cells_postfix[col]) for col, cell in enumerate(row)]
+        for i, (index, row) in enumerate(data.iterrows()):
+            row_data = [cls.cell(index, col, cell, n_round) for col, cell in enumerate(row)]
 
             if (i == last_row) and not outer_row_lines:
                 table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
@@ -184,6 +226,9 @@ class Latex:
 
 
 class LatexTable(Latex):
+    def __init__(self):
+        super().__init__()
+
     @classmethod
     def header(self, column_labels: List[str], bold=True, row_lines=True, outer_row_lines=True, add_row_label: str = None):
         if bold:
@@ -218,8 +263,7 @@ class LatexTable(Latex):
         row_lines=True, 
         outer_row_lines=True, 
         col_lines=True, 
-        outer_col_lines=True, 
-        col_cells_postfix: Union[str, List[str]] = None) -> str: 
+        outer_col_lines=True) -> str: 
 
         if caption is None:
             caption = str(caption)
@@ -227,7 +271,7 @@ class LatexTable(Latex):
         n_cols = len(data.columns) if add_row_label is None else len(data.columns) + 1    
         
         header = cls.header(data.columns, bold_header, row_lines, outer_col_lines, add_row_label)
-        rows = cls.tabular_rows(data, round, row_lines, outer_row_lines, add_row_label is not None, col_cells_postfix)
+        rows = cls.tabular_rows(data, round, row_lines, outer_row_lines, add_row_label is not None)
         tabular = cls.tabular_skel(header, rows, n_cols, col_lines, outer_col_lines)
         table = cls.table_skel(tabular, caption, label)
         return table
@@ -238,7 +282,6 @@ class LatexMulticolTable(Latex):
         super().__init__()
         self.rest_space_idx = rest_space_idx
         self.data: Dict[str, dict] = {}
-        self.col_cells_postfix = {}
 
     def header(self, labels: List[str], sub_labels: List[str], bold_labels=True, bold_sub_labels=False, row_lines=True, outer_row_lines=True, col_lines=True, outer_col_lines=True) -> str:
         labels = self.escapes(labels)
@@ -320,10 +363,6 @@ class LatexMulticolTable(Latex):
         else:
             self.data[mapped_label][index] = data
     
-    def add_col_cells_postfix(self, postfix, label: str, sub_label: str = None):
-        mapped_label = self._encode_label(label, sub_label)
-        self.col_cells_postfix[mapped_label] = postfix
-    
     def create(
         self,
         label: str,
@@ -343,7 +382,6 @@ class LatexMulticolTable(Latex):
             caption = str(caption)
 
         data = pd.DataFrame.from_dict(self.data, orient='columns')
-        col_cells_postfix = [self.col_cells_postfix.get(col, "") for col in data.columns]
 
         labels, sub_labels = self._decode_labels(data.columns)
         print(labels)
@@ -355,9 +393,9 @@ class LatexMulticolTable(Latex):
         )
 
         if row_labels is None:
-            rows = self.tabular_rows(data, n_round, row_lines, outer_row_lines, False, col_cells_postfix)
+            rows = self.tabular_rows(data, n_round, row_lines, outer_row_lines, False)
         else:
-            rows = self.tabular_rows_with_label_rows(data, len(data.columns), row_labels, n_round, row_lines, outer_row_lines, outer_col_lines, False, col_cells_postfix)
+            rows = self.tabular_rows_with_label_rows(data, len(data.columns), row_labels, n_round, row_lines, outer_row_lines, outer_col_lines, False)
 
         tabular = self.tabular_skel(header, rows, len(data.columns), col_lines, outer_col_lines)
         table = self.table_skel(tabular, caption, label, vertical)
@@ -439,23 +477,6 @@ def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, so
     classif = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse, label='baseline_results_cls_train_test')
     return f"{reg}\n\n{classif}"
 
-
-
-def create_time_pct_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='baseline_times_pct') -> str:
-    folders = load_result_folders(ignore_datasets, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
-    pct = time_frame_pct(data)
-
-    mins = pct.min().sort_values()
-    pct = pct[mins.index]
-
-    latex_dict = dict(Dataset=list(map(lambda s: s.lower(), data.results.keys())))
-    latex_dict.update(pct.to_dict(orient='list'))
-    latex_frame = pd.DataFrame.from_dict(latex_dict)
-
-    cells_postfix = list(chain.from_iterable([ [""], ['%' for _ in range(len(latex_frame.columns) - 1)] ]))
-    return LatexTable.create(latex_frame, label, None, round=0, row_lines=False, outer_col_lines=False, col_cells_postfix=cells_postfix)
-
 def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
     folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
     data = calc_eval_metrics(folders)
@@ -466,8 +487,9 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
     pct = pct[mins.index]
     stamps = stamps[mins.index]
 
+    delta_t = "$\\delta t$"
     labels = list(chain.from_iterable([["Dataset"], pct.columns]))
-    sub_labels = ["pct", "stamp"]
+
     ltx = LatexMulticolTable(rest_space_idx=0)
     
     for i, (dataset, results) in enumerate(pct.iterrows()):
@@ -476,9 +498,9 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
         ltx.add_cell(index, "Dataset", data=dataset.lower())
 
         for (method, pct) in results.items():
-             ltx.add_cell(index, method, "pct", data=pct)
-             ltx.add_cell(index, method, "stamp", data=stamps.at[dataset, method])
-             ltx.add_col_cells_postfix('%', method, "pct")
+             ltx.add_cell(index, method, delta_t, data=pct)
+             ltx.add_cell(index, method, "time", data=stamps.at[dataset, method])
+             ltx.add_col_cells_postfix('s', method, delta_t)
         
     return ltx.create(label, None, round=0, row_lines=False, outer_col_lines=False)
 
