@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH -N 1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
+#SBATCH -A master        # Replace with the desired account name
+#SBATCH -p normal        # Replace with the desired partition name
+#SBATCH --output=R-%x.%j.out
+#SBATCH --error=R-%x.%j.err
+
+source venv/bin/activate # activate venv
+
+# Batch 1: electricity, accel , okcupid_stem, 
+# Batch 2: wave_e, fps, acsi, 
+# Batch 3: comet_mc, delays_zurich, 
+# Single: higgs, epsilon, rcv1 
+dataset="accel"
+repeats="3"
+
+./scripts/slurm_job_tmpl.sh -m KSearchOptuna -r "$repeats" -d "$dataset"

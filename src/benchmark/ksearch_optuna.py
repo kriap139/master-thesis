@@ -6,13 +6,15 @@ from sequd import SeqUD
 import pandas as pd
 from itertools import chain
 from numbers import Number
-from .optuna_search import BaseSearch, InnerResult, KSpaceOptunaSearch
+from .optuna_search import BaseSearch, InnerResult, KSpaceOptunaSearchV3
 from optuna.distributions import FloatDistribution
 from optuna.study import Study, create_study
 from sklearn.base import clone
 
 class KSearchOptuna(BaseSearch):    
     def __init__(self, ksearch_iter: int = 100, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
         self.ksearch_iter = ksearch_iter
         self._passed_kwargs = kwargs
         self._study = create_study(sampler=TPESampler(), direction="maximize")
@@ -23,8 +25,6 @@ class KSearchOptuna(BaseSearch):
 
         if 'model' in self._passed_kwargs:
             kwargs.pop('model')
-
-        super().__init__(*args, **kwargs)
     
     def _calc_result(self):
         self.result = dict(
@@ -51,6 +51,7 @@ class KSearchOptuna(BaseSearch):
 
     def create_kspace_distributions(self, search_space: TY_SPACE) -> Dict[str, FloatDistribution]:
         names = list(search_space.keys())
+        zero = np.nextafter(0, 1.0)
         return {name: FloatDistribution(zero, 1.0)}
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
@@ -61,15 +62,11 @@ class KSearchOptuna(BaseSearch):
             trial = self._study.ask(space)
             k = trial.params.copy()
 
-            tuner = KSpaceOptunaSearch(
-                k=k,
-                model=clone(self._model),
-                **self._passed_kwargs
-            )
+            tuner = KSpaceOptunaSearchV3(k=k, model=clone(self._model), **self._passed_kwargs)
             tuner.search(search_space, fixed_params)
 
             result = dict(search_dir=tuner._save_dir)
-            result.update(space)
+            result.update({f"k_{key}": v for key, v in k.items()})
             result.update(tuner.result)
 
             self._study.tell(trial, result["mean_test_acc"])
