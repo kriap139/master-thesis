@@ -65,8 +65,8 @@ class Builtin(Enum, metaclass=MetaEnum):
     EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)                               #
     ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
     KDD1998 = DatasetInfo("kdd1998", "TARGET_B", Task.BINARY, SizeGroup.MODERATE)
-    KDD1998_ALLCAT = DatasetInfo("kdd1998_allcat", "TARGET_B", Task.BINARY, SizeGroup.MODERATE)
-    KDD1998_NONUM = DatasetInfo("kdd1998_nonum", "TARGET_B", Task.BINARY, SizeGroup.SMALL)
+    KDD1998_ALLCAT = DatasetInfo("kdd1998_allcat", "TARGET_B", Task.BINARY, SizeGroup.MODERATE, base_name="kdd1998")
+    KDD1998_NONUM = DatasetInfo("kdd1998_nonum", "TARGET_B", Task.BINARY, SizeGroup.SMALL, base_name="kdd1998")
 
     EL_NINO = DatasetInfo("el_nino", "ss_temp", Task.REGRESSION, SizeGroup.SMALL)                       
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
@@ -167,9 +167,12 @@ class CVInfo(dict):
 class Dataset(DatasetInfo):
     def __init__(self, d: Union[Builtin, DatasetInfo, str], is_test=False, force_no_train_test=False):
         if isinstance(d, Builtin):
-            super().__init__(d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod, d.info().base_name)
+            super().__init__(
+                d.info().name, d.info().label_column, d.info().task, d.info().size_group, d.info().mod, 
+                d.info().force_no_train_test, d.info().base_name
+            )
         elif isinstance(d, DatasetInfo):
-            super().__init__(d.name, d.label_column, d.task, d.size_group, d.mod, d.base_name)
+            super().__init__(d.name, d.label_column, d.task, d.size_group, d.mod, d.force_no_train_test, d.base_name)
         elif isinstance(d, str) and d.__contains__("."):
             super().__init__(d, None, None, None, mod=True)
         else:
