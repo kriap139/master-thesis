@@ -74,7 +74,7 @@ class KSearchOptuna(BaseSearch):
             if self._save:
                 self.update_history(result)
 
-            print(f"{i}: train_score={round(result["mean_train_acc"], 4)}, test_score={round(result["mean_test_acc"], 4)}, params={json_to_str(k, indent=None)}")
+            print(f"{i}: train_score={round(result['mean_train_acc'], 4)}, test_score={round(result['mean_test_acc'], 4)}, params={json_to_str(k, indent=None)}")
         
         print(f"best_number={self._study.best_trial.number}, best_score={self._study.best_value}, best_params={self._study.best_params}")
         self._calc_result()            
