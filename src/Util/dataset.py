@@ -366,7 +366,7 @@ class Dataset(DatasetInfo):
             return self
         
         if self.name == "kdd1998_nonum":
-            cols = data.select_dtypes(exclude=["float64"]).columns.tolist()
+            cols = data.select_dtypes(include=["float64"]).columns.tolist()
             cols = [col for col in cols if col != self.label_column]
             data.drop(cols, axis=1, inplace=True)
         elif self.name == "kdd1998_allcat":

@@ -265,7 +265,7 @@ if "__main__" == __name__:
     print(dataset.x.info())
     del dataset
     gc.collect()
-    print("\nKDD1998_ALLCAT")
+    print()
     dataset = Dataset(Builtin.KDD1998_NONUM).load()
     print(dataset.x.info())
 
