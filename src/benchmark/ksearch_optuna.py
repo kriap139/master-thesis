@@ -10,6 +10,7 @@ from .optuna_search import BaseSearch, InnerResult, KSpaceOptunaSearchV3
 from optuna.distributions import FloatDistribution
 from optuna.study import Study, create_study
 from sklearn.base import clone
+from optuna.samplers import TPESampler
 
 class KSearchOptuna(BaseSearch):    
     def __init__(self, ksearch_iter: int = 100, *args, **kwargs):
