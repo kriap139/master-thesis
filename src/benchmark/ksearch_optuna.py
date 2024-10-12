@@ -53,7 +53,7 @@ class KSearchOptuna(BaseSearch):
     def create_kspace_distributions(self, search_space: TY_SPACE) -> Dict[str, FloatDistribution]:
         names = list(search_space.keys())
         zero = np.nextafter(0, 1.0)
-        return {name: FloatDistribution(zero, 1.0)}
+        return {name: FloatDistribution(zero, 1.0) for name in names}
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         self.init_save(search_space, fixed_params)    
