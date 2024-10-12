@@ -366,7 +366,7 @@ class Dataset(DatasetInfo):
             return self
         
         if self.name == "kdd1998_nonum":
-            data = data.select_dtypes(exclude=["float64"])
+            data = data.select_dtypes(exclude=["float64"], include="TARGET_B")
         elif self.name == "kdd1998_allcat":
             numeric = data.select_dtypes('float64').columns.tolist()
             for col in numeric:
