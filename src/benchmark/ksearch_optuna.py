@@ -57,7 +57,7 @@ class KSearchOptuna(BaseSearch):
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         self.init_save(search_space, fixed_params)    
-        space = self.create_optuna_kspace(search_space)
+        space = self.create_kspace_distributions(search_space)
 
         for i in range(self.ksearch_iter):
             trial = self._study.ask(space)
