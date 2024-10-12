@@ -261,6 +261,11 @@ if "__main__" == __name__:
     #tuner = search(args)
     #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
 
+    dataset = Dataset(Builtin.KDD1998).load()
+    print(dataset.x.info())
+    del dataset
+    gc.collect()
+    print("\nKDD1998_ALLCAT")
     dataset = Dataset(Builtin.KDD1998_ALLCAT).load()
     print(dataset.x.info())
 
