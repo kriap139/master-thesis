@@ -1,4 +1,4 @@
-from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE
+from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv
 from typing import Callable, Iterable, Dict
 import time
 import numpy as np
@@ -11,14 +11,18 @@ from optuna.distributions import FloatDistribution
 from optuna.study import Study, create_study
 from sklearn.base import clone
 from optuna.samplers import TPESampler
+import os
+import logging
+import sys
 
 class KSearchOptuna(BaseSearch):    
-    def __init__(self, ksearch_iter: int = 100, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs, save_dir=resume_dir)
 
         self.ksearch_iter = ksearch_iter
         self._passed_kwargs = kwargs
         self._study = create_study(sampler=TPESampler(), direction="maximize")
+        self._iter = range(self.ksearch_iter)
 
         #FIXME Have this here, as it is unkown how positional arguments will affect the 
         # propegation of arguments trough inherited classes. 
@@ -26,6 +30,25 @@ class KSearchOptuna(BaseSearch):
 
         if 'model' in self._passed_kwargs:
             kwargs.pop('model')
+
+        if resume_dir is not None:
+            self._resume_search(resume_dir)
+    
+    def _resume_search(self, resume_dir: str):
+        if os.path.exists(resume_dir):
+            data = load_csv(resume_dir)
+            self.history_head = list(data.columns)
+
+            rows = data.shape[0]
+            delta = rows - self.ksearch_iter
+
+            if delta >= rows:
+                self._iter = range(rows, delta)
+            else:
+                self._iter = range(rows, rows + self.ksearch_iter)
+        else:
+            raise ValueError(f"resume_dir doesn't exist: {resume_dir}")
+                
     
     def _calc_result(self):
         self.result = dict(
@@ -56,10 +79,9 @@ class KSearchOptuna(BaseSearch):
         return {name: FloatDistribution(zero, 1.0) for name in names}
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
-        self.init_save(search_space, fixed_params)    
         space = self.create_kspace_distributions(search_space)
 
-        for i in range(self.ksearch_iter):
+        for i in self._iter:
             trial = self._study.ask(space)
             k = trial.params.copy()
 
