@@ -32,7 +32,7 @@ class BaseSearch:
     def __init__(
         self, model, train_data: Dataset, test_data: Dataset = None, n_iter=100, n_jobs=None, cv: TY_CV = None, 
         inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, 
-        add_save_dir_info: dict = None, save_best_models=False):
+        add_save_dir_info: dict = None, save_best_models=False, save_dir: str = None):
 
         self.train_data = train_data
         self.test_data = test_data
@@ -55,7 +55,7 @@ class BaseSearch:
         self._history_fp = None
         self._inner_history_fp = None
         self._models_dir = None
-        self._save_dir = None
+        self._save_dir = save_dir
 
         self.result = None
 
@@ -68,6 +68,12 @@ class BaseSearch:
             self._init_save_paths(create_dirs=False)
     
     def _create_save_dir(self, info: dict = None) -> str:
+        if self._save_dir is not None:
+            if os.path.exists(self._save_dir):
+                return self._save_dir
+            else:
+                logging.warn(f"Passed save directory doesn't exist, faling back to standard path: {self._save_dir}")
+
         if self.add_save_dir_info is not None:
             if info is None:
                 info = self.add_save_dir_info
