@@ -23,6 +23,7 @@ class KSearchOptuna(BaseSearch):
         self._passed_kwargs = kwargs
         self._study = create_study(sampler=TPESampler(), direction="maximize")
         self._iter = range(self.ksearch_iter)
+        self._searches_dir = None
 
         #FIXME Have this here, as it is unkown how positional arguments will affect the 
         # propegation of arguments trough inherited classes. 
@@ -46,6 +47,9 @@ class KSearchOptuna(BaseSearch):
                 self._iter = range(rows, delta)
             else:
                 self._iter = range(rows, rows + self.ksearch_iter)
+            
+            self._searches_dir = os.path.join(self._save_dir, "searches")
+            assert os.path.exists(self._searches_dir)
         else:
             raise ValueError(f"resume_dir doesn't exist: {resume_dir}")
                 
@@ -62,15 +66,23 @@ class KSearchOptuna(BaseSearch):
             _data["result"] = self.result
             save_json(self._result_fp, _data, overwrite=True)
     
+    def init_save(self, row: dict):
+        self._init_save_paths(create_dirs=True)
+        self.history_head = list(data.keys())
+
+        self._searches_dir = os.path.join(self._save_dir, "searches")
+        os.makedirs(self._searches_dir, exist_ok=True)
+
+        data = load_json(self._result_fp, default={})
+        data = self._get_search_attrs(search_space, current_attrs=data)
+
+        save_json(self._result_fp, data)
+        save_csv(self._history_fp, self.history_head)
+    
+    
     def update_history(self, row: dict):
         if self.history_head is None:
-            self._init_save_paths(create_dirs=True)
-            self.history_head = list(data.keys())
-
-            data = load_json(self._result_fp, default={})
-            data = self._get_search_attrs(search_space, current_attrs=data)
-            save_json(self._result_fp, data)
-
+            self.init_save(row)
         save_csv(self._history_fp, self.history_head, row)
 
     def create_kspace_distributions(self, search_space: TY_SPACE) -> Dict[str, FloatDistribution]:
@@ -85,7 +97,7 @@ class KSearchOptuna(BaseSearch):
             trial = self._study.ask(space)
             k = trial.params.copy()
 
-            tuner = KSpaceOptunaSearchV3(k=k, model=clone(self._model), **self._passed_kwargs)
+            tuner = KSpaceOptunaSearchV3(k=k, model=clone(self._model), **self._passed_kwargs, root_dir=self._searches_dir)
             tuner.search(search_space, fixed_params)
 
             result = dict(search_dir=tuner._save_dir)

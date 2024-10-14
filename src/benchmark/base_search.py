@@ -32,7 +32,7 @@ class BaseSearch:
     def __init__(
         self, model, train_data: Dataset, test_data: Dataset = None, n_iter=100, n_jobs=None, cv: TY_CV = None, 
         inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, 
-        add_save_dir_info: dict = None, save_best_models=False, save_dir: str = None):
+        add_save_dir_info: dict = None, save_best_models=False, save_dir: str = None, root_dir: str = None):
 
         self.train_data = train_data
         self.test_data = test_data
@@ -56,6 +56,7 @@ class BaseSearch:
         self._inner_history_fp = None
         self._models_dir = None
         self._save_dir = save_dir
+        self._root_dir = root_dir
 
         self.result = None
 
@@ -72,7 +73,7 @@ class BaseSearch:
             if os.path.exists(self._save_dir):
                 return self._save_dir
             else:
-                logging.warn(f"Passed save directory doesn't exist, faling back to standard path: {self._save_dir}")
+                raise ValueError(f"Passed save directory doesn't exist: {self._save_dir}")
 
         if self.add_save_dir_info is not None:
             if info is None:
@@ -84,8 +85,14 @@ class BaseSearch:
             
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
-            return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]", make_add_dirs=False)
-        return data_dir(f"test_results/{self.__class__.__name__}[{self.train_data.name}]", make_add_dirs=False) 
+            sub_path = f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]"
+        else:
+            sub_path = f"test_results/{self.__class__.__name__}[{self.train_data.name}]"
+
+        if self._root_dir is None:
+            return data_dir(sub_path, make_add_dirs=False) 
+        else:
+            return os.path.join(self._root_dir, sub_path)
     
     def _init_save_paths(self, create_dirs=False):
         self._save_dir = self._create_save_dir()
