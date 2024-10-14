@@ -216,17 +216,24 @@ class Dataset(DatasetInfo):
     def get_builtin(self):
         return Builtin[self.name.upper()]
 
-    def get_dir(self) -> str:
+    def get_base_dir(self) -> str:
         path = data_dir(f"datasets/{self.base_name}", make_add_dirs=self.mod)
         if not os.path.exists(path):
             raise RuntimeError(f"Dataset path dosen't exist: {path}")
+        return path
+    
+    def get_dir(self):
+        path = data_dir(f"datasets/{self.name}", make_add_dirs=self.mod)
+        if not os.path.exists(path):
+            raise RuntimeError(f"Dataset path dosen't exist: {path}")
+        os.makedirs(path, exist_ok=True)
         return path
     
     def __set_dataset_paths(self):
         if self.mod is not None:
             return
 
-        path = self.get_dir()
+        path = self.get_base_dir()
         fns, exts = zip(*[self.splitext(f) for f in os.listdir(path)])
         
         try:
@@ -262,7 +269,7 @@ class Dataset(DatasetInfo):
         info = CVInfo(cv)
         path = info.path(self.get_dir())
         if not os.path.exists(path):
-            raise RuntimeError(f"No {str(info)} saved folds data found for dataset {self.base_name}")
+            raise RuntimeError(f"No {str(info)} saved folds data found for dataset {self.name}")
 
         data = load_json(path)
         folds = data["folds"]
@@ -442,10 +449,9 @@ class Dataset(DatasetInfo):
             x_train.insert(self.label_column, self.label_column, y_train)
             x_test.insert(self.label_column, self.label_column, y_test)
 
-        path = data_dir(f"datasets/{self.base_name}")
-        fn, ext = os.path.splitext(os.path.basename(path))
-        train_path = os.path.join(path, f"{self.base_name}_train{ext}")
-        test_path = os.path.join(path, f"{self.base_name}_test{ext}")
+        fn, ext = os.path.splitext(os.path.basename(self.train_path))
+        train_path = os.path.join(self.get_dir(), f"{self.base_name}_train{ext}")
+        test_path = os.path.join(self.get_dir(), f"{self.base_name}_test{ext}")
 
         x_train.to_csv(train_path, index=False, index_label=False, header=False)
         x_test.to_csv(test_path, index=False, index_label=False, header=False)
