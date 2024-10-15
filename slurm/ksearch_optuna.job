@@ -17,4 +17,4 @@ source venv/bin/activate # activate venv
 dataset="accel"
 repeats="3"
 
-./scripts/slurm_job_tmpl.sh -m KSearchOptuna -r "$repeats" -d "$dataset"
+./scripts/slurm_job_tmpl.sh -m KSearchOptuna -r "$repeats" -d "$dataset" -s "n_estimators learning_rate max_depth num_leaves"

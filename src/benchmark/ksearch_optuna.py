@@ -66,9 +66,8 @@ class KSearchOptuna(BaseSearch):
             _data["result"] = self.result
             save_json(self._result_fp, _data, overwrite=True)
     
-    def init_save(self, row: dict):
+    def init_save(self, search_space: dict):
         self._init_save_paths(create_dirs=True)
-        self.history_head = list(data.keys())
 
         self._searches_dir = os.path.join(self._save_dir, "searches")
         os.makedirs(self._searches_dir, exist_ok=True)
@@ -77,12 +76,11 @@ class KSearchOptuna(BaseSearch):
         data = self._get_search_attrs(search_space, current_attrs=data)
 
         save_json(self._result_fp, data)
-        save_csv(self._history_fp, self.history_head)
-    
     
     def update_history(self, row: dict):
         if self.history_head is None:
-            self.init_save(row)
+            self.history_head = list(data.keys())
+            save_csv(self._history_fp, self.history_head)
         save_csv(self._history_fp, self.history_head, row)
 
     def create_kspace_distributions(self, search_space: TY_SPACE) -> Dict[str, FloatDistribution]:
@@ -91,6 +89,9 @@ class KSearchOptuna(BaseSearch):
         return {name: FloatDistribution(zero, 1.0) for name in names}
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
+        if self._save:
+            self.init_save(search_space)
+            
         space = self.create_kspace_distributions(search_space)
 
         for i in self._iter:
