@@ -55,8 +55,9 @@ class BaseSearch:
         self._history_fp = None
         self._inner_history_fp = None
         self._models_dir = None
-        self._save_dir = save_dir
+        self._save_dir = None
         self._root_dir = root_dir
+        self._passed_dir = save_dir
 
         self.result = None
 
@@ -69,7 +70,7 @@ class BaseSearch:
             self._init_save_paths(create_dirs=False)
     
     def _create_save_dir(self, info: dict = None) -> str:
-        if self._save_dir is not None:
+        if self._passed_dir is not None:
             if os.path.exists(self._save_dir):
                 return self._save_dir
             else:
