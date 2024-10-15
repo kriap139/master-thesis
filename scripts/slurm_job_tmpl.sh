@@ -107,9 +107,6 @@ elif [ ${#search_spaces[@]} -eq 0 ] && [ ${#param_indexes[@]} -gt 0 ]; then
     search_spaces=() && for a in $spaces; do search_spaces+=("$a"); done
     echo "infered search space from params file: ${search_spaces[*]}"
 
-elif [ ${#param_indexes[@]} -eq 0 ] && [ ${#search_spaces[@]} -gt 0 ] && [ ${#search_spaces[@]} -ne ${#datasets[@]} ]; then
-    print_exit "Number of given search spaces (${#search_spaces[@]}) is less than the number of datasets (${#datasets[@]})!"
-
 elif [ ${#search_spaces[@]} -gt 0 ] && [ ${#param_indexes[@]} -gt 0 ]; then
     echo "It is not possible to specify search space and params at the same time, as the search space will be infered from the params!"
     echo "it is possible to add a search space key to params in the params file instead!. However if stuff like k space parameters-"
