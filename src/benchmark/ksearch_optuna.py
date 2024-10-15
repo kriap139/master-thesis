@@ -1,4 +1,4 @@
-from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv
+from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json
 from typing import Callable, Iterable, Dict
 import time
 import numpy as np
@@ -91,7 +91,7 @@ class KSearchOptuna(BaseSearch):
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         if self._save:
             self.init_save(search_space)
-            
+
         space = self.create_kspace_distributions(search_space)
 
         for i in self._iter:
