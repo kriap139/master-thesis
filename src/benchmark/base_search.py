@@ -86,12 +86,12 @@ class BaseSearch:
             
         if info is not None:
             info_str = ",".join([f"{k}={v}" for k, v in info.items()])
-            sub_path = f"test_results/{self.__class__.__name__}[{self.train_data.name};{info_str}]"
+            dirname = f"{self.__class__.__name__}[{self.train_data.name};{info_str}]"
         else:
-            sub_path = f"test_results/{self.__class__.__name__}[{self.train_data.name}]"
+            dirname = f"{self.__class__.__name__}[{self.train_data.name}]"
 
         if self._root_dir is None:
-            return data_dir(sub_path, make_add_dirs=False) 
+            return data_dir(f"test_results/{sub_path}", make_add_dirs=False) 
         else:
             return os.path.join(self._root_dir, sub_path)
     
