@@ -1,4 +1,4 @@
-from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json
+from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json, save_json
 from typing import Callable, Iterable, Dict
 import time
 import numpy as np
