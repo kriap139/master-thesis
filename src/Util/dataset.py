@@ -224,9 +224,12 @@ class Dataset(DatasetInfo):
     
     def get_dir(self):
         path = data_dir(f"datasets/{self.name}", make_add_dirs=self.mod)
+
         if not os.path.exists(path):
-            raise RuntimeError(f"Dataset path dosen't exist: {path}")
-        os.makedirs(path, exist_ok=True)
+            if self.name != self.base_name:
+                os.makedirs(path, exist_ok=True)
+            else:
+                raise RuntimeError(f"Dataset path dosen't exist: {path}")
         return path
     
     def __set_dataset_paths(self):
@@ -450,8 +453,8 @@ class Dataset(DatasetInfo):
             x_test.insert(self.label_column, self.label_column, y_test)
 
         fn, ext = os.path.splitext(os.path.basename(self.train_path))
-        train_path = os.path.join(self.get_dir(), f"{self.base_name}_train{ext}")
-        test_path = os.path.join(self.get_dir(), f"{self.base_name}_test{ext}")
+        train_path = os.path.join(self.get_dir(), f"{self.name}_train{ext}")
+        test_path = os.path.join(self.get_dir(), f"{self.name}_test{ext}")
 
         x_train.to_csv(train_path, index=False, index_label=False, header=False)
         x_test.to_csv(test_path, index=False, index_label=False, header=False)
