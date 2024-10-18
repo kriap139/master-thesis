@@ -91,9 +91,9 @@ class BaseSearch:
             dirname = f"{self.__class__.__name__}[{self.train_data.name}]"
 
         if self._root_dir is None:
-            return data_dir(f"test_results/{sub_path}", make_add_dirs=False) 
+            return data_dir(f"test_results/{dirname}", make_add_dirs=False) 
         else:
-            return os.path.join(self._root_dir, sub_path)
+            return os.path.join(self._root_dir, dirname)
     
     def _init_save_paths(self, create_dirs=False):
         self._save_dir = self._create_save_dir()
