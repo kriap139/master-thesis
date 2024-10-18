@@ -79,7 +79,7 @@ class KSearchOptuna(BaseSearch):
     
     def update_history(self, row: dict):
         if self.history_head is None:
-            self.history_head = list(data.keys())
+            self.history_head = list(row.keys())
             save_csv(self._history_fp, self.history_head)
         save_csv(self._history_fp, self.history_head, row)
 
