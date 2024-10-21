@@ -584,34 +584,6 @@ def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None,
     return ltx.create(frame, label, None, round=4, add_row_label="Dataset", row_lines=False, outer_col_lines=True)
 
 
-
-def create_manual_kspace_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='kspace_manual'):
-    def load_data(folder: ResultFolder):
-        results_path = os.path.join(folder.dir_path, "result.json")
-        history_path = os.path.join(folder.dir_path, "history.csv")
-
-        file_data = load_json(results_path, default={}) 
-
-        if 'result' not in file_data:
-            df = load_csv(history_path)
-            train_ = df["train_score"].mean()
-            test_ = df["test_score"].mean()
-            time_ = df["time"].mean()
-        else:
-            train_ = file_data["result"]["mean_train_acc"]
-            test_ = file_data["result"]["mean_test_acc"]
-            time_ = file_data["result"]["time"]
-            
-        return train_, test_, time_, file_data["info"] 
-    
-    filter_fn = lambda folder: (folder.method == "KOptunaSearchV2")
-    folders = load_result_folders(ignore_datasets, sort_fn=sort_fn, filter_fn=filter_fn, reverse=True)
-
-    for (dataset, methods) in data.items():
-        for method, folder in methods.items():
-            print(f"dataset={folder.dataset} info={folder.info}")
-
-
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
         f.write(table)
