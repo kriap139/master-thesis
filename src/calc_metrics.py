@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import pandas as pd
 import hashlib
 from itertools import chain
+import itertools
 from numbers import Number
 from scipy.stats import friedmanchisquare
 
@@ -100,6 +101,16 @@ def sort_folders(folders: Dict[str, Dict[str, ResultFolder]], fn: Callable[[Resu
                 dirs.append(folder)
     return folders
 
+def print_result_folders(folders: Dict[str, Union[List[ResultFolder], ResultFolder]]):
+    for (dataset, methods) in folders.items():
+        for method, folder in methods.items():
+            if isinstance(folder, list):
+                for sub_folder in folder:
+                    print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
+            else:
+                print(f"{method}[{dataset}]: {folder.dir_path}")
+    print()
+
 def load_result_folders(
         ignore_datasets: List[Builtin] = None, 
         ignore_methods: List[str] = None,
@@ -190,15 +201,7 @@ def load_result_folders(
         results = sort_folders(results, fn=sort_fn, filter_fn=filter_fn, reverse=reverse)
     
     if print_results:
-        for (dataset, methods) in results.items():
-            for method, folder in methods.items():
-                if isinstance(folder, list):
-                    for sub_folder in folder:
-                        print(f"{os.path.split(sub_folder.dir_path)[1]}: {sub_folder.dir_path}")
-                else:
-                    print(f"{method}[{dataset}]: {folder.dir_path}")
-        print()
-    
+        print_result_folders(results)
     return results
 
 @dataclass
@@ -358,6 +361,21 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
     return frame.map(BaseSearch.time_to_str)
 
+def time_frame_deltas(data: EvalMetrics) -> pd.DataFrame:
+    frame = time_frame(data)
+    columns = [col for col in frame.columns if col != "NOSearch"]
+
+    mins = frame[columns].min(axis=1)
+
+    deltas = frame.copy()
+    deltas.drop(columns="NOSearch", inplace=True)
+    deltas.columns = [f"{col}_delta" for col in deltas.columns]
+    deltas = deltas.subtract(mins, axis=0)
+
+    combined = pd.concat([frame, deltas], axis=1)
+
+    return combined
+
 
 def friedman_check(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, confidence: float = 0.05):
     friedman = calc_eval_metrics(
@@ -370,6 +388,10 @@ def friedman_check(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse
         print("There isn't a statisitically significant difference between the tested algorithms.")
 
     
+if __name__ == "__main__":
+    metrics = calc_eval_metrics(0.5, print_results=False)
+    frame = time_frame_deltas(metrics)
+    print(frame)
 
 
 
