@@ -7,6 +7,7 @@ data/basic_*.json
 data/zips
 
 table.txt
+repeats.txt
 *.out
 *.err
 *.zip
