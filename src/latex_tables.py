@@ -525,7 +525,7 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
         return "{:02}:{:02}".format(h, m)
 
 
-    delta_t = "$\\delta t$"
+    delta_t = "$\\Delta t$"
     ltx = LatexMulticolTable(rest_space_idx=0)
     
     for (dataset, results) in deltas.iterrows():
@@ -570,7 +570,6 @@ def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None,
         w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-
     latex_dict = {
         f"\\(a_s\\)": data.agg_scores.to_dict(),
         f"\\(a_r\\)":data.rank_scores.to_dict(),
