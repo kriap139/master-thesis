@@ -1,10 +1,12 @@
 import pandas as pd
 from typing import List, Tuple, Dict, Any, Union, Iterable, Optional
 from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check
+from calc_metrics import time_frame_deltas
 from Util import Task, SizeGroup
 import numbers
 from dataclasses import dataclass
 from itertools import chain
+import itertools
 
 @dataclass(frozen=True, eq=True)
 class RowLabel:
@@ -175,21 +177,21 @@ class Latex:
         if len(label_rows) and (label_rows[0].start_idx != 0):
             subset = data.iloc[0:label_rows[0].start_idx, :]
             rows.extend(
-                cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
+                self.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
             )
 
         for lr in label_rows:
             if lr.end_idx is not None:
-                rows.append(cls.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
+                rows.append(self.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
                 subset = data.iloc[lr.start_idx:lr.end_idx, :]
                 rows.extend(
-                    cls.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
+                    self.tabular_rows(subset, n_round, row_lines, False, add_row_labels)
                 )
             else:
-                rows.append(cls.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
+                rows.append(self.span_row_label(lr.label, n_cols, lr.bold, row_line_top=outer_row_lines, row_line_bottom=False, outer_col_lines=outer_col_lines))
                 subset = data.iloc[lr.start_idx:, :]
                 rows.extend(
-                    cls.tabular_rows(subset, n_round, row_lines, outer_row_lines, add_row_labels)
+                    self.tabular_rows(subset, n_round, row_lines, outer_row_lines, add_row_labels)
                 )
         return rows
     
@@ -204,9 +206,9 @@ class Latex:
     
     def cell(self, row, col, v: Any, n_round = None) -> str:
         if isinstance(v, numbers.Number):
-            v = str(cls.rounder(v, n_round))
+            v = str(self.rounder(v, n_round))
         else:
-            v = cls.escapes(v)
+            v = self.escapes(v)
         return self.apply_cell_post_processing(row, col, v)
     
     def tabular_rows(self, data: pd.DataFrame, n_round: int = None, row_lines=True, outer_row_lines=True, add_row_labels=False) -> List[str]:
@@ -214,13 +216,13 @@ class Latex:
         row_line = ROW_LINE_NL if row_lines else ""
 
         if add_row_labels:
-            row_labels = [f"{cls.escapes(label)} & " for label in data.index]
+            row_labels = [f"{self.escapes(label)} & " for label in data.index]
         else:
             row_labels = ["" for _ in data.index]
 
         last_row = len(data.index) - 1
         for i, (index, row) in enumerate(data.iterrows()):
-            row_data = [cls.cell(index, col, cell, n_round) for col, cell in enumerate(row)]
+            row_data = [self.cell(index, col, cell, n_round) for col, cell in enumerate(row)]
 
             if (i == last_row) and not outer_row_lines:
                 table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
@@ -229,7 +231,6 @@ class Latex:
             else:
                 table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {row_line}")
         return table_rows
-    
 
 
 
@@ -237,7 +238,6 @@ class LatexTable(Latex):
     def __init__(self):
         super().__init__()
 
-    @classmethod
     def header(self, column_labels: List[str], bold=True, row_lines=True, outer_row_lines=True, add_row_label: str = None):
         if bold:
             labels = self.bold(column_labels)
@@ -258,9 +258,8 @@ class LatexTable(Latex):
             header += ROW_LINE_NL
         return header + '\n'
     
-    @classmethod
     def create(
-        cls, 
+        self, 
         data: pd.DataFrame, 
         label: str, 
         caption: str = None, 
@@ -278,10 +277,10 @@ class LatexTable(Latex):
 
         n_cols = len(data.columns) if add_row_label is None else len(data.columns) + 1    
         
-        header = cls.header(data.columns, bold_header, row_lines, outer_col_lines, add_row_label)
-        rows = cls.tabular_rows(data, round, row_lines, outer_row_lines, add_row_label is not None)
-        tabular = cls.tabular_skel(header, rows, n_cols, col_lines, outer_col_lines)
-        table = cls.table_skel(tabular, caption, label)
+        header = self.header(data.columns, bold_header, row_lines, outer_col_lines, add_row_label)
+        rows = self.tabular_rows(data, round, row_lines, outer_row_lines, add_row_label is not None)
+        tabular = self.tabular_skel(header, rows, n_cols, col_lines, outer_col_lines)
+        table = self.table_skel(tabular, caption, label)
         return table
 
 class LatexMulticolTable(Latex):
@@ -416,12 +415,12 @@ def create_task_filter_fn(task: Task):
 
 def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label='test_result_stats') -> str:
     reg_data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, 
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"],
         filter_fn=create_task_filter_fn(Task.REGRESSION), sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
     cls_data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, 
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"],
         filter_fn=create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
@@ -432,9 +431,7 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
     
     row_start = 0
     n_rows = 0
-    for domain, data in dict(Classification=cls_data, regression=reg_data).items():
-        labels = list(chain.from_iterable([["Dataset"], data.get_method_names()]))
-
+    for domain, data in dict(Classification=cls_data, Regression=reg_data).items():
         for i, (dataset, results) in enumerate(data.results.items()):
             index = dataset.lower()
             # FIXME: Use index instead of own column as in normal table!
@@ -443,11 +440,13 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
             for (method, result) in results.items():
                 for sub_label in sub_labels:
                     ltx.add_cell(index, method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
-            n_row += 1
-        
-        row_start += max(0, n_rows - 1)
-        if domain == "regression":
-            row_labels.append(RowLabel(row_start, domain, False, None))
+    
+            n_rows += 1
+
+        row_labels.append(RowLabel(row_start, domain, False, n_rows))
+        row_start = n_rows
+
+        print(row_labels)
     
     return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False, row_labels=row_labels, vertical=True)
 
@@ -459,56 +458,96 @@ def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=
 
 
 def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
-    data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+    reg_data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets,
+        filter_fn=create_task_filter_fn(Task.REGRESSION), sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-    ltx = LatexMulticolTable(rest_space_idx=0)
-    for i, (dataset, results) in enumerate(data.results.items()):
-        index = dataset.lower()
-        # FIXME: Use index instead of own column as in normal table!
-        ltx.add_cell(index, "Dataset", data=dataset.lower())
-
-        for (method, result) in results.items():
-            #print(f"{method}: train={result["result"]["mean_train_acc"]}, test={result["result"]["mean_test_acc"]}")
-            ltx.add_cell(index, method, "train_acc", data=result["result"]["mean_train_acc"])
-            ltx.add_cell(index, method, "test_acc", data=result["result"]["mean_test_acc"])
+    cls_data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets,
+        filter_fn=create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
     
-    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
+    ltx = LatexMulticolTable(rest_space_idx=0)
+    sub_labels = ["train", "test"]
+    row_labels = []
+
+    row_start = 0
+    n_rows = 0
+    for domain, data in dict(Classification=cls_data, Regression=reg_data).items():
+        for i, (dataset, results) in enumerate(data.results.items()):
+            index = dataset.lower()
+            # FIXME: Use index instead of own column as in normal table!
+            ltx.add_cell(index, "Dataset", data=dataset.lower())
+
+            for (method, result) in results.items():
+                #print(f"{method}: train={result["result"]["mean_train_acc"]}, test={result["result"]["mean_test_acc"]}")
+                for sub_label in sub_labels:
+                    ltx.add_cell(index, method, sub_label, data=result["result"][f"mean_{sub_label}_acc"])
+    
+            n_rows += 1
+
+        row_labels.append(RowLabel(row_start, domain, False, n_rows))
+        row_start = n_rows
+        print(row_labels)
+
+    return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=True, row_labels=row_labels)
 
 def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
     reg = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse, label='baseline_results_reg_train_test')
     classif = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse, label='baseline_results_cls_train_test')
     return f"{reg}\n\n{classif}"
 
-def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
-    folders = load_result_folders(ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True)
-    data = calc_eval_metrics(folders)
-    stamps = time_frame_stamps(data)
 
-    #mins = pct.min().sort_values()
-    #pct = pct[mins.index]
-    #stamps = stamps[mins.index]
+
+def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
+    data = calc_eval_metrics(w_nas=0.5, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True, print_results=False)
+    deltas = time_frame_deltas(data)
+
+    # use the delta values to order to columns
+    sort_deltas = [col for col in deltas.columns if col.endswith("_delta")]
+    sort_deltas = deltas[sort_deltas].sum(axis=0)
+    sort_deltas = sort_deltas.sort_values()
+    sort_deltas = list(sort_deltas.index)
+    sort_deltas.reverse()
+    sort_cols = [col.rstrip("_delta") for col in sort_deltas]
+
+    sorted_columns = list(itertools.chain.from_iterable(zip(sort_cols, sort_deltas)))
+    sorted_columns.append("NOSearch")
+
+    deltas = deltas[sorted_columns]
+    deltas = deltas.astype(int)
+
+    def stamp(secs: int) -> str:
+        m, s = divmod(secs, 60)
+        h, m = divmod(m, 60)
+        return "{:02}:{:02}".format(h, m)
+
 
     delta_t = "$\\delta t$"
     ltx = LatexMulticolTable(rest_space_idx=0)
     
-    for i, (dataset, results) in enumerate(pct.iterrows()):
+    for (dataset, results) in deltas.iterrows():
         index = dataset.lower()
         # FIXME: Use index instead of own column as in normal table!
         ltx.add_cell(index, "Dataset", data=dataset.lower())
 
-        for (method, pct) in results.items():
-             ltx.add_cell(index, method, delta_t, data=pct)
-             ltx.add_cell(index, method, "time", data=stamps.at[dataset, method])
-        
-    return ltx.create(label, None, round=0, row_lines=False, outer_col_lines=False)
+        for (method, secs) in results.items():
+            if method.endswith("_delta"):
+                label, sub_label = method.rstrip("_delta"), delta_t
+            else:
+                label, sub_label = method, "time"
+
+            ltx.add_cell(index, label, sub_label, data=stamp(secs))
+    
+    return ltx.create(label, None, n_round=0, row_lines=False, outer_col_lines=False)
 
 
 
-def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, filter_fn=None, sort_reverse=True, label='ns_ranks') -> str:
+def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='ns_ranks') -> str:
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, filter_fn=filter_fn, sort_fn=sort_fn, reverse=sort_reverse, 
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
     ltx = LatexMulticolTable(rest_space_idx=0)
@@ -522,23 +561,29 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, filter
             ltx.add_cell(index, method, "ns", data=data.normalized_scores.at[method, dataset])
             ltx.add_cell(index, method, "rank", data=data.mean_ranks.at[dataset, method])
 
-    return  ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False)
+    return  ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=True)
+
+
 
 def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='basline_metric') -> str:
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, sort_fn=sort_fn, reverse=sort_reverse, 
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
 
     latex_dict = {
-        'as': data.agg_scores.to_dict(),
-        'rs':data.rank_scores.to_dict(),
-        'nas': data.nas.to_dict(),
-        'nrs': data.nrs.to_dict(),
-        'js': data.js.to_dict()
+        f"\\(a_s\\)": data.agg_scores.to_dict(),
+        f"\\(a_r\\)":data.rank_scores.to_dict(),
+        f"\\(\\mu_s\\)": data.nas.to_dict(),
+        f"\\(\\mu_r\\)": data.nrs.to_dict(),
+        f"\\(\\lambda\\)": data.js.to_dict()
     }
+
+    ltx = LatexTable()
     frame = pd.DataFrame.from_dict(latex_dict)
-    return LatexTable.create(frame, label, None, round=4, add_row_label="Dataset", row_lines=False, outer_col_lines=True)
+    return ltx.create(frame, label, None, round=4, add_row_label="Dataset", row_lines=False, outer_col_lines=True)
+
+
 
 def create_manual_kspace_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, label='kspace_manual'):
     def load_data(folder: ResultFolder):
@@ -585,7 +630,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
-    table = create_test_results_stats_table(ignore_datasets, sort_fn=folder_sorter)
+    table = create_time_table(ignore_datasets, sort_fn=folder_sorter)
     #print(table)
     save_table(table)
 
