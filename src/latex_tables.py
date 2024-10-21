@@ -535,11 +535,11 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
 
         for (method, secs) in results.items():
             if method.endswith("_delta"):
-                label, sub_label = method.rstrip("_delta"), delta_t
+                _label, sub_label = method.rstrip("_delta"), delta_t
             else:
-                label, sub_label = method, "time"
+                _label, sub_label = method, "time"
 
-            ltx.add_cell(index, label, sub_label, data=stamp(secs))
+            ltx.add_cell(index, _label, sub_label, data=stamp(secs))
     
     return ltx.create(label, None, n_round=0, row_lines=False, outer_col_lines=False)
 

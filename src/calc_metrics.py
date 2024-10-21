@@ -363,8 +363,12 @@ def time_frame_stamps(data: EvalMetrics) -> pd.DataFrame:
 
 def time_frame_deltas(data: EvalMetrics) -> pd.DataFrame:
     frame = time_frame(data)
-    columns = [col for col in frame.columns if col != "NOSearch"]
 
+    # sort rows by by time to train, biggest first
+    maxs = list(frame.sum(axis=1).sort_values(ascending=False).index)
+    frame = frame.reindex(index=maxs)
+    
+    columns = [col for col in frame.columns if col != "NOSearch"]
     mins = frame[columns].min(axis=1)
 
     deltas = frame.copy()
