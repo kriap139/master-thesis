@@ -450,11 +450,6 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
     
     return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=False, row_labels=row_labels, vertical=True)
 
-def create_test_results_stats_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
-    reg = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse)
-    classif = create_test_results_stats_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse)
-    return f"{reg}\n\n{classif}"
-
 
 
 def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, label="test_result_stats") -> str:
@@ -493,11 +488,6 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
         print(row_labels)
 
     return ltx.create(label, None, n_round=4, row_lines=False, outer_col_lines=True, row_labels=row_labels)
-
-def create_train_test_tables(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
-    reg = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.REGRESSION), sort_fn, sort_reverse, label='baseline_results_reg_train_test')
-    classif = create_train_test_table(ignore_datasets, create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn, sort_reverse, label='baseline_results_cls_train_test')
-    return f"{reg}\n\n{classif}"
 
 
 
