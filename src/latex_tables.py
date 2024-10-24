@@ -229,7 +229,7 @@ class Latex:
             v = str(self.rounder(v, self.n_round))
         else:
             v = self.escapes(v)
-        return self.apply_cell_post_processing(row, col, v)
+        return v
     
     def tabular_rows(self, data: pd.DataFrame) -> List[str]:
         table_rows = []
@@ -240,19 +240,14 @@ class Latex:
         else:
             row_labels = ["" for _ in data.index]
 
-        last_row = len(data.index) - 1
         for i, (index, row) in enumerate(data.iterrows()):
             row_data = [self.cell(index, col, cell) for col, cell in enumerate(row)]
-
-            if (i == last_row) and not self.outer_row_lines:
-                table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\")
-            elif (i == last_row) and self.outer_row_lines and (not self.row_lines):
-                table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {ROW_LINE_NL}")
-            else:
-                table_rows.append(SPACES_L3 + row_labels[i] + " & ".join(row_data) + f" \\\\ {row_line}")
+            table_rows.append(f"{SPACES_L3}{row_labels[i]}{'&'.join(row_data)} \\\\ {row_line}")
+        
+        if self.outer_row_lines:
+            row_labels.append(ROW_LINE_NL)
+            
         return table_rows
-
-
 
 class LatexTable(Latex):
     def __init__(self, *args, **kwargs):
@@ -426,7 +421,7 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
         for i, (dataset, results) in enumerate(data.results.items()):
             for (method, result) in results.items():
                 for sub_label in sub_labels:
-                    ltx.add_cell(index=dataset.lower(), method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
+                    ltx.add_cell(dataset.lower(), method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
             n_rows += 1
 
         row_labels.append(RowLabel(row_start, domain, False, n_rows))
@@ -459,7 +454,7 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
             for (method, result) in results.items():
                 #print(f"{method}: train={result["result"]["mean_train_acc"]}, test={result["result"]["mean_test_acc"]}")
                 for sub_label in sub_labels:
-                    ltx.add_cell(index=dataset.lower(), method, sub_label, data=result["result"][f"mean_{sub_label}_acc"])
+                    ltx.add_cell(dataset.lower(), method, sub_label, data=result["result"][f"mean_{sub_label}_acc"])
             n_rows += 1
 
         row_labels.append(RowLabel(row_start, domain, False, n_rows))
@@ -502,7 +497,7 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
                 _label, sub_label = method.rstrip("_delta"), delta_t
             else:
                 _label, sub_label = method, "time"
-            ltx.add_cell(index=dataset.lower(), _label, sub_label, data=stamp(secs))
+            ltx.add_cell(dataset.lower(), _label, sub_label, data=stamp(secs))
     
     return ltx.create()
 
@@ -517,8 +512,8 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, sort_r
 
     for i, (dataset, results) in enumerate(data.results.items()):
         for (method, result) in results.items():
-            ltx.add_cell(index=dataset.lower(), method, "ns", data=data.normalized_scores.at[method, dataset])
-            ltx.add_cell(index=dataset.lower(), method, "rank", data=data.mean_ranks.at[dataset, method])
+            ltx.add_cell(dataset.lower(), method, "ns", data=data.normalized_scores.at[method, dataset])
+            ltx.add_cell(dataset.lower(), method, "rank", data=data.mean_ranks.at[dataset, method])
     return  ltx.create()
 
 
