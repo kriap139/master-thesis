@@ -44,7 +44,7 @@ class Latex:
         add_column_labels=True, 
         add_row_label: str = None, 
         n_round: int = None, 
-        bold_header=True, 
+        header_style=None, 
         row_lines=True, 
         outer_row_lines=True, 
         col_lines=True, 
@@ -52,9 +52,7 @@ class Latex:
         vertical=False):
 
         self.add_column_labels = add_column_labels
-        self.add_row_label = self.process_header_labels(add_row_label)
         self.n_round = n_round
-        self.bold_header = bold_header
         self.row_lines = row_lines
         self.col_lines = col_lines
         self.outer_row_lines = outer_row_lines
@@ -62,8 +60,31 @@ class Latex:
         self.caption = caption
         self.label = label
         self.vertical = vertical
+        self.header_style = header_style
+        self.add_row_label = self.process_header_labels(add_row_label)
     
-    def process_header_labels(self, labels: Union[None, str, List[str]], override_bold=False) -> Union[str, List[str]]:
+    def parse_styles(self, style: str) -> List[str]:
+        if ',' in style:
+            return style.split(',')
+        else:
+            return [style]
+    
+    def apply_styles(self, s: Union[str, pd.Series, Iterable[str]], styles: List[str]) -> Union[str, pd.Series, Iterable[str]]:
+        styler = lambda s: s
+        
+        for style in styles:
+            styler = getattr(self, style, None)
+            if styler is not None:
+                styler = lambda s: styler(s)
+        
+        if type(s) == str:
+            return styler(s)
+        elif type(s) == pd.Series:
+            print(f"Series type: {s.dtype}")
+        else: 
+            return [styler(_s) for _s in s]
+    
+    def process_header_labels(self, labels: Union[None, str, List[str]], override_style=None) -> Union[str, List[str]]:
         if labels is None:
             return
         elif type(labels) == str:
@@ -72,8 +93,15 @@ class Latex:
             return labels
 
         labels = self.escapes(s)
-        if self.bold_header or override_bold:
-            labels = self.bold(labels)
+
+        if override_style is not None:
+            styles = self.parse_styles(override_style)
+        elif self.header_style is not None:
+            styles = self.parse_styles(self.header_style)
+        else:
+            return labels if len(labels) > 1 else labels[0]
+
+        labels = self.apply_styles(labels, styles)
         
         return labels if len(labels) > 1 else labels[0]
 
@@ -259,9 +287,9 @@ class LatexTable(Latex):
 
 class LatexMulticolTable(Latex):
 
-    def __init__(self, bold_sub_labels=False, sub_header_top_line=True, *args, **kwargs):
+    def __init__(self, sub_label_style: str = None, sub_header_top_line=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.bold_sub_labels = bold_sub_labels
+        self.sub_label_style = sub_label_style
         self.sub_header_top_line = sub_header_top_line
         self.data: Dict[str, dict] = {}
     
@@ -293,7 +321,7 @@ class LatexMulticolTable(Latex):
             else:
                 header.append(self.multicolumn(len(sub_labels), label))
                 sub_header.extend(
-                    self.process_header_labels(sub_labels, override_bold=self.bold_sub_labels)
+                    self.process_header_labels(sub_labels, override_style=self.sub_label_style)
                 )
 
         if len(column_holes) and self.sub_header_top_line:
