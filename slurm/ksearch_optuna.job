@@ -19,4 +19,4 @@ repeats="6"
 
 #params_file="data/ksearch_optuna_params.json"
 
-./scripts/slurm_job_tmpl.sh -m KSearchOptuna -r "$repeats" -d "$dataset" -s "n_estimators learning_rate max_depth num_leaves" ${params_file:+-f "$params_file" -i "0"}
+./scripts/slurm_job_tmpl.sh -m KSearchOptuna -r "$repeats" -d "$dataset" -s "n_estimators,learning_rate,max_depth,num_leaves" ${params_file:+-f "$params_file" -i "0"}
