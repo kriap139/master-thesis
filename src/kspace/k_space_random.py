@@ -6,6 +6,7 @@ from itertools import chain
 from typing import Iterable, Union, Iterable, Callable
 from numbers import Number
 from .k_space import KSpaceV3
+from Util import TY_SPACE
 
 
 class KSpaceRandom(RandomizedSearchCV):
