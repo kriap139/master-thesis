@@ -8,7 +8,7 @@ from numbers import Number
 from .k_space import KSpaceV3
 
 
-class KSpaceRandomSearch(RandomizedSearchCV):
+class KSpaceRandom(RandomizedSearchCV):
     def __init__(self, model, k_space: TY_SPACE, k:  Union[Number, dict] = None, *args, **kwargs):
         super().__init__(model, k_space, *args, **kwargs)
         self.kspace = KSpaceV3(k_space, k, x_in_search_space=True)
@@ -31,9 +31,6 @@ class KSpaceRandomSearch(RandomizedSearchCV):
         for column, values in pd.DataFrame(data).to_dict(orient="list"):
             frame[column + '_original'] = values
         self.cv_results_ = frame
-
-
-
 
         self.cv_results_ = results
     

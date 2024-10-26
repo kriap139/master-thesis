@@ -1,4 +1,5 @@
-from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json, save_json
+from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json, save_json, json_to_str, 
+from Util.compat import removeprefix
 from typing import Callable, Iterable, Dict
 import time
 import numpy as np
@@ -7,6 +8,7 @@ import pandas as pd
 from itertools import chain
 from numbers import Number
 from .optuna_search import BaseSearch, InnerResult, KSpaceOptunaSearchV3
+from .kspace_random import KSpaceRandomSearchV3
 from optuna.distributions import FloatDistribution
 from optuna.study import Study, create_study
 from sklearn.base import clone
@@ -16,7 +18,7 @@ import logging
 import sys
 
 class KSearchOptuna(BaseSearch):    
-    def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, *args, **kwargs):
+    def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, search_method=None, *args, **kwargs):
         super().__init__(*args, **kwargs, save_dir=resume_dir)
 
         self.ksearch_iter = ksearch_iter
@@ -24,16 +26,33 @@ class KSearchOptuna(BaseSearch):
         self._study = create_study(sampler=TPESampler(), direction="maximize")
         self._iter = range(self.ksearch_iter)
         self._searches_dir = None
-
-        #FIXME Have this here, as it is unkown how positional arguments will affect the 
-        # propegation of arguments trough inherited classes. 
+        self.search_method = search_method
+        
+        #FIXME Have this here, as it is unknown how positional arguments will affect the 
+        # propagation of arguments trough inherited classes. 
         assert len(args) == 0
+
+        if self.search_method:
+            this_module = sys.modules[__name__]
+            self._method = getattr(this_module, self.search_method, None)
+            if self._method is None:
+                raise ValueError(f"Unable to find selected search_method: {self.search_method}")
+            if 'kspace' in self._method.__name__.lower():
+                raise ValueError(f"Selected search method not a kspace method: {self.search_method}")
+        else:
+            self._method = KSpaceOptunaSearchV3
 
         if 'model' in self._passed_kwargs:
             kwargs.pop('model')
-
         if resume_dir is not None:
             self._resume_search(resume_dir)
+
+    def _create_save_dir(self) -> str:
+        method = self._method.__name__ 
+        method = removeprefix(method, "KSpace")
+        method = method.split("Search", maxsplit=1)[0]
+        info = dict(method=method)
+        return super()._create_save_dir(info)
     
     def _resume_search(self, resume_dir: str):
         if os.path.exists(resume_dir):
@@ -91,14 +110,14 @@ class KSearchOptuna(BaseSearch):
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         if self._save:
             self.init_save(search_space)
-
+        
         space = self.create_kspace_distributions(search_space)
 
         for i in self._iter:
             trial = self._study.ask(space)
             k = trial.params.copy()
 
-            tuner = KSpaceOptunaSearchV3(k=k, model=clone(self._model), **self._passed_kwargs, root_dir=self._searches_dir)
+            tuner = self._method(k=k, model=clone(self._model), **self._passed_kwargs, root_dir=self._searches_dir)
             tuner.search(search_space, fixed_params)
 
             result = dict(search_dir=tuner._save_dir)

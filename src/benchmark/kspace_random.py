@@ -11,8 +11,7 @@ import pandas as pd
 from sklearn.model_selection import KFold
 from sklearn.base import clone
 from sklearn.utils.estimator_checks import check_estimator
-from kspace import KSpaceStudy, infer_kspace_ver
-from kspace import KSpaceRandomSearch
+from kspace import KSpaceRandom
         
 class KSpaceRandomSearchV3(BaseSearch):
     def __init__(self, k:  Union[Number, dict] = None, *args, **kwargs):
@@ -26,6 +25,6 @@ class KSpaceRandomSearchV3(BaseSearch):
         return super()._create_save_dir(info)
     
     def _inner_search(self, search_iter: int, x_train: pd.DataFrame, y_train: pd.DataFrame, search_space: dict, fixed_params: dict) -> InnerResult:
-        search = KSpaceRandomSearch(self._model, search_space, k=self.k, n_iter=self.n_iter, scoring=self.scoring, n_jobs=self.n_jobs, cv=self.inner_cv, refit=self.refit)
+        search = KSpaceRandom(self._model, search_space, k=self.k, n_iter=self.n_iter, scoring=self.scoring, n_jobs=self.n_jobs, cv=self.inner_cv, refit=self.refit)
         results = search.fit(x_train, y_train, **fixed_params)
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.cv_results_, results.best_estimator_)

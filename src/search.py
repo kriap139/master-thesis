@@ -48,7 +48,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
             "RandomSearch", "SeqUDSearch",
             "GridSearch", "OptunaSearch", "KSpaceSeqUDSearch", "KSpaceSeqUDSearchV2", "KSpaceSeqUDSearchV3", 
             "KSpaceOptunaSearch", "KSpaceOptunaSearchV2", "KSpaceOptunaSearchV3",
-            "NOSearch", "KSearchOptuna"
+            "NOSearch", "KSearchOptuna", "KSpaceRandomSearchV3"
         ),
         type=str,
         required=test_method is None,
