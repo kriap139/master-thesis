@@ -1,3 +1,5 @@
-{
-    "search_method": "KSpaceRandomSearchV3"
-}
+[
+    {
+        "search_method": "KSpaceRandomSearchV3"
+    }
+]
