@@ -19,6 +19,7 @@ import sys
 
 class KSearchOptuna(BaseSearch):    
     def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, search_method=None, *args, **kwargs):
+        self.search_method = search_method
         super().__init__(*args, **kwargs, save_dir=resume_dir)
 
         self.ksearch_iter = ksearch_iter
@@ -26,7 +27,6 @@ class KSearchOptuna(BaseSearch):
         self._study = create_study(sampler=TPESampler(), direction="maximize")
         self._iter = range(self.ksearch_iter)
         self._searches_dir = None
-        self.search_method = search_method
         
         #FIXME Have this here, as it is unknown how positional arguments will affect the 
         # propagation of arguments trough inherited classes. 
