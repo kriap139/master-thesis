@@ -14,6 +14,7 @@ class RowLabel:
    label: str
    start_idx: int
    end_idx: int = None
+   color: str = None
    processing: List[str] = field(default_factory=[])
    
    def bold(self) -> RowLabel:
@@ -73,9 +74,9 @@ class Latex:
         styler = lambda s: s
         
         for style in styles:
-            styler = getattr(self, style, None)
-            if styler is not None:
-                styler = lambda s: styler(s)
+            styler_x = getattr(self, style, None)
+            if styler_tmp is not None:
+                styler = lambda s: styler_x(styler(s))
         
         if type(s) == str:
             return styler(s)
@@ -172,6 +173,9 @@ class Latex:
     def multicolumn(self, n_cols: int, label: str) -> str:
         col_fmt = self.col_format(1)
         return f"\\multicolumn{{{n_cols}}}{{{col_fmt}}}{{{label}}}"
+
+    def rowcolor(self, color: str) -> str:
+        return f"\\rowcolor{{s}}"
     
     @classmethod
     def cline(cls, start_col: int, end_col: int) -> str:
@@ -199,7 +203,11 @@ class Latex:
         for process in rl.processing: 
             label = getattr(self, process, lambda l: l)(label)
 
-        return f"{row_line_top}{SPACES_L3}{self.multicolumn(n_cols, label)} \\\\ {row_line_bottom}"
+        if rl.color is not None:
+            color = f"\n{SPACES_L3}{self.rowcolor(rl.color)}"
+        else:
+            color = ""
+        return f"{color}{row_line_top}{SPACES_L3}{self.multicolumn(n_cols, label)} \\\\ {row_line_bottom}"
     
     def tabular_rows_with_label_rows(self, data: pd.DataFrame, n_cols: int, label_rows: Iterable[RowLabel]) -> List[str]:
         rows = []
@@ -357,7 +365,6 @@ class LatexMulticolTable(Latex):
                 labels[label] = []
             elif sub_label is not None:
                 sub_labels.append(sublabel)
-            
         return labels
         
     
@@ -424,7 +431,7 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
                     ltx.add_cell(dataset.lower(), method, sub_label, data=result["result"][f"{sub_label}_test_acc"])
             n_rows += 1
 
-        row_labels.append(RowLabel(row_start, domain, False, n_rows))
+        row_labels.append(RowLabel(row_start, domain, n_rows, 'lightgray'))
         row_start = n_rows
         print(row_labels)
     return ltx.create(row_labels=row_labels)
@@ -457,7 +464,7 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
                     ltx.add_cell(dataset.lower(), method, sub_label, data=result["result"][f"mean_{sub_label}_acc"])
             n_rows += 1
 
-        row_labels.append(RowLabel(row_start, domain, False, n_rows))
+        row_labels.append(RowLabel(row_start, domain, n_rows, 'lightgray'))
         row_start = n_rows
         print(row_labels)
     return ltx.create(row_labels=row_labels)
