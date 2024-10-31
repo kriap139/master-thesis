@@ -16,6 +16,7 @@ from optuna.samplers import TPESampler
 import os
 import logging
 import sys
+import gc
 
 class KSearchOptuna(BaseSearch):    
     def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, search_method=None, *args, **kwargs):
@@ -121,7 +122,8 @@ class KSearchOptuna(BaseSearch):
             tuner = self._method(k=k, model=clone(self._model), **self._passed_kwargs, root_dir=self._searches_dir)
             tuner.search(search_space, fixed_params)
 
-            result = dict(search_dir=tuner._save_dir)
+            search_dir = tuner._save_dir.split(os.path.sep)[-1]
+            result = dict(search_dir=search_dir)
             result.update({f"k_{key}": v for key, v in k.items()})
             result.update(tuner.result)
 
@@ -131,6 +133,9 @@ class KSearchOptuna(BaseSearch):
                 self.update_history(result)
 
             print(f"{i}: train_score={round(result['mean_train_acc'], 4)}, test_score={round(result['mean_test_acc'], 4)}, params={json_to_str(k, indent=None)}")
+            
+            del tuner
+            gc.collect()
         
         print(f"best_number={self._study.best_trial.number}, best_score={self._study.best_value}, best_params={self._study.best_params}")
         self._calc_result()            
