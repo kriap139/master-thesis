@@ -17,11 +17,11 @@ class RowLabel:
    color: str = None
    processing: List[str] = field(default_factory=[])
    
-   def bold(self) -> RowLabel:
+   def bold(self) -> 'RowLabel':
       self.processing.append("bold")
       return self
     
-   def underline(self) -> RowLabel:
+   def underline(self) -> 'RowLabel':
       self.processing.append("underline")
       return self
 
@@ -40,7 +40,7 @@ class Latex:
 
     def __init__(
         self, 
-        label: str = "tab:", 
+        label: str = None, 
         caption: str = "",
         add_column_labels=True, 
         add_row_label: str = None, 
@@ -86,14 +86,15 @@ class Latex:
             return [styler(_s) for _s in s]
     
     def process_header_labels(self, labels: Union[None, str, List[str]], override_style=None) -> Union[str, List[str]]:
-        if labels is None:
-            return
-        elif type(labels) == str:
-            labels = (labels, )
-        elif not len(labels):
-            return labels
+        return_str = False
 
-        labels = self.escapes(s)
+        if (labels is None) or (not len(labels)):
+            return labels
+        elif type(labels) == str:
+            return_str = True
+            labels = (labels, )
+
+        labels = self.escapes(labels)
 
         if override_style is not None:
             styles = self.parse_styles(override_style)
@@ -104,7 +105,7 @@ class Latex:
 
         labels = self.apply_styles(labels, styles)
         
-        return labels if len(labels) > 1 else labels[0]
+        return labels[0] if return_str else labels
 
     def table_skel(self, tabular: str) -> str:
         resize_to = "\\linewidth" if self.vertical else "\\textwidth"
@@ -116,7 +117,7 @@ class Latex:
             f"{tabular}\n"
             f"{SPACES_L1}}}\n"
             f"{SPACES_L1}\\caption{{{self.caption}}}\n"
-            f"{SPACES_L1}\\label{{tab:{self.table_label}}}\n"
+            f"{SPACES_L1}\\label{{tab:{self.label}}}\n"
             f"\\end{{table}}"
         ) 
 
@@ -234,14 +235,14 @@ class Latex:
     
     def cell(self, row, col, v: Any) -> str:
         if isinstance(v, numbers.Number):
-            v = str(self.rounder(v, self.n_round))
+            v = str(self.rounder(v))
         else:
             v = self.escapes(v)
         return v
     
     def tabular_rows(self, data: pd.DataFrame) -> List[str]:
         table_rows = []
-        row_line = ROW_LINE_NL if row_lines else ""
+        row_line = ROW_LINE_NL if self.row_lines else ""
 
         if self.add_row_label is not None:
             row_labels = [f"{self.escapes(label)} & " for label in data.index]
@@ -250,7 +251,7 @@ class Latex:
 
         for i, (index, row) in enumerate(data.iterrows()):
             row_data = [self.cell(index, col, cell) for col, cell in enumerate(row)]
-            table_rows.append(f"{SPACES_L3}{row_labels[i]}{'&'.join(row_data)} \\\\ {row_line}")
+            table_rows.append(f"{SPACES_L3}{row_labels[i]}{' & '.join(row_data)} \\\\ {row_line}")
         
         if self.outer_row_lines:
             row_labels.append(ROW_LINE_NL)
@@ -263,13 +264,13 @@ class LatexTable(Latex):
 
     def header(self, column_labels: List[str]):
         column_labels = self.process_header_labels(column_labels)
-        self.add_row_label = self.bold(add_row_label)
+        self.add_row_label = self.bold(self.add_row_label)
 
         outer_line = ROW_LINE_NL if self.outer_row_lines else ""
         inner_line = ROW_LINE_NL if self.row_lines else "\n"
 
-        row_label = f"{SPACES_L3}" if add_row_label is None else f"{outer_line}{SPACES_L3}{add_row_label} & "
-        header = row_label + " & ".join(labels) + f" \\\\ {inner_line}"
+        row_label = f"{SPACES_L3}" if self.add_row_label is None else f"{outer_line}{SPACES_L3}{self.add_row_label} & "
+        header = row_label + " & ".join(column_labels) + f" \\\\ {inner_line}"
         
         return header
     
@@ -305,10 +306,11 @@ class LatexMulticolTable(Latex):
                 n_cols += 1
         return n_cols
 
-    def header(self, decoded_labels: Dict[str, List[str]], n_cols: int) -> str:
-        outer_row_line = ROW_LINE_NL if self.outer_row_lines else ""
+    def header(self, labels: List[str], sub_labels: Dict[str, List[str]], n_cols: int) -> str:
+        outer_row_line = f"{SPACES_L3}{ROW_LINE}" if self.outer_row_lines else ""
         inner_row_line = f" \\\\{ROW_LINE_NL}" if self.row_lines else "\\\\\n"
-        
+        qoute = '& ' if self.add_row_label else ''
+
         column_holes = []
         header = []
         sub_header = []
@@ -317,16 +319,16 @@ class LatexMulticolTable(Latex):
             header.append(self.multirow(2, self.add_row_label))
             column_holes.append(0 + 1)
 
-        for i, (label, sub_labels) in enumerate(decoded_labels.items()):
-            if not len(sub_labels):
+        for i, label in enumerate(labels):
+            _sub_labels = sub_labels[label]
+            if not len(_sub_labels):
                 header.append(self.multirow(2, self.process_header_labels(label)))
                 column_holes.append(i + 1)
             else:
-                header.append(self.multicolumn(len(sub_labels), label))
-                sub_header.extend(
-                    self.process_header_labels(sub_labels, override_style=self.sub_label_style)
-                )
-
+                header.append(self.multicolumn(len(_sub_labels), label))
+                _sub_labels = self.process_header_labels(_sub_labels, override_style=self.sub_label_style)
+                sub_header.extend(_sub_labels)
+        
         if len(column_holes) and self.sub_header_top_line:
             if len(column_holes) == 1 and column_holes[0] == 1:
                 cline = self.cline(1, n_cols)
@@ -334,11 +336,11 @@ class LatexMulticolTable(Latex):
                 cline = self.cline(1, column_holes[0]) + self.cline(column_holes[0]+1, n_cols)
             else:
                 cline = self.cline(1, n_cols)
-            cline = f" \\\\\n{SPACES_L3}{cline}"
+            cline = f" \\\\\n{SPACES_L3}{cline}\n"
         else:
             cline = inner_row_line
         
-        label_header = f"{outer_row_line}\n{' &\n'.join(header)}\n{SPACES_L3}{cline}{' & '.join(sub_header)}{inner_row_line}"
+        label_header = f"{outer_row_line}\n{SPACES_L3}{f' &\n{SPACES_L3}'.join(header)} {cline}{SPACES_L3}{qoute}{' & '.join(sub_header)}{inner_row_line}"
         return label_header
     
     def _encode_label(self, label: str, sub_label: str = None) -> str:
@@ -357,21 +359,25 @@ class LatexMulticolTable(Latex):
             return decoded_label, decoded_sub_label
         return label, None
     
-    def _decode_labels(self, encoded: List[str]) -> Dict[str, List[str]]:
-        labels = {}
-        for (label, sublabel) in (self._decode_label(l) for l in encoded):
-            sub_labels = labels.get(label)
-            if sub_labels is None:
-                labels[label] = []
-            elif sub_label is not None:
-                sub_labels.append(sublabel)
-        return labels
+    def _decode_labels(self, encoded: List[str]) -> Tuple[List[str], Dict[str, str]]:
+        decoded = tuple(self._decode_label(l) for l in encoded)
+        _labels = map(lambda tup: tup[0], decoded)
+
+        labels = []
+        for label in _labels:
+            if label not in labels:
+                labels.append(label) 
+
+        sub_labels = {label: [] for label in labels}
+        for (label, sub_label) in decoded:
+            if sub_label is not None:
+                sub_labels[label].append(sub_label)
+            
+        return labels, sub_labels
         
-    
     def add_cell(self, index, label: str, sub_label: str = None, data = None):
         mapped_label = self._encode_label(label, sub_label)
-        row = self.data.get(mapped_label, None)
-
+        row = self.data.get(mapped_label, None) 
         if row is None:
             self.data[mapped_label] = {index: data}        
         else:
@@ -379,12 +385,13 @@ class LatexMulticolTable(Latex):
     
     def create(self, row_labels: Iterable[RowLabel] = None) -> str:
         data = pd.DataFrame.from_dict(self.data, orient='columns')
-        decoded_labels = self._decode_labels(data.columns)
-        n_cols = self.calc_n_cols(decoded_labels)  
+        labels, sub_labels = self._decode_labels(data.columns)
+        n_cols = self.calc_n_cols(sub_labels)  
 
-        print(decoded_labels)
+        print(f"labels: {labels}")
+        print(f"sub_labels: {sub_labels.values()}")
 
-        header = self.header(decoded_labels, n_cols)
+        header = self.header(labels, sub_labels, n_cols)
         if row_labels is None:
             rows = self.tabular_rows(data)
         else:
@@ -393,9 +400,33 @@ class LatexMulticolTable(Latex):
         tabular = self.tabular_skel(header, rows, n_cols)
         table = self.table_skel(tabular)
         return table
+    
+    def sort_columns(self, by_sub_labels: List[str], ascending=True):
+        data = pd.DataFrame.from_dict(self.data, orient='columns')
 
+        sort_columns = []
+        for col in data.columns:
+            label, sub_label = self._decode_label(col)
+            if sub_label in by_sub_labels:
+                sort_columns.append(col)
 
+        sort_frame = data[sort_columns].sum(axis=0)
+        sort_frame = sort_frame.sort_values()
 
+        sorted_labels = list(sort_frame.index)
+        if ascending:
+            sorted_labels.reverse()
+        sorted_labels = list(self._decode_label(label)[0] for label in sorted_labels)
+
+        sort_columns = []
+        _, sub_labels = self._decode_labels(data.columns)
+        for label in sorted_labels:
+            sort_columns.extend(
+                self._encode_label(label, sub_label) for sub_label in sub_labels[label]
+            )
+        
+        data = data[sort_columns]
+        self.data = data.to_dict(orient='dict')
 
 
 
@@ -494,7 +525,6 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
         h, m = divmod(m, 60)
         return "{:02}:{:02}".format(h, m)
 
-
     delta_t = "$\\Delta t$"
     ltx = LatexMulticolTable(n_round=0, row_lines=False, outer_col_lines=False)
     
@@ -515,12 +545,14 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, sort_r
         w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=False
     )
-    ltx = LatexMulticolTable(n_round=4, row_lines=False, outer_col_lines=True)
+    ltx = LatexMulticolTable(n_round=4, row_lines=False, outer_col_lines=True, add_row_label='Dataset')
 
     for i, (dataset, results) in enumerate(data.results.items()):
         for (method, result) in results.items():
-            ltx.add_cell(dataset.lower(), method, "ns", data=data.normalized_scores.at[method, dataset])
-            ltx.add_cell(dataset.lower(), method, "rank", data=data.mean_ranks.at[dataset, method])
+            ltx.add_cell(dataset.lower(), method, "ns", data=data.normalized_scores.at[dataset, method])
+            ltx.add_cell(dataset.lower(), method, "mns", data=data.mean_normalized_scores.at[dataset, method])
+    
+    ltx.sort_columns(by_sub_labels=['ns'], ascending=True)
     return  ltx.create()
 
 
@@ -531,17 +563,31 @@ def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None,
         print_results=False
     )
     latex_dict = {
-        f"\\(a_s\\)": data.agg_scores.to_dict(),
-        f"\\(a_r\\)":data.rank_scores.to_dict(),
-        f"\\(\\mu_s\\)": data.nas.to_dict(),
-        f"\\(\\mu_r\\)": data.nrs.to_dict(),
+        f"\\(a_ns\\)": data.agg_ns_scores.to_dict(),
+        f"\\(a_mns\\)":data.agg_mns_scors.to_dict(),
+        f"\\(\\mu_{{ns}}\\)": data.nas.to_dict(),
+        f"\\(\\mu_{{mns}}\\)": data.nams.to_dict(),
         f"\\(\\lambda\\)": data.js.to_dict()
     }
 
     ltx = LatexTable(n_round=4, add_row_label="Dataset", row_lines=False, outer_col_lines=True)
     frame = pd.DataFrame.from_dict(latex_dict)
+    frame.sort_values(by="\\(\\lambda\\)", axis=0, ascending=False, inplace=True)
+
     return ltx.create(frame)
 
+def create_lambda_metric_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+    data = calc_eval_metrics(
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=False
+    )
+    latex_dict = {
+        f"\\(\\lambda\\)": data.js.to_dict()
+    }
+    ltx = LatexTable(n_round=4, add_row_label="Metric", row_lines=False, outer_col_lines=True)
+    frame = pd.DataFrame.from_dict(latex_dict, orient='index')
+    frame.sort_values(by="\\(\\lambda\\)", axis=0, ascending=False, inplace=True)
+    return ltx.create(frame)
 
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
@@ -561,8 +607,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
-    table = create_time_table(ignore_datasets, sort_fn=folder_sorter)
-    #print(table)
+    table = create_lambda_metric_table(ignore_datasets, sort_fn=folder_sorter)
     save_table(table)
 
 
