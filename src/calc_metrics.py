@@ -209,14 +209,13 @@ class EvalMetrics:
     folders: Dict[str, Dict[str, ResultFolder]]
     results: Dict[str, Dict[str, dict]]
     mean_accs: pd.DataFrame
-    mean_ranks: pd.DataFrame
     max_accs: pd.DataFrame
-    max_ranks: pd.DataFrame
     normalized_scores: pd.DataFrame
-    agg_scores: pd.DataFrame
-    rank_scores: pd.DataFrame
+    mean_normalized_scores: pd.DataFrame
+    agg_ns_scores: pd.DataFrame
+    agg_mns_scors: pd.DataFrame
     nas: pd.DataFrame
-    nrs: pd.DataFrame
+    nams: pd.DataFrame
     js: pd.DataFrame
     method_names: List[str]
     w_nas: float
@@ -246,6 +245,7 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
     data = load_result_folders(*load_folder_args, **load_folders_kwargs)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
+    mean_normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     max_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     datasets_max_acc: [str, float] = {dataset: 0 for dataset in data.keys()}
@@ -298,40 +298,37 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
         for (method, result) in methods.items():
             max_dataset = datasets_max_acc[dataset]
             max_method = result["result"]["max_test_acc"]
+            mean_method = result["result"]["mean_test_acc"]
             ns = max_method / max_dataset
+            mns = mean_method / max_dataset
             normalized_scores[dataset][method] = ns
+            mean_normalized_scores[dataset][method] = mns
 
-            mns = result["result"]["mean_test_acc"] / max_dataset
             subset_score = w_nas * ns + (1 - w_nas) *  mns
             friedman_subscores[method].append(subset_score)
     
     mean_frame = pd.DataFrame.from_dict(mean_accs, orient='index')
-    mean_ranks = mean_frame.rank(axis=1)
-
     max_frame = pd.DataFrame.from_dict(max_accs, orient='index')
-    max_ranks = mean_frame.rank(axis=1)
+    norm_frame = pd.DataFrame.from_dict(normalized_scores, orient='index')
+    mean_norm_frame = pd.DataFrame.from_dict(mean_normalized_scores, orient='index')
 
-    norm_frame = pd.DataFrame.from_dict(normalized_scores)
-
-    agg_scores = norm_frame.sum(axis=1)
-    rank_scores = mean_ranks.sum(axis=0)
+    agg_ns_scores = norm_frame.sum(axis=0)
+    agg_mns_scores = mean_norm_frame.sum(axis=0)
 
     d_n = len(data)
-    n = len(methods_names)
-
-    nas = agg_scores / d_n
-    nrs = rank_scores / (d_n * n)
-
-    js = w_nas * nas + (1 - w_nas) * nrs
+    nas = agg_ns_scores / d_n
+    nams = agg_mns_scores / d_n
+    js = w_nas * nas + (1 - w_nas) * nams
 
     friedman_stats = friedmanchisquare(*friedman_subscores.values())
 
     return EvalMetrics(
-        data,
-        results,
-        mean_frame, mean_ranks, max_frame, max_ranks,
-        norm_frame, agg_scores, rank_scores,
-        nas, nrs, js, methods_names, w_nas, friedman_stats
+        data, results, 
+        mean_frame, max_frame, 
+        norm_frame, mean_norm_frame,
+        agg_ns_scores, agg_mns_scores, 
+        nas, nams, js,
+        methods_names, w_nas, friedman_stats
     )
 
 def time_frame(data: EvalMetrics) -> pd.DataFrame:
