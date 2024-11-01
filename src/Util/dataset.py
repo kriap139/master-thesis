@@ -64,9 +64,9 @@ class Builtin(Enum, metaclass=MetaEnum):
     COMET_MC = DatasetInfo("COMET_MC".lower(), "label", Task.MULTICLASS, SizeGroup.LARGE)                  #
     EPSILON = DatasetInfo("epsilon", 'target', Task.BINARY, SizeGroup.LARGE)                               #
     ELECTRICITY = DatasetInfo("electricity", "class", Task.BINARY, SizeGroup.SMALL)                        #
-    KDD1998 = DatasetInfo("kdd1998", "TARGET_B", Task.BINARY, SizeGroup.MODERATE)
-    KDD1998_ALLCAT = DatasetInfo("kdd1998_allcat", "TARGET_B", Task.BINARY, SizeGroup.MODERATE, base_name="kdd1998")
-    KDD1998_NONUM = DatasetInfo("kdd1998_nonum", "TARGET_B", Task.BINARY, SizeGroup.SMALL, base_name="kdd1998")
+    KDD1998 = DatasetInfo("kdd1998", "TARGET_B", Task.REGRESSION, SizeGroup.MODERATE)
+    KDD1998_ALLCAT = DatasetInfo("kdd1998_allcat", "TARGET_B", Task.REGRESSION, SizeGroup.MODERATE, base_name="kdd1998")
+    KDD1998_NONUM = DatasetInfo("kdd1998_nonum", "TARGET_B", Task.REGRESSION, SizeGroup.SMALL, base_name="kdd1998")
 
     EL_NINO = DatasetInfo("el_nino", "ss_temp", Task.REGRESSION, SizeGroup.SMALL)                       
     #PUF_128 = DatasetInfo("PUF_128".lower(), 128, Task.BINARY, SizeGroup.LARGE)
