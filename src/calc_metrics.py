@@ -12,7 +12,7 @@ from itertools import chain
 import itertools
 from numbers import Number
 from scipy.stats import friedmanchisquare
-
+import sys
 
 @dataclass
 class ResultFolder:
@@ -219,6 +219,7 @@ class EvalMetrics:
     js: pd.DataFrame
     method_names: List[str]
     w_nas: float
+    friedman_subscores: pd.DataFrame
     friedman_stats: Any
 
     def get_method_names(self) -> List[str]:
@@ -248,7 +249,8 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
     mean_normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     mean_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
     max_accs: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
-    datasets_max_acc: [str, float] = {dataset: 0 for dataset in data.keys()}
+    datasets_max_acc: Dict[str, float] = {dataset: 0 for dataset in data.keys()}
+    datasets_max_mean_acc: Dict[str, float] = {dataset: 0 for dataset in data.keys()}
     dataset_methods_names: Dict[str, list] = {}
 
     methods_names = []
@@ -270,6 +272,8 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
 
             if abs(datasets_max_acc[dataset]) < abs(file_data["result"]["max_test_acc"]):
                 datasets_max_acc[dataset] = file_data["result"]["max_test_acc"]
+            if abs(datasets_max_mean_acc[dataset]) < abs(file_data["result"]["mean_test_acc"]):
+                datasets_max_mean_acc[dataset] = file_data["result"]["mean_test_acc"]
             
             mean_accs[dataset][method] = file_data["result"]["mean_test_acc"]
             max_accs[dataset][method] = file_data["result"]["max_test_acc"]
@@ -288,7 +292,7 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
     if printed_newline:
         print()
 
-    friedman_subscores = {m: [] for m in methods_names}
+    friedman_subscores = {d: {} for d in dataset_methods_names.keys()}
 
     for dataset, methods in results.items():
         if len(methods) < len(methods_names):
@@ -297,15 +301,17 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
 
         for (method, result) in methods.items():
             max_dataset = datasets_max_acc[dataset]
+            max_mean_dataset = datasets_max_mean_acc[dataset]
             max_method = result["result"]["max_test_acc"]
             mean_method = result["result"]["mean_test_acc"]
+
             ns = max_method / max_dataset
-            mns = mean_method / max_dataset
+            mns = mean_method / max_mean_dataset
             normalized_scores[dataset][method] = ns
             mean_normalized_scores[dataset][method] = mns
 
             subset_score = w_nas * ns + (1 - w_nas) *  mns
-            friedman_subscores[method].append(subset_score)
+            friedman_subscores[dataset][method] = subset_score
     
     mean_frame = pd.DataFrame.from_dict(mean_accs, orient='index')
     max_frame = pd.DataFrame.from_dict(max_accs, orient='index')
@@ -320,7 +326,13 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
     nams = agg_mns_scores / d_n
     js = w_nas * nas + (1 - w_nas) * nams
 
-    friedman_stats = friedmanchisquare(*friedman_subscores.values())
+    subscore_frame = pd.DataFrame.from_dict(friedman_subscores, orient='index')
+    subscore_numpy = subscore_frame.to_numpy()
+
+    if subscore_frame.shape[1] > 3:
+        friedman_stats = friedmanchisquare(*subscore_numpy)
+    else:
+        friedman_stats = None
 
     return EvalMetrics(
         data, results, 
@@ -328,7 +340,8 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
         norm_frame, mean_norm_frame,
         agg_ns_scores, agg_mns_scores, 
         nas, nams, js,
-        methods_names, w_nas, friedman_stats
+        methods_names, w_nas,
+        subscore_frame, friedman_stats
     )
 
 def time_frame(data: EvalMetrics) -> pd.DataFrame:

@@ -6,7 +6,6 @@ data/test_archive
 data/basic_*.json
 data/zips
 data/**/*.tar
-data/kdd1998_cls/
 
 
 table.txt
