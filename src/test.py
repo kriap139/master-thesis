@@ -236,12 +236,12 @@ def print_basic_test_results(descriptions: dict):
     
 def print_dataset_stats(bt: Builtin):
     dataset = Dataset(bt).load()
+    y = pd.DataFrame(dataset.y)
 
     print(dataset.x.info())
     print()
-    print(dataset.y.info())
+    print(y.info())
 
-    y = dataset.y
     labels, counts = np.unique(y.to_numpy(), return_counts=True)
     print(f"labels={labels}, counts={counts}")
 
