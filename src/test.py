@@ -14,6 +14,7 @@ from sequd import SeqUD
 from scipy.sparse import coo_matrix
 from sklearn.metrics import get_scorer, get_scorer_names
 from typing import Iterable, Callable, Tuple, Dict, Union, List
+from scipy.stats import skew 
 
 from benchmark import (
     BaseSearch, RepeatedStratifiedKFold, RepeatedKFold, KFold, StratifiedKFold, SeqUDSearch, OptunaSearch, RandomSearch,
@@ -248,7 +249,7 @@ def print_dataset_stats(bt: Builtin):
     if labels.dtype == object:
         encoding = tuple(range(len(labels)))
         y.replace(labels, encoding, inplace=True)
-        
+    
     print(f"Skewness: {skew(y.to_numpy())}")
     print(f"y.shape: {y.shape}")
 
@@ -278,7 +279,7 @@ if "__main__" == __name__:
 
     #tuner = search(args)
     #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
-    print_dataset_stats(Builtin.KDD1998)
+    print_dataset_stats(Builtin.ELECTRICITY)
     
 
 
