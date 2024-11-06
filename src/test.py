@@ -233,6 +233,24 @@ def print_basic_test_results(descriptions: dict):
         test_score = np.mean(test_scores[name])
         diff_score = np.mean(diff_scores[name])
         print(f"# {descriptions[name]}\n\t{name}: train={round(train_score, 6)}, test={round(test_score, 6)}, delta={round(diff_score, 6)}")
+    
+def print_dataset_stats(bt: Builtin):
+    dataset = Dataset(bt).load()
+
+    print(dataset.x.info())
+    print()
+    print(dataset.y.info())
+
+    y = dataset.y
+    labels, counts = np.unique(y.to_numpy(), return_counts=True)
+    print(f"labels={labels}, counts={counts}")
+
+    if labels.dtype == object:
+        encoding = tuple(range(len(labels)))
+        y.replace(labels, encoding, inplace=True)
+        
+    print(f"Skewness: {skew(y.to_numpy())}")
+    print(f"y.shape: {y.shape}")
 
 if "__main__" == __name__:
     # Args method is not Used in this script!
@@ -260,14 +278,8 @@ if "__main__" == __name__:
 
     #tuner = search(args)
     #tuner = data_dir("test_results/KSpaceOptunaSearch[iris;kmask=0,kparams=2]") 
-
-    dataset = Dataset(Builtin.KDD1998).load()
-    print(dataset.x.info())
-    del dataset
-    gc.collect()
-    print()
-    dataset = Dataset(Builtin.KDD1998_NONUM).load()
-    print(dataset.x.info())
+    print_dataset_stats(Builtin.KDD1998)
+    
 
 
 
