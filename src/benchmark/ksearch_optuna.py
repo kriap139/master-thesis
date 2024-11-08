@@ -36,7 +36,7 @@ class KSearchOptuna(BaseSearch):
             self._method = getattr(this_module, self.search_method, None)
             if self._method is None:
                 raise ValueError(f"Unable to find selected search_method: {self.search_method}")
-            if 'kspace' in self._method.__name__.lower():
+            if 'kspace' not in self._method.__name__.lower():
                 raise ValueError(f"Selected search method not a kspace method: {self.search_method}")
             logging.info(f"Using search method {self._method.__name__}")
         else:
