@@ -1,5 +1,13 @@
 [
     {
+        "search_space": [
+            "n_estimators","learning_rate","max_depth","num_leaves"
+        ]
+    },
+    {
+        "search_space": [
+            "n_estimators","learning_rate","max_depth","num_leaves"
+        ],
         "search_method": "KSpaceRandomSearchV3"
     }
 ]

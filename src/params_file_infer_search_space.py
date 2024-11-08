@@ -8,7 +8,8 @@ def get_search_space(params: dict) -> str:
         keys = params["k"].keys()
         return ",".join(keys)
     elif "search_space" in params:
-        return params["search_space"]
+        search_space =  params["search_space"]
+        return ",".join(search_space)
     else:
         return "all"
 
