@@ -162,6 +162,7 @@ run_search_with_params() {
         search_space=${search_spaces[$i]}
         params="$(python3 src/params_file_to_cmd.py "$params_file" "$params_idx")"
         print_search_space_info
+        echo "params_idx=$params_idx, search_space= $search_space, params=$params"
         
         # last params index
         if [ $i -eq $((${#param_indexes[@]}-1)) ] && [[ "$dataset" == "$last_dataset" ]]
