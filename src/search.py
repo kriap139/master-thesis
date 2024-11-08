@@ -110,6 +110,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     
     if args.params is not None:
         args.params = parse_cmd_params(args.params)
+        logging.info(f"Args.params: {args.params}")
     
     if args.search_space is not None:
         if args.search_space == 'all':
