@@ -16,7 +16,7 @@ def parse_list(a: str) -> list:
         param = param.strip()
         if param.startswith("{"):
             result.append(parse_dict(param))
-        elif v.startswith("["):
+        elif param.startswith("["):
             result.append(parse_list(param))
         else:
             result.append(try_number(param))
