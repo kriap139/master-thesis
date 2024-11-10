@@ -11,8 +11,7 @@ from Util import TY_SPACE
 class KSpaceRandom(RandomizedSearchCV):
     def __init__(self, 
         model, 
-        k_space: TY_SPACE, 
-        k:  Union[Number, dict] = None, 
+        param_distributions: TY_SPACE, 
         n_iter=10, 
         scoring=None, 
         n_jobs=None, 
@@ -24,11 +23,14 @@ class KSpaceRandom(RandomizedSearchCV):
         error_score=np.nan,
         return_train_score=False):
         super().__init__(
-            estimator=model, param_distributions=k_space, n_iter=n_iter, scoring=scoring, n_jobs=n_jobs, 
+            estimator=model, param_distributions=param_distributions, n_iter=n_iter, scoring=scoring, n_jobs=n_jobs, 
             refit=refit, cv=cv, verbose=verbose, pre_dispatch=pre_dispatch, random_state=random_state, 
             error_score=error_score, return_train_score=return_train_score
         )
-        self.kspace = KSpaceV3(k_space, k, x_in_search_space=True)
+        self.kspace = None
+    
+    def set_k(self, k:  Union[Number, dict] = None):
+        self.kspace = KSpaceV3(param_distributions, k, x_in_search_space=True)
     
     def _run_search(self, evaluate_candidates):
         """Search n_iter candidates from param_distributions"""
