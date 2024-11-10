@@ -24,9 +24,9 @@ class KSpaceRandom(RandomizedSearchCV):
         error_score=np.nan,
         return_train_score=False):
         super().__init__(
-            model, k_space, n_iter, scoring, n_jobs, refit, 
-            cv, verbose, pre_dispatch, random_state, 
-            error_score, return_train_score
+            estimator=model, param_distributions=k_space, n_iter=n_iter, scoring=scoring, n_jobs=n_jobs, 
+            refit=refit, cv=cv, verbose=verbose, pre_dispatch=pre_dispatch, random_state=random_state, 
+            error_score=error_score, return_train_score=return_train_score
         )
         self.kspace = KSpaceV3(k_space, k, x_in_search_space=True)
     
