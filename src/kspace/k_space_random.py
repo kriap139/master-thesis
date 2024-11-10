@@ -8,10 +8,26 @@ from numbers import Number
 from .k_space import KSpaceV3
 from Util import TY_SPACE
 
-
 class KSpaceRandom(RandomizedSearchCV):
-    def __init__(self, model, k_space: TY_SPACE, k:  Union[Number, dict] = None, *args, **kwargs):
-        super().__init__(model, k_space, *args, **kwargs)
+    def __init__(self, 
+        model, 
+        k_space: TY_SPACE, 
+        k:  Union[Number, dict] = None, 
+        n_iter=10, 
+        scoring=None, 
+        n_jobs=None, 
+        refit=True,
+        cv=None,
+        verbose=0,
+        pre_dispatch="2*n_jobs",
+        random_state=None,
+        error_score=np.nan,
+        return_train_score=False):
+        super().__init__(
+            model, k_space, n_iter, scoring, n_jobs, refit, 
+            cv, verbose, pre_dispatch, random_state, 
+            error_score, return_train_score
+        )
         self.kspace = KSpaceV3(k_space, k, x_in_search_space=True)
     
     def _run_search(self, evaluate_candidates):
@@ -27,9 +43,9 @@ class KSpaceRandom(RandomizedSearchCV):
             )
 
         evaluate_candidates(candidates)
-
         frame = pd.DataFrame(self.cv_results_)
-        for column, values in pd.DataFrame(data).to_dict(orient="list"):
+
+        for column, values in pd.DataFrame(sampled).to_dict(orient="list"):
             frame[column + '_original'] = values
         self.cv_results_ = frame
 
