@@ -19,6 +19,7 @@ class ResultFolder:
     dir_path: str
     dataset: Builtin
     search_method: str
+    dir_str: str
     version: int = 0
     info: dict = None
     
@@ -45,7 +46,7 @@ def select_version(current: ResultFolder, new: Optional[ResultFolder] = None, se
             select = select.copy()
             version = select.pop("version", None)
             select = select if len(select) > 0 else None
-            test = ResultFolder(current.dir_path, current.dataset, current.search_method, version, select)
+            test = ResultFolder(current.dir_path, current.dataset, current.search_method, current.dir_str, version, select)
 
             curr_hash = current.info_hash()
             if new is None:
@@ -158,7 +159,7 @@ def load_result_folders(
         elif ignore_with_info_filter is not None and ignore_with_info_filter(info):
             continue
 
-        new_folder = ResultFolder(path, Builtin[dataset], method, version, info)
+        new_folder = ResultFolder(path, Builtin[dataset], method, result_dir, version, info)
         dataset_results = results.get(dataset, None)
         
         if dataset_results is None: 
