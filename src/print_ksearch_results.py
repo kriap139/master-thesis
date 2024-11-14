@@ -27,7 +27,7 @@ def print_k_search(folders: Dict[str, Dict[str, Union[List[ResultFolder], Result
 if __name__ == "__main__":
     ignore_datasets = ("kdd1998_allcat", "kdd1998_nonum")
     ignore_methods = (
-        "RandomSearch", "SeqUDSearch", "GridSearch", "OptunaSearch", 
+        "RandomSearch", "SeqUDSearch", "GridSearch", #"OptunaSearch", 
         "KSpaceSeqUDSearch", "KSpaceSeqUDSearchV2", "KSpaceSeqUDSearchV3", 
         "KSpaceOptunaSearch", "KSpaceOptunaSearchV2", "KSpaceOptunaSearchV3",
         "NOSearch", "KSpaceRandomSearchV3"
