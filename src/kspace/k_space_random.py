@@ -30,7 +30,7 @@ class KSpaceRandom(RandomizedSearchCV):
         self.kspace = None
     
     def set_k(self, k:  Union[Number, dict] = None):
-        self.kspace = KSpaceV3(param_distributions, k, x_in_search_space=True)
+        self.kspace = KSpaceV3(self.param_distributions, k, x_in_search_space=True)
     
     def _run_search(self, evaluate_candidates):
         """Search n_iter candidates from param_distributions"""
