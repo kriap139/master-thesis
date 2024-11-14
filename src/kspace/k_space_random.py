@@ -10,7 +10,7 @@ from Util import TY_SPACE
 
 class KSpaceRandom(RandomizedSearchCV):
     def __init__(self, 
-        model, 
+        estimator, 
         param_distributions: TY_SPACE, 
         n_iter=10, 
         scoring=None, 
@@ -23,7 +23,7 @@ class KSpaceRandom(RandomizedSearchCV):
         error_score=np.nan,
         return_train_score=False):
         super().__init__(
-            estimator=model, param_distributions=param_distributions, n_iter=n_iter, scoring=scoring, n_jobs=n_jobs, 
+            estimator=estimator, param_distributions=param_distributions, n_iter=n_iter, scoring=scoring, n_jobs=n_jobs, 
             refit=refit, cv=cv, verbose=verbose, pre_dispatch=pre_dispatch, random_state=random_state, 
             error_score=error_score, return_train_score=return_train_score
         )
