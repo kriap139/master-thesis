@@ -39,9 +39,18 @@ class KSpaceRandom(RandomizedSearchCV):
         )
 
         self.kspace = None
+        self.original_candidates = None
     
     def set_k(self, k:  Union[Number, dict] = None):
         self.kspace = KSpaceV3(self.param_distributions, k, x_in_search_space=True)
+    
+    def process_results(self):
+        frame = pd.DataFrame(self.cv_results_)
+        originals = pd.DataFrame(self.original_candidates).to_dict(orient="series")
+
+        for column, values in originals.items():
+            frame[column + '_original'] = values
+        self.cv_results_ = frame
     
     def _run_search(self, evaluate_candidates):
         """Search n_iter candidates from param_distributions"""
@@ -54,13 +63,7 @@ class KSpaceRandom(RandomizedSearchCV):
             candidates.append(
                 {param: self.kspace.kmap(param, v, default=v) for param, v in sample.items()}
             )
-
+        
+        self.original_candidates = sampled
         evaluate_candidates(candidates)
-        frame = pd.DataFrame(self.cv_results_)
-
-        for column, values in pd.DataFrame(sampled).to_dict(orient="list"):
-            frame[column + '_original'] = values
-        self.cv_results_ = frame
-
-        self.cv_results_ = results
-    
+        

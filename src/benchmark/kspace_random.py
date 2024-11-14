@@ -28,4 +28,5 @@ class KSpaceRandomSearchV3(BaseSearch):
         search = KSpaceRandom(self._model, search_space, n_iter=self.n_iter, scoring=self.scoring, n_jobs=self.n_jobs, cv=self.inner_cv, refit=self.refit)
         search.set_k(self.k)
         results = search.fit(x_train, y_train, **fixed_params)
+        search.process_results()
         return InnerResult(results.best_index_, results.best_params_, results.best_score_, results.cv_results_, results.best_estimator_)
