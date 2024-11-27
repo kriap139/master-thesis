@@ -11,6 +11,7 @@ from .optuna_search import BaseSearch, InnerResult, KSpaceOptunaSearchV3
 from .kspace_random import KSpaceRandomSearchV3
 from optuna.distributions import FloatDistribution
 from optuna.study import Study, create_study
+from optuna.trial import Trial, create_trial
 from sklearn.base import clone
 from optuna.samplers import TPESampler
 import os
@@ -19,7 +20,7 @@ import sys
 import gc
 
 class KSearchOptuna(BaseSearch):    
-    def __init__(self, ksearch_iter: int = 100, resume_dir: str = None, search_method=None, *args, **kwargs):
+    def __init__(self, ksearch_iter: int = 100, resume=False, search_method=None, *args, **kwargs):
         self.search_method = search_method
         self.ksearch_iter = ksearch_iter
         self._passed_kwargs = kwargs
@@ -42,12 +43,12 @@ class KSearchOptuna(BaseSearch):
         else:
             self._method = KSpaceOptunaSearchV3
 
-        super().__init__(*args, **kwargs, save_dir=resume_dir)
+        super().__init__(*args, **kwargs, resume=self._resume)
         
         if 'model' in self._passed_kwargs:
             kwargs.pop('model')
-        if resume_dir is not None:
-            self._resume_search(resume_dir)
+        if self._resume:
+            self._resume_search()
 
     def _create_save_dir(self) -> str:
         method = self._method.__name__ 
@@ -56,24 +57,35 @@ class KSearchOptuna(BaseSearch):
         info = dict(method=method)
         return super()._create_save_dir(info)
     
-    def _resume_search(self, resume_dir: str):
-        if os.path.exists(resume_dir):
-            data = load_csv(resume_dir)
-            self.history_head = list(data.columns)
+    def _set_history_head(self, search_space: dict):
+        # Is set after first history update 
+        self.history_head = None
+    
+    def _resume_search(self):
+        data = load_csv(self._history_fp)
+        self.history_head = list(data.columns)
 
-            rows = data.shape[0]
-            delta = rows - self.ksearch_iter
+        rows = data.shape[0]
+        delta = rows - self.ksearch_iter
 
-            if delta >= rows:
-                self._iter = range(rows, delta)
-            else:
-                self._iter = range(rows, rows + self.ksearch_iter)
-            
-            self._searches_dir = os.path.join(self._save_dir, "searches")
-            assert os.path.exists(self._searches_dir)
+        if delta >= rows:
+            self._iter = range(rows, delta)
         else:
-            raise ValueError(f"resume_dir doesn't exist: {resume_dir}")
-                
+            self._iter = range(rows, rows + self.ksearch_iter)
+        
+        self._searches_dir = os.path.join(self._save_dir, "searches")
+        assert os.path.exists(self._searches_dir)
+
+        # Adding previous trials!
+        params = [param[len("k_"):] for param in self.history_head if param.startswith("k_")]
+        
+        for row in data.iterrows():
+            trial = create_trial(
+                params={param: row[param] for param in params},
+                distributions=self.create_kspace_distributions(params),
+                value=row["mean_test_acc"]
+            )
+            self._study.add_trial(trial)
     
     def _calc_result(self):
         self.result = dict(
@@ -88,15 +100,9 @@ class KSearchOptuna(BaseSearch):
             save_json(self._result_fp, _data, overwrite=True)
     
     def init_save(self, search_space: dict):
-        self._init_save_paths(create_dirs=True)
-
         self._searches_dir = os.path.join(self._save_dir, "searches")
         os.makedirs(self._searches_dir, exist_ok=True)
-
-        data = load_json(self._result_fp, default={})
-        data = self._get_search_attrs(search_space, current_attrs=data)
-
-        save_json(self._result_fp, data)
+        super().init_save(search_space)
     
     def update_history(self, row: dict):
         if self.history_head is None:
@@ -104,8 +110,12 @@ class KSearchOptuna(BaseSearch):
             save_csv(self._history_fp, self.history_head)
         save_csv(self._history_fp, self.history_head, row)
 
-    def create_kspace_distributions(self, search_space: TY_SPACE) -> Dict[str, FloatDistribution]:
-        names = list(search_space.keys())
+    def create_kspace_distributions(self, search_space: Union[TY_SPACE, List[str]]) -> Dict[str, FloatDistribution]:
+        if type(search_space) != list:
+            names = list(search_space.keys())
+        else:
+            names = search_space
+
         zero = np.nextafter(0, 1.0)
         return {name: FloatDistribution(zero, 1.0) for name in names}
     
@@ -132,7 +142,7 @@ class KSearchOptuna(BaseSearch):
             if self._save:
                 self.update_history(result)
 
-            print(f"{i}: train_score={round(result['mean_train_acc'], 4)}, test_score={round(result['mean_test_acc'], 4)}, params={json_to_str(k, indent=None)}")
+            print(f"{i}: train_score={round(result['mean_train_acc'], 4)}, test_score={round(result['mean_test_acc'], 4)}, params={json_to_str(k, indent=None)}", flush=True)
             
             del tuner
             gc.collect()

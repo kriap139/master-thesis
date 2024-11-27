@@ -32,7 +32,7 @@ class BaseSearch:
     def __init__(
         self, model, train_data: Dataset, test_data: Dataset = None, n_iter=100, n_jobs=None, cv: TY_CV = None, 
         inner_cv: TY_CV = None, scoring=None, save=False, save_inner_history=True, max_outer_iter: int = None, refit=True, 
-        add_save_dir_info: dict = None, save_best_models=False, save_dir: str = None, root_dir: str = None):
+        add_save_dir_info: dict = None, save_best_models=False, root_dir: str = None, resume=False):
 
         self.train_data = train_data
         self.test_data = test_data
@@ -49,7 +49,8 @@ class BaseSearch:
         self.history_head = None
         self.save_inner_history = save_inner_history
         self.save_best_models = save_best_models
-        self._save = save
+        self._save = save or resume
+        self._resume = resume
 
         self._result_fp = None
         self._history_fp = None
@@ -57,7 +58,6 @@ class BaseSearch:
         self._models_dir = None
         self._save_dir = None
         self._root_dir = root_dir
-        self._passed_dir = save_dir
 
         self.result = None
 
@@ -70,12 +70,6 @@ class BaseSearch:
             self._init_save_paths(create_dirs=False)
     
     def _create_save_dir(self, info: dict = None) -> str:
-        if self._passed_dir is not None:
-            if os.path.exists(self._save_dir):
-                return self._save_dir
-            else:
-                raise ValueError(f"Passed save directory doesn't exist: {self._save_dir}")
-
         if self.add_save_dir_info is not None:
             if info is None:
                 info = self.add_save_dir_info
@@ -98,7 +92,9 @@ class BaseSearch:
     def _init_save_paths(self, create_dirs=False):
         self._save_dir = self._create_save_dir()
 
-        if os.path.exists(self._save_dir):
+        if self._resume and (not os.path.exists(self._save_dir)):
+            raise ValueError(f"resume not possible, previous search folder doesn't exist: {self._save_dir}")
+        elif os.path.exists(self._save_dir):
             old_dir = self._save_dir
             self._save_dir = find_dir_ver(self._save_dir)
             logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")   
@@ -157,21 +153,26 @@ class BaseSearch:
             return current_attrs
 
         return dict(info=info)
-                
-    def init_save(self, search_space: dict, fixed_params: dict):
-        if not self._save:
-            return
-        self._init_save_paths(create_dirs=True)
-
+    
+    def _set_history_head(self, search_space: dict):
         self.history_head = list(chain.from_iterable([
             ("inner_index", ), [name for name, v in search_space.items()], ("train_score", "test_score", "time")
         ]))
+                
+    def init_save(self, search_space: dict):
+        self._init_save_paths(create_dirs=True)
+        self._set_history_head(search_space)
 
-        data = load_json(self._result_fp, default={})
-        data = self._get_search_attrs(search_space, current_attrs=data)
+        file_data = load_json(self._result_fp, default={})
+        data = self._get_search_attrs(search_space, current_attrs=file_data.copy())
 
-        save_json(self._result_fp, data)
-        save_csv(self._history_fp, self.history_head)
+        if not self._resume:
+            save_json(self._result_fp, data)
+            # In case _set_history_head is overridden to None in a subclass 
+            if self.history_head is not None:
+                save_csv(self._history_fp, self.history_head)
+        else:
+            assert file_data["info"] == data["info"]
     
     def _update_info(self, update_keys: dict):
          data = load_json(self._result_fp, default=dict(info={}))
@@ -300,7 +301,7 @@ class BaseSearch:
         raise RuntimeError("Unimplemented")
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
-        self.init_save(search_space, fixed_params)
+        self.init_save(search_space)
         
         if not self.train_data.has_saved_folds(self.cv):
             print(f"Saving {CVInfo(self.cv)} folds for dataset {self.train_data.name}")
