@@ -1,6 +1,6 @@
 from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json, save_json, json_to_str
 from Util.compat import removeprefix
-from typing import Callable, Iterable, Dict, Union
+from typing import Callable, Iterable, Dict, Union, List
 import time
 import numpy as np
 from sequd import SeqUD
