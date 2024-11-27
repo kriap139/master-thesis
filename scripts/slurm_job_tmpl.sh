@@ -50,6 +50,9 @@ while getopts ":f:i:d:s:m:r:b" option; do
       
       b) # save best models
          save_best_models=1;;
+      
+      c) # resume from previous job
+         resume=1;;
 
      \?) # Invalid option
          echo "Error: Invalid option"
@@ -151,6 +154,7 @@ run_search() {
     --inner-random-state $inner_random_state    \
     --dataset "$dataset"                        \
     ${save_best_models:+--save-best-models}     \
+    ${resume:+--resume}                         \
     ${params:+--params "$params"}               \
     ${search_space:+--search-space "$search_space"}              
 }

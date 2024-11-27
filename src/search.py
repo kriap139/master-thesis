@@ -65,6 +65,7 @@ def build_cli(test_method: str = None, test_dataset: Builtin = None, test_max_lg
     )
 
     parser.add_argument("--save-best-models", action='store_true')
+    parser.add_argument("--resume", action='store_true')
 
     parser.add_argument("--search-space", type=str, default=None)
     parser.add_argument("--move-slurm-logs", action='store_true')
@@ -219,7 +220,7 @@ def search(args: argparse.Namespace, override_current_scoring=False) -> BaseSear
     
     tuner = tuner(model=model, train_data=dataset, test_data=None, n_iter=100, add_save_dir_info=save_dir_info,
                   n_jobs=search_n_jobs, cv=cv, inner_cv=inner_cv, scoring=args.scoring, save=True, save_best_models=args.save_best_models, 
-                  max_outer_iter=args.max_outer_iter, refit=refit, **params)
+                  max_outer_iter=args.max_outer_iter, refit=refit, resume=args.resume, **params)
 
     print(f"Results saved to: {tuner._save_dir}", flush=True)
     tuner.search(search_space, fixed_params)
@@ -233,7 +234,7 @@ def check_scoring(args: argparse.Namespace, task: Task, override_current=False) 
             "neg_root_mean_squared_error"
         )
         args.refit_metric = "r2"
-    elif override_current:
+    elif override_current: 
         args.scoring = None
         args.refit_metric = None
 
