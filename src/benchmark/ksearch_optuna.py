@@ -1,6 +1,6 @@
 from Util import Dataset, TY_CV, Integer, Real, Categorical, save_csv, TY_SPACE, load_csv, load_json, save_json, json_to_str
 from Util.compat import removeprefix
-from typing import Callable, Iterable, Dict
+from typing import Callable, Iterable, Dict, Union
 import time
 import numpy as np
 from sequd import SeqUD
@@ -78,7 +78,7 @@ class KSearchOptuna(BaseSearch):
 
         # Adding previous trials!
         params = [param[len("k_"):] for param in self.history_head if param.startswith("k_")]
-        
+
         for row in data.iterrows():
             trial = create_trial(
                 params={param: row[param] for param in params},
