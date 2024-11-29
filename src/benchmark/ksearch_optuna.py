@@ -20,7 +20,7 @@ import sys
 import gc
 
 class KSearchOptuna(BaseSearch):    
-    def __init__(self, ksearch_iter: int = 100, resume=False, search_method=None, *args, **kwargs):
+    def __init__(self, ksearch_iter: int = 100, search_method=None, *args, **kwargs):
         self.search_method = search_method
         self.ksearch_iter = ksearch_iter
         self._passed_kwargs = kwargs
@@ -43,7 +43,7 @@ class KSearchOptuna(BaseSearch):
         else:
             self._method = KSpaceOptunaSearchV3
 
-        super().__init__(*args, **kwargs, resume=self._resume)
+        super().__init__(*args, **kwargs)
         
         if 'model' in self._passed_kwargs:
             kwargs.pop('model')
