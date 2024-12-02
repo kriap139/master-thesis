@@ -27,7 +27,7 @@ check_exit() {
 }
 
 # Get the options
-while getopts ":f:i:d:s:m:r:b" option; do
+while getopts ":f:i:d:s:m:r:bc" option; do
    case $option in
       d) # datasets
          for a in $OPTARG; do datasets+=("$a") ; done
