@@ -2,12 +2,13 @@ import pandas as pd
 from typing import List, Tuple, Dict, Any, Union, Iterable, Optional
 from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check
 from calc_metrics import time_frame_deltas
-from Util import Task, SizeGroup
+from Util import Task, SizeGroup, load_csv
 import numbers
 from dataclasses import dataclass, field
 from itertools import chain
 import itertools
 import math
+import os
 
 @dataclass(frozen=True, eq=True)
 class RowLabel:
@@ -433,21 +434,28 @@ class LatexMulticolTable(Latex):
 def create_task_filter_fn(task: Task):
     return lambda folder: folder.dataset.info().task in task
 
-def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, no_search_table=False) -> str:
+def create_test_results_stats_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, no_search_table=False, print_folders=False) -> str:
+
     if no_search_table:
-        ignore_methods = ["RandomSearch", "SeqUDSearch", "GridSearch", "OptunaSearch"]
+        ignore_methods = ["RandomSearch", "SeqUDSearch", "GridSearch", "OptunaSearch", "KSearchOptuna"]
     else:
-        ignore_methods = ["NOSearch"]
+        if ignore_methods is None:
+            ignore_methods = ["NOSearch"]
+        else:
+            ignore_methods = ignore_methods.copy()
+            ignore_methods.append("NOSearch")
 
     reg_data = calc_eval_metrics(
         w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods,
         filter_fn=create_task_filter_fn(Task.REGRESSION), sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
     cls_data = calc_eval_metrics(
         w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods,
         filter_fn=create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
 
     add_row_label = "Dataset" if not no_search_table else "NOSearch metrics"
@@ -482,16 +490,18 @@ def create_test_results_stats_table(ignore_datasets: List[str] = None, filter_fn
 
 
 
-def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True) -> str:
+def create_train_test_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
     reg_data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets,
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods,
         filter_fn=create_task_filter_fn(Task.REGRESSION), sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
     cls_data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets,
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods,
         filter_fn=create_task_filter_fn(Task.BINARY | Task.MULTICLASS), sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
     
     ltx = LatexMulticolTable(n_round=4, row_lines=False, outer_col_lines=True, add_row_label='Dataset')
@@ -517,8 +527,9 @@ def create_train_test_table(ignore_datasets: List[str] = None, filter_fn=None, s
 
 
 
-def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True) -> str:
-    data = calc_eval_metrics(w_nas=0.5, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True, print_results=False)
+def create_time_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, filter_fn=None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    data = calc_eval_metrics(w_nas=0.5, filter_fn=filter_fn, sort_fn=sort_fn, reverse=True, print_results=print_folders, 
+    ignore_with_info_filter=ignore_with_info_filter, ignore_methods=ignore_methods, ignore_datasets=ignore_datasets)
     deltas = time_frame_deltas(data)
 
     # use the delta values to order to columns
@@ -555,10 +566,17 @@ def create_time_table(ignore_datasets: List[str] = None, filter_fn=None, sort_fn
 
 
 
-def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+def create_ns_rank_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    if ignore_methods is None:
+        ignore_methods = ["NOSearch"]
+    else:
+        ignore_methods = ignore_methods.copy()
+        ignore_methods.append("NOSearch")
+
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
     ltx = LatexMulticolTable(n_round=4, row_lines=False, outer_col_lines=True, add_row_label='Dataset')
     p_hat = f"\\(\\hat{{p}}\\)"
@@ -573,11 +591,19 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, sort_fn=None, sort_r
 
 
 
-def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+def create_method_metrics_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    if ignore_methods is None:
+        ignore_methods = ["NOSearch"]
+    else:
+        ignore_methods = ignore_methods.copy()
+        ignore_methods.append("NOSearch")
+
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=print_folders, 
+        ignore_with_info_filter=ignore_with_info_filter
     )
+
     latex_dict = {
         f"\\(a_{{s}}\\)": data.agg_ns_scores.to_dict(),
         f"\\(a_{{ms}}\\)":data.agg_mns_scors.to_dict(),
@@ -592,10 +618,17 @@ def create_method_metrics_table(ignore_datasets: List[str] = None, sort_fn=None,
 
     return ltx.create(frame)
 
-def create_lambda_metric_table(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True) -> str:
+def create_lambda_metric_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    if ignore_methods is None:
+        ignore_methods = ["NOSearch"]
+    else:
+        ignore_methods = ignore_methods.copy()
+        ignore_methods.append("NOSearch")
+
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=["NOSearch"], sort_fn=sort_fn, reverse=sort_reverse, 
-        print_results=False
+        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, sort_fn=sort_fn, reverse=sort_reverse, 
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
     )
     latex_dict = {
         f"\\(\\lambda\\)": data.js.to_dict()
@@ -605,12 +638,40 @@ def create_lambda_metric_table(ignore_datasets: List[str] = None, sort_fn=None, 
     frame.sort_values(by="\\(\\lambda\\)", axis=1, ascending=False, inplace=True)
     return ltx.create(frame)
 
+def create_ksearch_iter_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    metrics = calc_eval_metrics(
+        w_nas=0.5, 
+        ignore_datasets=ignore_datasets, 
+        ignore_methods=ignore_methods, 
+        sort_fn=sort_fn, 
+        reverse=sort_reverse, 
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
+    )
+    names = [method for method in metrics.get_method_names() if method.startswith("KSearch")]
+    data = {name: {} for name in names}
+
+    for dataset, methods in metrics.folders.items():
+        for method, folder in methods.items():
+            if method.startswith("KSearch"):
+                history = load_csv(os.path.join(folder.dir_path, "history.csv"))
+                data[method][dataset] = history.shape[0]
+    
+    ltx = LatexTable(n_round=4, add_row_label="Dataset", row_lines=True, outer_row_lines=True, outer_col_lines=True)
+    frame = pd.DataFrame.from_dict(data, orient='columns')
+    print(frame)
+    return ltx.create(frame)
+
+
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
         f.write(table)
 
 if __name__ == "__main__":
-    ignore_datasets = ("kdd1998_allcat", "kdd1998_nonum")
+    #ignore_datasets = ("kdd1998_allcat", "kdd1998_nonum")
+    ignore_datasets = ("fps", "acsi", "wave_e", "rcv1", "delays_zurich", "comet_mc", "epsilon", "kdd1998", "kdd1998_allcat", "kdd1998_nonum")
+    ignore_methods = ["GridSearch"]
+    ignore_with_info_filter = lambda info: info["nparams"] != "4"
 
     folder_sorter = lambda folder: ( 
         folder.dataset.info().task in (Task.BINARY, Task.MULTICLASS), 
@@ -623,7 +684,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
-    table = create_train_test_table_kddmuts(ignore_datasets, sort_fn=folder_sorter)
+    table = create_ksearch_iter_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True)
     save_table(table)
 
 
