@@ -2,7 +2,8 @@ import os
 from Util import Dataset, Builtin, data_dir, Task, get_n_search_space
 from Util.io_util import load_json, json_to_str, load_csv
 from Util.compat import removeprefix
-from benchmark import BaseSearch
+from benchmark import BaseSearch, KSearchOptuna
+import benchmark
 from typing import List, Dict, Tuple, Callable, Any, Union, Optional
 import re
 from dataclasses import dataclass
@@ -159,6 +160,10 @@ def load_result_folders(
         elif ignore_with_info_filter is not None and ignore_with_info_filter(info):
             continue
 
+        if method == "KSearchOptuna":
+            k_space_method = info["method"]
+            method = f"KSearch{k_space_method}"
+
         new_folder = ResultFolder(path, Builtin[dataset], method, result_dir, version, info)
         dataset_results = results.get(dataset, None)
         
@@ -263,14 +268,20 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
 
             file_data = load_json(os.path.join(folder.dir_path, "result.json"))
 
-            if 'result' not in file_data.keys():
+            if ('result' not in file_data.keys()) or (folder.search_method.startswith("KSearch")):
                 if not printed_newline:
                     print()
                     printed_newline = True
 
                 print(f"Result for {method} on the {dataset} dataset, doesn't exist. Computing it")
-                file_data = BaseSearch.recalc_results(folder.dir_path)
+                searcher = getattr(benchmark, folder.search_method, None)
 
+                if (searcher is None) and folder.search_method.startswith("KSearch"):
+                    searcher = KSearchOptuna
+                if searcher is None:
+                    raise RuntimeError(f"Unable to find search method class {folder.search_method}")
+                file_data = searcher.recalc_results(folder.dir_path)
+                
             if abs(datasets_max_acc[dataset]) < abs(file_data["result"]["max_test_acc"]):
                 datasets_max_acc[dataset] = file_data["result"]["max_test_acc"]
             if abs(datasets_max_mean_acc[dataset]) < abs(file_data["result"]["mean_test_acc"]):
