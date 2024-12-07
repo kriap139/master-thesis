@@ -77,12 +77,12 @@ class KSearchOptuna(BaseSearch):
         assert os.path.exists(self._searches_dir)
 
         # Adding previous trials!
-        params = [param[len("k_"):] for param in self.history_head if param.startswith("k_")]
+        k_params = [param for param in self.history_head if param.startswith("k_")]
+        params = [param[len("k_"):] for param in k_params]
 
         for index, row in data.iterrows():
-            print(row)
             trial = create_trial(
-                params={param: row[param] for param in params},
+                params={params[i]: row[k_param] for i, k_param in enumerate(k_params)},
                 distributions=self.create_kspace_distributions(params),
                 value=row["mean_test_acc"]
             )

@@ -398,9 +398,9 @@ def friedman_check(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse
     ).friedman_stats
 
     if friedman.pvalue < confidence:
-        print("There is a statisitically significant difference between the tested algorithms.")
+        print("There is a statistically significant difference between the tested algorithms.")
     else:
-        print("There isn't a statisitically significant difference between the tested algorithms.")
+        print("There isn't a statistically significant difference between the tested algorithms.")
 
     
 if __name__ == "__main__":
