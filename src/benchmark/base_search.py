@@ -94,7 +94,7 @@ class BaseSearch:
 
         if self._resume and (not os.path.exists(self._save_dir)):
             raise ValueError(f"resume not possible, previous search folder doesn't exist: {self._save_dir}")
-        elif os.path.exists(self._save_dir):
+        elif (not self._resume) and os.path.exists(self._save_dir):
             old_dir = self._save_dir
             self._save_dir = find_dir_ver(self._save_dir)
             logging.debug(f"Save directory already exists ({old_dir}), saving to alternative directory: {self._save_dir}")   
