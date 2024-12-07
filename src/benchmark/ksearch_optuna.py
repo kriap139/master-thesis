@@ -80,6 +80,7 @@ class KSearchOptuna(BaseSearch):
         params = [param[len("k_"):] for param in self.history_head if param.startswith("k_")]
 
         for index, row in data.iterrows():
+            print(row)
             trial = create_trial(
                 params={param: row[param] for param in params},
                 distributions=self.create_kspace_distributions(params),
