@@ -88,22 +88,33 @@ class KSearchOptuna(BaseSearch):
             )
             self._study.add_trial(trial)
     
-    def _calc_result(self):
-        self.result = dict(
-            best_number=self._study.best_trial.number,
-            best_score=self._study.best_value,
-            best_params=self._study.best_params
-        )
+    @classmethod
+    def recalc_results(cls, result_dir: str) -> dict:
+        _data = load_json(os.path.join(result_dir, "result.json"), default={})
+        history = load_csv(os.path.join(result_dir, "history.csv"))
 
+        k_params = [param for param in history.columns if param.startswith("k_")]
+        params = [param[len("k_"):] for param in k_params]
+        
+        str_cols = history.select_dtypes('object').columns.tolist()
+        no_str_cols = [col for col in history.columns if col not in str_cols]
+        best_index = history[no_str_cols].idxmax(axis=0)["mean_test_acc"]
+        best_row = history.loc[best_index]
+
+        #print(best_row)
+        _data["result"] = best_row.to_dict()
+        return _data
+    
+    def _calc_result(self):
+        data = self.recalc_results(self._save_dir)
+        self.result = data["result"]
         if self._save:
-            _data = load_json(self._result_fp, default={})
-            _data["result"] = self.result
-            save_json(self._result_fp, _data, overwrite=True)
+            save_json(self._result_fp, data, overwrite=True)
     
     def init_save(self, search_space: dict):
+        super().init_save(search_space)
         self._searches_dir = os.path.join(self._save_dir, "searches")
         os.makedirs(self._searches_dir, exist_ok=True)
-        super().init_save(search_space)
     
     def update_history(self, row: dict):
         if self.history_head is None:
