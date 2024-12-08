@@ -20,9 +20,11 @@ import sys
 import gc
 
 class KSearchOptuna(BaseSearch):    
-    def __init__(self, ksearch_iter: int = 100, search_method=None, *args, **kwargs):
+    def __init__(self, ksearch_iter: int = 100, k_lower: float = -30.0, k_upper: float = 30.0, search_method=None, *args, **kwargs):
         self.search_method = search_method
         self.ksearch_iter = ksearch_iter
+        self.k_lower = k_lower
+        self.k_upper = k_upper
         self._passed_kwargs = kwargs
         self._study = create_study(sampler=TPESampler(), direction="maximize")
         self._iter = range(self.ksearch_iter)
@@ -128,8 +130,7 @@ class KSearchOptuna(BaseSearch):
         else:
             names = search_space
 
-        zero = np.nextafter(0, 1.0)
-        return {name: FloatDistribution(zero, 1.0) for name in names}
+        return {name: FloatDistribution(self.k_lower, self.k_upper) for name in names}
     
     def search(self, search_space: dict, fixed_params: dict) -> 'BaseSearch':
         if self._save:

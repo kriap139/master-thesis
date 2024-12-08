@@ -403,14 +403,16 @@ def time_frame_deltas(data: EvalMetrics) -> pd.DataFrame:
     return combined
 
 
-def friedman_check(ignore_datasets: List[str] = None, sort_fn=None, sort_reverse=True, confidence: float = 0.05):
+def friedman_check(confidence: float = 0.05, *load_folder_args, **load_folder_kwargs):
     friedman = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, sort_fn=sort_fn, reverse=sort_reverse, print_results=False
+        w_nas=0.5, *load_folder_args, **load_folder_kwargs
     ).friedman_stats
 
     if friedman.pvalue < confidence:
+        print(f"pvalue ({friedman.pvalue}) < {confidence}")
         print("There is a statistically significant difference between the tested algorithms.")
     else:
+        print(f"pvalue ({friedman.pvalue}) > {confidence}")
         print("There isn't a statistically significant difference between the tested algorithms.")
 
     
