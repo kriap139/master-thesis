@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Tuple, Dict, Any, Union, Iterable, Optional
-from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check
+from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check, KSearchOptuna
 from calc_metrics import time_frame_deltas
 from Util import Task, SizeGroup, load_csv
 import numbers
@@ -521,7 +521,7 @@ def create_train_test_table(ignore_datasets: List[str] = None, ignore_methods: L
         row_labels.append(RowLabel(domain, row_start, n_rows, 'lightgray'))
         row_start = n_rows
     
-    ltx.sort_columns(by_sub_labels=["test"], ascending=True)
+    ltx.sort_columns(by_sub_labels=["test"], ascending=False)
     print(row_labels)
     return ltx.create(row_labels=row_labels)
 
@@ -659,9 +659,38 @@ def create_ksearch_iter_table(ignore_datasets: List[str] = None, ignore_methods:
     
     ltx = LatexTable(n_round=4, add_row_label="Dataset", row_lines=True, outer_row_lines=True, outer_col_lines=True)
     frame = pd.DataFrame.from_dict(data, orient='columns')
+    frame.index = [index.lower() for index in frame.index]
     print(frame)
     return ltx.create(frame)
 
+def create_k_space_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+    metrics = calc_eval_metrics(
+        w_nas=0.5, 
+        ignore_datasets=ignore_datasets, 
+        ignore_methods=ignore_methods, 
+        sort_fn=sort_fn, 
+        reverse=sort_reverse, 
+        print_results=print_folders,
+        ignore_with_info_filter=ignore_with_info_filter
+    )
+
+    ltx = LatexMulticolTable(n_round=3, row_lines=True, outer_col_lines=True, add_row_label='param')
+
+    for dataset, methods in metrics.folders.items():
+        for method, folder in methods.items():
+            if method.startswith("KSearch"):
+                data = KSearchOptuna.recalc_results(folder.dir_path)
+                result = data["result"]
+
+                k_params = [param for param in result.keys() if param.startswith("k_")]
+                params = [param[len("k_"):] for param in k_params]
+                for param in params:
+                    ltx.add_cell(param.replace('_', '-'), method, dataset.lower(), data=result['k_' + param])
+    
+    print(pd.DataFrame.from_dict(ltx.data, orient='columns'))
+    return ltx.create()
+
+                
 
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
@@ -683,8 +712,8 @@ if __name__ == "__main__":
         folder.search_method
     )
 
-    #friedman_check(ignore_datasets, folder_sorter, sort_reverse=True)
-    table = create_ksearch_iter_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True)
+    #friedman_check(ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, ignore_with_info_filter=ignore_with_info_filter, print_results=True)
+    table = create_test_results_stats_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, no_search_table=True)
     save_table(table)
 
 
