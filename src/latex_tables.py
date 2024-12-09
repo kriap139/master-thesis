@@ -591,7 +591,7 @@ def create_ns_rank_table(ignore_datasets: List[str] = None, ignore_methods: List
 
 
 
-def create_method_metrics_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+def create_method_metrics_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False, normalize_k_search_histories=False) -> str:
     if ignore_methods is None:
         ignore_methods = ["NOSearch"]
     else:
@@ -599,7 +599,7 @@ def create_method_metrics_table(ignore_datasets: List[str] = None, ignore_method
         ignore_methods.append("NOSearch")
 
     data = calc_eval_metrics(
-        w_nas=0.5, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, sort_fn=sort_fn, reverse=sort_reverse, 
+        w_nas=0.5, normalize_k_search_histories=normalize_k_search_histories, ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, sort_fn=sort_fn, reverse=sort_reverse, 
         print_results=print_folders, 
         ignore_with_info_filter=ignore_with_info_filter
     )
@@ -713,7 +713,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, ignore_with_info_filter=ignore_with_info_filter, print_results=True)
-    table = create_test_results_stats_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, no_search_table=True)
+    table = create_method_metrics_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, normalize_k_search_histories=True)
     save_table(table)
 
 

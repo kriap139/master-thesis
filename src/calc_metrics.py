@@ -248,7 +248,17 @@ class EvalMetrics:
         return {k: v for (k, v) in self.folders.items() if Builtin[k].info().task in (Task.BINARY, Task.MULTICLASS)}
 
 
-def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) -> EvalMetrics:
+def get_min_ksearch_histories(data: Dict[str, Dict[str, Union[List[ResultFolder], ResultFolder]]]) -> Dict[str, int]:
+    min_histories = {}
+    for dataset, methods in data.items():
+        for (method, folder) in methods.items():
+            if method.startswith("KSearch"):
+                history = load_csv(os.path.join(folder.dir_path, "history.csv"))
+                if (dataset not in min_histories) or (min_histories[dataset] > history.shape[0]):
+                    min_histories[dataset] = history.shape[0]
+    return min_histories
+
+def calc_eval_metrics(w_nas: float, normalize_k_search_histories=False, *load_folder_args, **load_folders_kwargs) -> EvalMetrics:
     data = load_result_folders(*load_folder_args, **load_folders_kwargs)
     results: Dict[str, Dict[str, dict]] = {dataset: {} for dataset in data.keys()}
     normalized_scores: Dict[str, Dict[str, float]] = {dataset: {} for dataset in data.keys()}
@@ -258,7 +268,10 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
     datasets_max_acc: Dict[str, float] = {dataset: 0 for dataset in data.keys()}
     datasets_max_mean_acc: Dict[str, float] = {dataset: 0 for dataset in data.keys()}
     dataset_methods_names: Dict[str, list] = {}
-
+    
+    min_ksearch_histories = get_min_ksearch_histories(data) if normalize_k_search_histories else None
+    print(min_ksearch_histories)
+    
     methods_names = []
     printed_newline = False
     for dataset, methods in data.items():
@@ -280,7 +293,11 @@ def calc_eval_metrics(w_nas: float, *load_folder_args, **load_folders_kwargs) ->
                     searcher = KSearchOptuna
                 if searcher is None:
                     raise RuntimeError(f"Unable to find search method class {folder.search_method}")
-                file_data = searcher.recalc_results(folder.dir_path)
+                
+                if normalize_k_search_histories and folder.search_method.startswith("KSearch"):
+                    file_data = searcher.recalc_results(folder.dir_path, limit_history=min_ksearch_histories[dataset])
+                else:
+                    file_data = searcher.recalc_results(folder.dir_path)
                 
             if abs(datasets_max_acc[dataset]) < abs(file_data["result"]["max_test_acc"]):
                 datasets_max_acc[dataset] = file_data["result"]["max_test_acc"]

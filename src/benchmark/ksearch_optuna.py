@@ -91,7 +91,7 @@ class KSearchOptuna(BaseSearch):
             self._study.add_trial(trial)
     
     @classmethod
-    def recalc_results(cls, result_dir: str) -> dict:
+    def recalc_results(cls, result_dir: str, limit_history: int = None) -> dict:
         _data = load_json(os.path.join(result_dir, "result.json"), default={})
         history = load_csv(os.path.join(result_dir, "history.csv"))
 
@@ -100,7 +100,12 @@ class KSearchOptuna(BaseSearch):
         
         str_cols = history.select_dtypes('object').columns.tolist()
         no_str_cols = [col for col in history.columns if col not in str_cols]
-        best_index = history[no_str_cols].idxmax(axis=0)["mean_test_acc"]
+
+        if limit_history is not None:
+            best_index = history[no_str_cols].head(limit_history).idxmax(axis=0)["mean_test_acc"]
+        else:
+            best_index = history[no_str_cols].idxmax(axis=0)["mean_test_acc"]
+
         best_row = history.loc[best_index]
 
         #print(best_row)
