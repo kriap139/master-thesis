@@ -663,7 +663,7 @@ def create_ksearch_iter_table(ignore_datasets: List[str] = None, ignore_methods:
     print(frame)
     return ltx.create(frame)
 
-def create_k_space_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False) -> str:
+def create_k_space_table(ignore_datasets: List[str] = None, ignore_methods: List[str] = None, sort_fn=None, sort_reverse=True, print_folders=False, n_round=4) -> str:
     metrics = calc_eval_metrics(
         w_nas=0.5, 
         ignore_datasets=ignore_datasets, 
@@ -674,7 +674,7 @@ def create_k_space_table(ignore_datasets: List[str] = None, ignore_methods: List
         ignore_with_info_filter=ignore_with_info_filter
     )
 
-    ltx = LatexMulticolTable(n_round=3, row_lines=True, outer_col_lines=True, add_row_label='param')
+    ltx = LatexMulticolTable(n_round=n_round, row_lines=True, outer_col_lines=True, add_row_label='param')
 
     for dataset, methods in metrics.folders.items():
         for method, folder in methods.items():
@@ -713,7 +713,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, ignore_with_info_filter=ignore_with_info_filter, print_results=True)
-    table = create_method_metrics_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, normalize_k_search_histories=True)
+    table = create_k_space_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, n_round=None)
     save_table(table)
 
 
