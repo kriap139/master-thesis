@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Tuple, Dict, Any, Union, Iterable, Optional
 from calc_metrics import calc_eval_metrics, load_result_folders, Builtin, EvalMetrics, BaseSearch, time_frame_pct, time_frame_stamps, sort_folders, friedman_check, KSearchOptuna
 from calc_metrics import time_frame_deltas
-from Util import Task, SizeGroup, load_csv
+from Util import Task, SizeGroup, load_csv, load_json
 import numbers
 from dataclasses import dataclass, field
 from itertools import chain
@@ -690,8 +690,6 @@ def create_k_space_table(ignore_datasets: List[str] = None, ignore_methods: List
     print(pd.DataFrame.from_dict(ltx.data, orient='columns'))
     return ltx.create()
 
-                
-
 def save_table(table: str):
     with open("table.txt", mode='w') as f:
         f.write(table)
@@ -713,7 +711,7 @@ if __name__ == "__main__":
     )
 
     #friedman_check(ignore_datasets=ignore_datasets, ignore_methods=ignore_methods, ignore_with_info_filter=ignore_with_info_filter, print_results=True)
-    table = create_k_space_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True, n_round=None)
+    table = create_ksearch_iter_table(ignore_datasets, ignore_methods, sort_fn=folder_sorter, sort_reverse=True, print_folders=True)
     save_table(table)
 
 
