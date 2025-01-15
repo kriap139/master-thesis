@@ -2,12 +2,16 @@
     {
         "search_space": [
             "n_estimators","learning_rate","max_depth","num_leaves"
-        ]
+        ],
+        "k_lower": -200, 
+        "k_upper": 200
     },
     {
         "search_space": [
             "n_estimators","learning_rate","max_depth","num_leaves"
         ],
-        "search_method": "KSpaceRandomSearchV3"
+        "search_method": "KSpaceRandomSearchV3",
+        "k_lower": -200, 
+        "k_upper": 200
     }
 ]
